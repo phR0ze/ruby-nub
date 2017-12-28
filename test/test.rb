@@ -20,15 +20,21 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
+require 'colorize'
 require 'minitest/autorun'
 require_relative '../lib/cmds'
 
 class TestCmds < Minitest::Test
 
-  def test_place_holder
-    puts("Place holder test")
+  def test_hypens_to_underscores_in_command
+    ARGV.clear and ARGV << 'fix-links'
+    opts = Cmds.new('test', '0.1.2', "")
+    opts.add('fix-links', 'Test hypend commands', [
+      CmdOpt.new('--all', 'List all info'),
+    ])
+    opts.parse!
+    assert(opts[:fix_links])
   end
 end
-
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

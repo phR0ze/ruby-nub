@@ -1,7 +1,7 @@
 Gem::Specification.new do |spec|
   spec.name        = 'cmds'
-  spec.version     = '0.0.1'
-  spec.date        = '2017-10-21'
+  spec.version     = '0.0.2'
+  spec.date        = '2017-12-28'
   spec.summary     = "Command like syntax for CLI apps"
   spec.description = "Command like syntax for command line parameters"
   spec.authors     = ["Patrick Crummett"]

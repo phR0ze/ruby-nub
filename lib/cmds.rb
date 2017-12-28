@@ -114,7 +114,7 @@ class Cmds
     # Parse each command which will consume options from ARGV
     cmds.each do |cmd|
       begin
-        @cmds[cmd.to_sym] = true
+        @cmds[cmd.gsub('-', '_').to_sym] = true
         @cmds_config[cmd][:outopts].order!
 
         # Ensure that all required options were given

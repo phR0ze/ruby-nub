@@ -1,5 +1,6 @@
 source 'https://rubygems.org' do
   gem 'minitest', '>= 5.10.2'
+  gem 'colorize'
   gem 'rake'
 end
 
