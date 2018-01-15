@@ -1,7 +1,7 @@
 # ruby-utils
 Collection of ruby utils I've used in several of my projects and wanted re-usable
 
-[![Build Status](https://travis-ci.org/phR0ze/cmds.svg)](https://travis-ci.org/phR0ze/cmds)
+[![Build Status](https://travis-ci.org/phR0ze/ruby-utils.svg)](https://travis-ci.org/phR0ze/ruby-utils)
 
 ## classes
 
