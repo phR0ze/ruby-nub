@@ -20,6 +20,9 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require_relative 'test_cmds'
+module Utils
+  require 'utils/cmds'
+  require 'utils/log'
+end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
