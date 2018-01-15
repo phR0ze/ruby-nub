@@ -36,17 +36,21 @@ ColorMap = {
 # logs to both a file and the console/queue for shell/UI apps
 module Log
   extend self
+  @@path = nil
+  @@queue = nil
 
   # @param log_path [String] path to log file
   # @param log_queue [Queue] optional queue to log to
   def init(log_path:nil, log_queue:nil)
-    @@path ||= File.expand_path(log_path)
-    @@queue ||= log_queue
+    @@path ||= File.expand_path(log_path) if log_path
+    @@queue ||= log_queue if log_queue
 
     # Open log file creating directory if necessary
-    FileUtils.mkdir_p(File.dirname(@@path)) if !File.exist?(File.dirname(@@path))
-    @@file ||= File.open(@@path, 'a')
-    @@file.sync = true
+    if @@path
+      FileUtils.mkdir_p(File.dirname(@@path)) if !File.exist?(File.dirname(@@path))
+      @@file ||= File.open(@@path, 'a')
+      @@file.sync = true
+    end
   end
 
   # Format the given string for use in log
@@ -57,7 +61,7 @@ module Log
   def print(str, notime:false)
     str ||= ""
     str = format(str) if !notime
-    @@file.write(strip_colorize(str)) if str
+    @@file.write(strip_colorize(str)) if @@path and !str.empty?
     if @@queue
       @@queue << str if !str.empty?
     else
@@ -70,7 +74,7 @@ module Log
   def puts(str, notime: false)
     str ||= ""
     str = format(str) if !notime
-    @@file.puts(strip_colorize(str))
+    @@file.puts(strip_colorize(str)) if @@path
     if @@queue
       @@queue << "#{str}\n" if !str.empty?
     else
