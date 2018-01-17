@@ -62,7 +62,7 @@ class Cmds
     @examples = examples || ''
   end
 
-  # Array like accessor for checking if a command is set
+  # Hash like accessor for checking if a command is set
   def [](key)
     return @cmds[key] if @cmds[key]
     return @opts[key] if @opts[key]

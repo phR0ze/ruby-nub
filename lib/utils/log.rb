@@ -43,6 +43,7 @@ module Log
 
   # Private properties
   @@_queue = nil
+  @@_stdout = true
   @@_monitor = Monitor.new
 
   # Public properties
@@ -58,10 +59,9 @@ module Log
   def init(path:nil, queue:false, stdout:true)
     @id ||= 'singleton'.object_id
 
-    @@_queue = queue ? Queue.new : nil
     @path = path ? File.expand_path(path) : nil
-    @queue = queue
-    @stdout = stdout
+    @@_queue = queue ? Queue.new : nil
+    @@_stdout = stdout
 
     # Open log file creating as needed
     if @path
@@ -87,8 +87,8 @@ module Log
 
       if !str.empty?
         @file << strip_colorize(str) if @path
-        @@_queue << str if @queue
-        $stdout.print(str) if @stdout
+        @@_queue << str if @@_queue
+        $stdout.print(str) if @@_stdout
       end
 
       return true
@@ -102,8 +102,8 @@ module Log
 
       if !str.empty?
         @file << "#{strip_colorize(str)}\n" if @path
-        @@_queue << "#{str}\n" if @queue
-        $stdout << "#{str}\n" if @stdout
+        @@_queue << "#{str}\n" if @@_queue
+        $stdout << "#{str}\n" if @@_stdout
       end
 
       return true
@@ -112,12 +112,12 @@ module Log
 
   # Remove an item from the queue, block until one exists
   def pop()
-    return @queue ? @@_queue.pop : nil
+    return @@_queue ? @@_queue.pop : nil
   end
 
   # Check if the log queue is empty
   def empty?
-    return @queue ? @@_queue.empty? : true
+    return @@_queue ? @@_queue.empty? : true
   end
 
   # Strip the ansi color codes from the given string

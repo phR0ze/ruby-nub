@@ -25,12 +25,11 @@ require_relative 'user'
 require_relative 'log'
 
 # Simple YAML configuration for an application
-# uses singleton pattern and mutex to make thread safe
+# uses singleton pattern for single source of truth
 module Config
 
   # Private properties
   @@_yml = nil
-  @@_mutex = Mutex.new
 
   # Public properties
   class << self
@@ -40,17 +39,31 @@ module Config
   # Singleton new alternate
   # @param config_name [String] name of the config file
   def self.init(config_name)
-    if !@@_yml
-      @path = "/home/#{User.name}/.config/#{config_name}"
-      Log.puts("Error: config '#{config_name}' doesn't exist!".colorize(:red)) and exit unless File.exists?(@path)
-      begin
-        @@_yml = YAML.load_file(@path)
-      rescue Exception => e
-        @log.puts("Error: #{e}".colorize(:red)) and exit
-      end
+    @path = "/home/#{User.name}/.config/#{config_name}"
+
+    # Open the config file or create in memory yml
+    begin
+      @@_yml = File.exists?(@path) ? YAML.load_file(@path) : {}
+    rescue Exception => e
+      Log.puts("Error: #{e}".colorize(:red)) and exit
     end
 
     return nil
+  end
+
+  # Hash like getter
+  def self.[](key)
+    return @@_yml[key]
+  end
+
+  # Hash like setter
+  def self.[]=(key, val)
+    return @@_yml[key] = val
+  end
+
+  # Save the config file
+  def self.save
+    File.open(@path, 'w'){|f| f << @@_yml.to_yaml } if @@_yml
   end
 end
 

@@ -27,8 +27,14 @@ class TestConfig < Minitest::Test
 
   def test_init
     Config.init('foo.bar')
-    #assert_equal(config.path, "/home/#{ENV['USER']}/.config/foo.bar")
-    puts(Config.path)
+    assert_equal(Config.path, "/home/#{ENV['USER']}/.config/foo.bar")
+  end
+
+  def test_modifications
+    Config.init('foofoo.yml')
+    Config['vpns'] = ['foo1', 'foo2']
+    assert_equal(Config['vpns'], ['foo1', 'foo2'])
+    Config.save
   end
 end
 
