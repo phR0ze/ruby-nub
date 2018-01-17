@@ -23,10 +23,9 @@
 module User
 
   # Get the current user taking into account sudo priviledges
-  def name
+  def self.name
     return Process.uid.zero? ? Etc.getpwuid(ENV['SUDO_UID'].to_i).name : ENV['USER']
   end
-  module_function(:name)
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

@@ -20,15 +20,45 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
+require 'time'
 require 'minitest/autorun'
-require_relative '../lib/utils/config'
+require_relative '../lib/utils/log'
 
-class TestConfig < Minitest::Test
+class TestLog < Minitest::Test
 
-  def test_init
-    Config.init('foo.bar')
-    #assert_equal(config.path, "/home/#{ENV['USER']}/.config/foo.bar")
-    puts(Config.path)
+  def test_multiaccess
+    mock = Minitest::Mock.new
+    mock.expect(:sync=, nil, [true])
+    mock.expect(:sync=, nil, [true])
+
+    File.stub(:exist?, true){
+      File.stub(:open, mock){
+        Log.init(path: 'foo.bar')
+        id = Log.id
+        Log.init(path: 'foo.foo')
+        assert_equal(id, Log.id)
+      }
+    }
+
+    assert_mock(mock)
+  end
+
+  def test_queue
+    Log.init(queue: true, stdout: false)
+    Log.print('foo.bar')
+    assert(!Log.empty?)
+    msg = Log.pop
+    assert(msg.start_with?(Time.now.strftime('%Y-%m-%d')))
+    assert(msg.include?(":: "))
+    assert(msg.end_with?('foo.bar'))
+    assert(Log.empty?)
+  end
+
+  def test_format
+    msg = Log.format("foo.bar")
+    assert(msg.start_with?(Time.now.strftime('%Y-%m-%d')))
+    assert(msg.include?(":: "))
+    assert(msg.end_with?('foo.bar'))
   end
 end
 

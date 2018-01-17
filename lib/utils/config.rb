@@ -20,34 +20,38 @@
 #SOFTWARE.
 
 require 'yaml'
+require 'colorize'
 require_relative 'user'
+require_relative 'log'
 
 # Simple YAML configuration for an application
-# using singleton pattern to handle multi consumers
-class Config
-  def self.instance
+# uses singleton pattern and mutex to make thread safe
+module Config
 
-  # Encapsulate configuration
-  # @param config_name [String] name of the config file
-  def initialize(config_name)
-    @@path = "/home/#{User.name}/.config/#{config_name}"
-    #@log.puts("Error: config file doesn't exist!".colorize(:red)) and exit unless File.exists?(@config_path)
- 
-    begin
-      @config = YAML.load_file(@@path)
-      @vpns = @config['vpns']
-      raise("missing 'vpns' list in config") if vpns.nil?
-      #vpn = vpns.find{|x| x['name'] == @vpn }
-      #raise("couldn't find '#{@vpn}' in config") if vpn.nil?
-      #@username = vpn['user']
-      #@openvpn_conf = vpn['conf']
-      #@route = vpn['route']
-      #@auth_path = File.join(File.dirname(@openvpn_conf), "#{@vpn}.auth")
-    rescue Exception => e
-      @log.puts("Error: #{e}".colorize(:red)) and exit
-    end
+  # Private properties
+  @@_yml = nil
+  @@_mutex = Mutex.new
+
+  # Public properties
+  class << self
+    attr_accessor :path
   end
 
+  # Singleton new alternate
+  # @param config_name [String] name of the config file
+  def self.init(config_name)
+    if !@@_yml
+      @path = "/home/#{User.name}/.config/#{config_name}"
+      Log.puts("Error: config '#{config_name}' doesn't exist!".colorize(:red)) and exit unless File.exists?(@path)
+      begin
+        @@_yml = YAML.load_file(@path)
+      rescue Exception => e
+        @log.puts("Error: #{e}".colorize(:red)) and exit
+      end
+    end
+
+    return nil
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

@@ -42,7 +42,7 @@ class ThreadComm < Thread
 
   # Pop a message off the thread's queue or block
   def pop
-    return @comm_out.pop 
+    return @comm_out.pop
   end
 
   # Push the given message onto the threads incoming queue
