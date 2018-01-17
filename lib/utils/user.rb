@@ -22,6 +22,11 @@
 
 module User
 
+  # Check if the current user has root privileges
+  def self.root?
+    return Process.uid.zero?
+  end
+
   # Get the current user taking into account sudo priviledges
   def self.name
     return Process.uid.zero? ? Etc.getpwuid(ENV['SUDO_UID'].to_i).name : ENV['USER']

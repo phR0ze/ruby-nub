@@ -24,6 +24,9 @@ require 'minitest/autorun'
 require_relative '../lib/utils/user'
 
 class TestUser < Minitest::Test
+  def test_root?
+    assert(!User.root?)
+  end
 
   def test_name
     assert(User.name != 'root')
