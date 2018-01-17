@@ -22,9 +22,10 @@
 
 module Utils
   require 'utils/cmds'
+  require 'utils/config'
   require 'utils/log'
   require 'utils/string'
-  require 'utils/thread_commm'
+  require 'utils/thread_comm'
   require 'utils/user'
 end
 
