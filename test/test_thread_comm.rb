@@ -21,12 +21,31 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
-require_relative '../lib/utils/string'
+require_relative '../lib/utils/thread_comm'
 
 class TestString < Minitest::Test
+  def test_thread_comm
 
-  def test_to_ascii
-    assert_equal("test", "test".to_ascii)
+    # Start comm thread
+    t1 = ThreadComm.new{|comm_in, comm_out|
+      while true do
+        if !comm_in.empty?
+          msg = comm_in.pop
+          assert_equal(msg.cmd, 'halt')
+          comm_out << ThreadMsg.new('halted', nil)
+          break
+        end
+        sleep(0.01)
+      end
+    }
+
+    # Give comm thread some time to run
+    sleep(0.25)
+    t1.push(ThreadMsg.new('halt', nil))
+
+    # Send mesage to comm thread and listen for response
+    msg = t1.pop
+    assert_equal(msg.cmd, 'halted')
   end
 end
 

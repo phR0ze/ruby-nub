@@ -26,15 +26,27 @@ ThreadMsg = Struct.new(:cmd, :value)
 
 # Provides a simple messaging mechanism between threads
 class ThreadComm < Thread
-  @in = nil
-  @out = nil
 
   # Define two queues to use for communication
-  def initialize(*args, &block)
+  # @param comm_in [Queue] incomming queue to use
+  def initialize(comm_in:nil)
+    @out = Queue.new
     @in = comm_in ? comm_in : Queue.new
-    @out = comm_out ? comm_out : Queue.new
 
-    super(*args, &block)
+    # Proc.new will return the block given to this method
+    # pass it along to thread .new with arguments
+    super(@in, @out, &Proc.new)
+  end
+
+  # Pop a message off the thread's queue or block
+  def pop
+    return @out.pop 
+  end
+
+  # Push the given message onto the threads incoming queue
+  # @param msg [ThreadMsg] message to the thread
+  def push(msg)
+    @in << msg
   end
 end
 

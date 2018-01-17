@@ -23,6 +23,8 @@
 module Utils
   require 'utils/cmds'
   require 'utils/log'
+  require 'utils/string'
+  require 'utils/thread_commm'
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
