@@ -23,8 +23,9 @@
 require 'minitest/autorun'
 require_relative '../lib/utils/thread_comm'
 
-class TestString < Minitest::Test
-  def test_thread_comm
+class TestThreadComm < Minitest::Test
+
+  def test_messaging
 
     # Start comm thread
     t1 = ThreadComm.new{|comm_in, comm_out|
@@ -32,16 +33,15 @@ class TestString < Minitest::Test
         if !comm_in.empty?
           msg = comm_in.pop
           assert_equal(msg.cmd, 'halt')
-          comm_out << ThreadMsg.new('halted', nil)
+          comm_out << ThreadMsg.new('halted')
           break
         end
-        sleep(0.01)
       end
     }
 
     # Give comm thread some time to run
-    sleep(0.25)
-    t1.push(ThreadMsg.new('halt', nil))
+    sleep(0.01)
+    t1.push(ThreadMsg.new('halt'))
 
     # Send mesage to comm thread and listen for response
     msg = t1.pop

@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 #MIT License
 #Copyright (c) 2018 phR0ze
 #
@@ -19,36 +20,14 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require 'ostruct'
+require 'minitest/autorun'
+require_relative '../lib/utils/config'
 
-# Provides a simple messaging mechanism between threads
-ThreadMsg = Struct.new(:cmd, :value)
+class TestConfig < Minitest::Test
 
-# Thread with communication queues for simple messaging
-class ThreadComm < Thread
-  def initialize
-    @comm_in = Queue.new
-    @comm_out = Queue.new
-
-    # Proc.new will return the block given to this method
-    # pass it along to thread .new with arguments
-    super(@comm_in, @comm_out, &Proc.new)
-  end
-
-  # Check if the message queue is empty
-  def empty?
-    return @comm_out.empty?
-  end
-
-  # Pop a message off the thread's queue or block
-  def pop
-    return @comm_out.pop 
-  end
-
-  # Push the given message onto the threads incoming queue
-  # @param msg [ThreadMsg] message to the thread
-  def push(msg)
-    @comm_in << msg
+  def test_init
+    config = Config.new('foo.bar')
+    assert_equal(config.path, "/home/#{ENV['USER']}/.config/foo.bar")
   end
 end
 

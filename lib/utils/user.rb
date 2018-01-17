@@ -1,3 +1,4 @@
+#!/usr/bin/env ruby
 #MIT License
 #Copyright (c) 2018 phR0ze
 #
@@ -19,37 +20,13 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require 'ostruct'
+module User
 
-# Provides a simple messaging mechanism between threads
-ThreadMsg = Struct.new(:cmd, :value)
-
-# Thread with communication queues for simple messaging
-class ThreadComm < Thread
-  def initialize
-    @comm_in = Queue.new
-    @comm_out = Queue.new
-
-    # Proc.new will return the block given to this method
-    # pass it along to thread .new with arguments
-    super(@comm_in, @comm_out, &Proc.new)
+  # Get the current user taking into account sudo priviledges
+  def name
+    return Process.uid.zero? ? Etc.getpwuid(ENV['SUDO_UID'].to_i).name : ENV['USER']
   end
-
-  # Check if the message queue is empty
-  def empty?
-    return @comm_out.empty?
-  end
-
-  # Pop a message off the thread's queue or block
-  def pop
-    return @comm_out.pop 
-  end
-
-  # Push the given message onto the threads incoming queue
-  # @param msg [ThreadMsg] message to the thread
-  def push(msg)
-    @comm_in << msg
-  end
+  module_function(:name)
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

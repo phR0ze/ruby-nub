@@ -19,37 +19,35 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require 'ostruct'
+require 'yaml'
+require_relative 'user'
 
-# Provides a simple messaging mechanism between threads
-ThreadMsg = Struct.new(:cmd, :value)
+# Simple YAML configuration for an application
+# using singleton pattern to handle multi consumers
+class Config
+  def self.instance
 
-# Thread with communication queues for simple messaging
-class ThreadComm < Thread
-  def initialize
-    @comm_in = Queue.new
-    @comm_out = Queue.new
-
-    # Proc.new will return the block given to this method
-    # pass it along to thread .new with arguments
-    super(@comm_in, @comm_out, &Proc.new)
+  # Encapsulate configuration
+  # @param config_name [String] name of the config file
+  def initialize(config_name)
+    @@path = "/home/#{User.name}/.config/#{config_name}"
+    #@log.puts("Error: config file doesn't exist!".colorize(:red)) and exit unless File.exists?(@config_path)
+ 
+    begin
+      @config = YAML.load_file(@@path)
+      @vpns = @config['vpns']
+      raise("missing 'vpns' list in config") if vpns.nil?
+      #vpn = vpns.find{|x| x['name'] == @vpn }
+      #raise("couldn't find '#{@vpn}' in config") if vpn.nil?
+      #@username = vpn['user']
+      #@openvpn_conf = vpn['conf']
+      #@route = vpn['route']
+      #@auth_path = File.join(File.dirname(@openvpn_conf), "#{@vpn}.auth")
+    rescue Exception => e
+      @log.puts("Error: #{e}".colorize(:red)) and exit
+    end
   end
 
-  # Check if the message queue is empty
-  def empty?
-    return @comm_out.empty?
-  end
-
-  # Pop a message off the thread's queue or block
-  def pop
-    return @comm_out.pop 
-  end
-
-  # Push the given message onto the threads incoming queue
-  # @param msg [ThreadMsg] message to the thread
-  def push(msg)
-    @comm_in << msg
-  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

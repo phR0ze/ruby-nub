@@ -21,5 +21,9 @@
 #SOFTWARE.
 
 require_relative 'test_cmds'
+require_relative 'test_config'
+require_relative 'test_string'
+require_relative 'test_thread_comm'
+require_relative 'test_user'
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
