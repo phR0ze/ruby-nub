@@ -40,15 +40,25 @@ class ThreadComm < Thread
     return @comm_out.empty?
   end
 
-  # Pop a message off the thread's queue or block
+  # Pop a message off the thread's outbound queue or block
   def pop
-    return @comm_out.pop
+    msg = @comm_out.pop
+    return msg if msg.is_a?(ThreadMsg)
+    return ThreadMsg.new(msg)
   end
 
-  # Push the given message onto the threads incoming queue
+  # Push the given message onto the threads inbound queue
   # @param msg [ThreadMsg] message to the thread
-  def push(msg)
-    @comm_in << msg
+  # @param cmd [String] message command to the thread
+  # @param value [String] message value to the thread
+  def push(*args)
+    if args.first.is_a?(ThreadMsg)
+      @comm_in << args.first
+    elsif args.size == 1
+      @comm_in << ThreadMsg.new(args.first)
+    else
+      @comm_in << ThreadMsg.new(args.first, args.last)
+    end
   end
 end
 

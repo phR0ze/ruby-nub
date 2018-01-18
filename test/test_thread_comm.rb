@@ -25,10 +25,8 @@ require_relative '../lib/utils/thread_comm'
 
 class TestThreadComm < Minitest::Test
 
-  def test_messaging
-
-    # Start comm thread
-    t1 = ThreadComm.new{|comm_in, comm_out|
+  def setup
+    @t1 = ThreadComm.new{|comm_in, comm_out|
       while true do
         if !comm_in.empty?
           msg = comm_in.pop
@@ -38,13 +36,35 @@ class TestThreadComm < Minitest::Test
         end
       end
     }
+  end
 
+  def test_msg_with_ThreadMsg
     # Give comm thread some time to run
     sleep(0.01)
-    t1.push(ThreadMsg.new('halt'))
+    @t1.push(ThreadMsg.new('halt'))
 
     # Send mesage to comm thread and listen for response
-    msg = t1.pop
+    msg = @t1.pop
+    assert_equal(msg.cmd, 'halted')
+  end
+
+  def test_msg_with_cmd
+    # Give comm thread some time to run
+    sleep(0.01)
+    @t1.push('halt')
+
+    # Send mesage to comm thread and listen for response
+    msg = @t1.pop
+    assert_equal(msg.cmd, 'halted')
+  end
+
+  def test_msg_with_cmd_and_value
+    # Give comm thread some time to run
+    sleep(0.01)
+    @t1.push('halt', 'value')
+
+    # Send mesage to comm thread and listen for response
+    msg = @t1.pop
     assert_equal(msg.cmd, 'halted')
   end
 end
