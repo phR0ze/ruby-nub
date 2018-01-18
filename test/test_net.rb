@@ -26,7 +26,7 @@ require_relative '../lib/utils/net'
 class TestProxy < Minitest::Test
 
   def test_exist?
-    assert(Net.proxy_exist?)
+    assert(!Net.proxy_exist?)
   end
 end
 
