@@ -20,14 +20,14 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-module Utils
-  require 'utils/cmds'
-  require 'utils/config'
-  require 'utils/log'
-  require 'utils/proxy'
-  require 'utils/string'
-  require 'utils/thread_comm'
-  require 'utils/user'
+require 'minitest/autorun'
+require_relative '../lib/utils/proxy'
+
+class TestProxy < Minitest::Test
+
+  def test_exist?
+    assert(Proxy.exist?)
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
