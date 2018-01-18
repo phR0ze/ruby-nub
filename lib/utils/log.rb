@@ -76,14 +76,24 @@ module Log
   # Format the given string for use in log
   def format(str)
     @@_monitor.synchronize{
-      return "#{Time.now.utc.iso8601(3)}:: #{str}"
+
+      # Locate caller
+      stack = caller_locations(3,4)
+      i = -1
+      while i += 1 do
+        mod = File.basename(stack[i].path, '.rb')
+        break if mod != 'log' and mod != 'monitor'
+      end
+      loc = ":#{File.basename(stack[i].path, '.rb')}:#{stack[i].label}:#{stack[i].lineno}"
+
+      return "#{Time.now.utc.iso8601(3)}#{loc}:: #{str}"
     }
   end
 
-  def print(str, notime:false)
+  def print(str, stamp:true)
     @@_monitor.synchronize{
       str ||= ""
-      str = format(str) if !notime
+      str = format(str) if stamp
 
       if !str.empty?
         @file << strip_colorize(str) if @path
@@ -95,10 +105,10 @@ module Log
     }
   end
 
-  def puts(str, notime: false)
+  def puts(str, stamp: true)
     @@_monitor.synchronize{
       str ||= ""
-      str = format(str) if !notime
+      str = format(str) if stamp
 
       if !str.empty?
         @file << "#{strip_colorize(str)}\n" if @path
