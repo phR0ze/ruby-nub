@@ -42,7 +42,7 @@ module Net
   # Get a shell export string for proxies
   def self.proxy_export
     get_proxy if @@_proxy.nil?
-    return exist? ? (@@_proxy.map{|k,v| "export #{k}=#{v}"} * ';') + ";" : nil
+    return proxy_exist? ? (@@_proxy.map{|k,v| "export #{k}=#{v}"} * ';') + ";" : nil
   end
 
   # Check if a proxy is set

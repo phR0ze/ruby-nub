@@ -60,6 +60,18 @@ class TestLog < Minitest::Test
     assert(msg.include?(":: "))
     assert(msg.end_with?('foo.bar'))
   end
+
+  def test_parent_log
+    begin
+      raise('raise and exception')
+    rescue
+      msg = Log.format("foo.bar")
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_parent_log:"))
+      assert(msg.end_with?('foo.bar'))
+    end
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

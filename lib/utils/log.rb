@@ -78,11 +78,11 @@ module Log
     @@_monitor.synchronize{
 
       # Locate caller
-      stack = caller_locations(3,4)
+      stack = caller_locations(3,6)
       i = -1
       while i += 1 do
         mod = File.basename(stack[i].path, '.rb')
-        break if mod != 'log' and mod != 'monitor'
+        break if mod != 'log' and mod != 'monitor' and !stack[i].label.include?('rescue in')
       end
       loc = ":#{File.basename(stack[i].path, '.rb')}:#{stack[i].label}:#{stack[i].lineno}"
 
