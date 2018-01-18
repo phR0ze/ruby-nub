@@ -20,17 +20,17 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-module Proxy
+module Net 
   @@_proxy = nil
 
   # Accessors
-  def self.ftp; get if @@_proxy.nil?; @@_proxy['ftp_proxy']; end
-  def self.http; get if @@_proxy.nil?; @@_proxy['http_proxy']; end
-  def self.https; get if @@_proxy.nil?; @@_proxy['https_proxy']; end
-  def self.no; get if @@_proxy.nil?; @@_proxy['no_proxy']; end
+  def self.ftp_proxy; get_proxy if @@_proxy.nil?; @@_proxy['ftp_proxy']; end
+  def self.http_proxy; get_proxy if @@_proxy.nil?; @@_proxy['http_proxy']; end
+  def self.https_proxy; get_proxy if @@_proxy.nil?; @@_proxy['https_proxy']; end
+  def self.no_proxy; get_proxy if @@_proxy.nil?; @@_proxy['no_proxy']; end
 
   # Get the system proxy variables
-  def self.get
+  def self.get_proxy
     @@_proxy = {
       'ftp_proxy' => ENV['ftp_proxy'],
       'http_proxy' => ENV['http_proxy'],
@@ -40,14 +40,20 @@ module Proxy
   end
 
   # Get a shell export string for proxies
-  def self.export
+  def self.proxy_export
+    get_proxy if @@_proxy.nil?
     return exist? ? (@@_proxy.map{|k,v| "export #{k}=#{v}"} * ';') + ";" : nil
   end
 
   # Check if a proxy is set
-  def self.exist?
-    get if @@_proxy.nil?
+  def self.proxy_exist?
+    get_proxy if @@_proxy.nil?
     return !@@_proxy['http_proxy'].nil?
+  end
+
+  # Check if the system is configured for the kernel to forward ip traffic
+  def self.ip_forward?
+    return `cat /proc/sys/net/ipv4/ip_forward`.include?('1')
   end
 end
 

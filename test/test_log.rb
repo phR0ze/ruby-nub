@@ -48,7 +48,7 @@ class TestLog < Minitest::Test
     Log.print('foo.bar')
     assert(!Log.empty?)
     msg = Log.pop
-    assert(msg.start_with?(Time.now.strftime('%Y-%m-%d')))
+    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
     assert(msg.include?(":: "))
     assert(msg.end_with?('foo.bar'))
     assert(Log.empty?)
@@ -56,7 +56,7 @@ class TestLog < Minitest::Test
 
   def test_format
     msg = Log.format("foo.bar")
-    assert(msg.start_with?(Time.now.strftime('%Y-%m-%d')))
+    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
     assert(msg.include?(":: "))
     assert(msg.end_with?('foo.bar'))
   end

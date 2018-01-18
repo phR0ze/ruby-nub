@@ -22,6 +22,8 @@
 
 require_relative 'test_cmds'
 require_relative 'test_config'
+require_relative 'test_log'
+require_relative 'test_net'
 require_relative 'test_string'
 require_relative 'test_thread_comm'
 require_relative 'test_user'

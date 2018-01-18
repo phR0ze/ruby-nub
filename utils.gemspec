@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name        = 'utils'
-  spec.version     = '0.0.8'
+  spec.version     = '0.0.9'
   spec.date        = '2018-01-17'
   spec.summary     = "Collection of useful utilities"
   spec.description = "Collection of useful utilities"
@@ -10,7 +10,7 @@ Gem::Specification.new do |spec|
                       "lib/utils/cmds.rb",
                       "lib/utils/config.rb",
                       "lib/utils/log.rb",
-                      "lib/utils/proxy.rb",
+                      "lib/utils/net.rb",
                       "lib/utils/string.rb",
                       "lib/utils/thread_comm.rb",
                       "lib/utils/user.rb"]

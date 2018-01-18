@@ -24,7 +24,7 @@ module Utils
   require 'utils/cmds'
   require 'utils/config'
   require 'utils/log'
-  require 'utils/proxy'
+  require 'utils/net'
   require 'utils/string'
   require 'utils/thread_comm'
   require 'utils/user'

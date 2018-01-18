@@ -21,12 +21,12 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
-require_relative '../lib/utils/proxy'
+require_relative '../lib/utils/net'
 
 class TestProxy < Minitest::Test
 
   def test_exist?
-    assert(Proxy.exist?)
+    assert(Net.proxy_exist?)
   end
 end
 
