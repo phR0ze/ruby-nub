@@ -1,7 +1,7 @@
 Gem::Specification.new do |spec|
   spec.name        = 'utils'
-  spec.version     = '0.0.9'
-  spec.date        = '2018-01-17'
+  spec.version     = '0.0.10'
+  spec.date        = '2018-01-18'
   spec.summary     = "Collection of useful utilities"
   spec.description = "Collection of useful utilities"
   spec.authors     = ["Patrick Crummett"]
