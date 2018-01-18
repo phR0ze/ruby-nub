@@ -33,9 +33,9 @@ class TestLog < Minitest::Test
 
     File.stub(:exist?, true){
       File.stub(:open, mock){
-        Log.init(path: 'foo.bar')
+        Log.init(path: 'foo.bar', queue:false, stdout:false)
         id = Log.id
-        Log.init(path: 'foo.foo')
+        Log.init(path: 'foo.bar', queue:false, stdout:false)
         assert_equal(id, Log.id)
       }
     }
@@ -44,7 +44,7 @@ class TestLog < Minitest::Test
   end
 
   def test_queue
-    Log.init(queue: true, stdout: false)
+    Log.init(path:nil, queue: true, stdout: false)
     Log.print('foo.bar')
     assert(!Log.empty?)
     msg = Log.pop
@@ -55,6 +55,7 @@ class TestLog < Minitest::Test
   end
 
   def test_format
+    Log.init(path:nil, queue: false, stdout: false)
     msg = Log.format("foo.bar")
     assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
     assert(msg.include?(":: "))
@@ -62,6 +63,7 @@ class TestLog < Minitest::Test
   end
 
   def test_parent_log
+    Log.init(path:nil, queue: false, stdout: false)
     begin
       raise('raise and exception')
     rescue

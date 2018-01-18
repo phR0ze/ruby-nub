@@ -90,9 +90,18 @@ module Log
     }
   end
 
-  def print(str, stamp:true)
+  def print(*args)
     @@_monitor.synchronize{
-      str ||= ""
+      str = args.first.is_a?(String) ? args.first : ''
+
+      # Determine if stamp should be used
+      stamp = true
+      opts = args.find{|x| x.is_a?(Hash)}
+      if opts and opts.key?(:stamp)
+        stamp = opts[:stamp]
+      end
+
+      # Format message
       str = format(str) if stamp
 
       if !str.empty?
@@ -105,16 +114,24 @@ module Log
     }
   end
 
-  def puts(str, stamp: true)
+  def puts(*args)
     @@_monitor.synchronize{
-      str ||= ""
+      str = args.first.is_a?(String) ? args.first : ''
+
+      # Determine if stamp should be used
+      stamp = true
+      opts = args.find{|x| x.is_a?(Hash)}
+      if opts and opts.key?(:stamp)
+        stamp = opts[:stamp]
+      end
+
+      # Format message
       str = format(str) if stamp
 
-      if !str.empty?
-        @file << "#{strip_colorize(str)}\n" if @path
-        @@_queue << "#{str}\n" if @@_queue
-        $stdout << "#{str}\n" if @@_stdout
-      end
+      # Handle output
+      @file.puts(strip_colorize(str)) if @path
+      @@_queue << "#{str}\n" if @@_queue
+      $stdout.puts(str) if @@_stdout
 
       return true
     }
