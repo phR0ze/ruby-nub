@@ -19,11 +19,25 @@
 #LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
+require 'ostruct'
 
 module Net 
   @@_proxy = nil
+  @@_agents = OpenStruct.new({
+    windows_ie_6: 'Windows IE 6',
+    windows_ie_7: 'Windows IE 7',
+    windows_mozilla: 'Windows Mozilla',
+    mac_safari: 'Mac Safari',
+    mac_firefox: 'Mac FireFox',
+    mac_mozilla: 'Mac Mozilla',
+    linux_mozilla: 'Linux Mozilla',
+    linux_firefox: 'Linux Firefox',
+    linux_konqueror: 'Linux Konqueror',
+    iphone: 'iPhone'
+  })
 
   # Accessors
+  def self.agents; @@_agents; end
   def self.ftp_proxy; get_proxy if @@_proxy.nil?; @@_proxy['ftp_proxy']; end
   def self.http_proxy; get_proxy if @@_proxy.nil?; @@_proxy['http_proxy']; end
   def self.https_proxy; get_proxy if @@_proxy.nil?; @@_proxy['https_proxy']; end

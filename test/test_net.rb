@@ -26,7 +26,15 @@ require_relative '../lib/utils/net'
 class TestProxy < Minitest::Test
 
   def test_exist?
-    assert(!Net.proxy_exist?)
+    if ENV['http_proxy']
+      assert(Net.proxy_exist?)
+    else
+      assert(!Net.proxy_exist?)
+    end
+  end
+
+  def test_agents
+    assert_equal(Net.agents.windows_ie_6, 'Windows IE 6')
   end
 end
 
