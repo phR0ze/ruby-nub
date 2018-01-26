@@ -62,7 +62,7 @@ class TestLog < Minitest::Test
     assert(msg.end_with?('foo.bar'))
   end
 
-  def test_parent_log
+  def test_parent_log_rescue
     Log.init(path:nil, queue: false, stdout: false)
     begin
       raise('raise and exception')
@@ -70,10 +70,22 @@ class TestLog < Minitest::Test
       msg = Log.format("foo.bar")
       assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
       assert(msg.include?(":: "))
-      assert(msg.include?(":test_parent_log:"))
+      assert(msg.include?(":test_parent_log_rescue:"))
       assert(msg.end_with?('foo.bar'))
     end
   end
+
+  def test_parent_log_block
+    Log.init(path:nil, queue: false, stdout: false)
+    ['1', '2'].each{|x|
+      msg = Log.format("foo.bar")
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_parent_log_block:"))
+      assert(msg.end_with?('foo.bar'))
+    }
+  end
+
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

@@ -58,6 +58,7 @@ module Log
   # @param stdout [Bool] turn on or off stdout
   def init(path:nil, queue:false, stdout:true)
     @id ||= 'singleton'.object_id
+    @nested = ['rescue in', 'block in', 'each']
 
     @path = path ? File.expand_path(path) : nil
     @@_queue = queue ? Queue.new : nil
@@ -78,11 +79,11 @@ module Log
     @@_monitor.synchronize{
 
       # Locate caller
-      stack = caller_locations(3,6)
+      stack = caller_locations(3,10)
       i = -1
       while i += 1 do
         mod = File.basename(stack[i].path, '.rb')
-        break if mod != 'log' and mod != 'monitor' and !stack[i].label.include?('rescue in')
+        break if mod != 'log' and mod != 'monitor' and !@nested.any?{|x| stack[i].label.include?(x)}
       end
       loc = ":#{File.basename(stack[i].path, '.rb')}:#{stack[i].label}:#{stack[i].lineno}"
 
