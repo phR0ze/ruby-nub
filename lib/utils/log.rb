@@ -58,7 +58,6 @@ module Log
   # @param stdout [Bool] turn on or off stdout
   def init(path:nil, queue:false, stdout:true)
     @id ||= 'singleton'.object_id
-    @nested = ['rescue in', 'block in', 'each']
 
     @path = path ? File.expand_path(path) : nil
     @@_queue = queue ? Queue.new : nil
@@ -83,9 +82,16 @@ module Log
       i = -1
       while i += 1 do
         mod = File.basename(stack[i].path, '.rb')
-        break if mod != 'log' and mod != 'monitor' and !@nested.any?{|x| stack[i].label.include?(x)}
+        break if !['log', 'monitor'].include?(mod)
       end
-      loc = ":#{File.basename(stack[i].path, '.rb')}:#{stack[i].label}:#{stack[i].lineno}"
+
+      # Save lineno from non log call but use method name rather than rescue or block
+      lineno = stack[i].lineno
+      nested = ['rescue in', 'block in', 'each']
+      while nested.any?{|x| stack[i].label.include?(x)} do
+        i += 1
+      end
+      loc = ":#{File.basename(stack[i].path, '.rb')}:#{stack[i].label}:#{lineno}"
 
       return "#{Time.now.utc.iso8601(3)}#{loc}:: #{str}"
     }
