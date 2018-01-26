@@ -99,7 +99,7 @@ module Log
 
   def print(*args)
     @@_monitor.synchronize{
-      str = args.first.is_a?(String) ? args.first : ''
+      str = !args.first.is_a?(Hash) ? args.first.to_s : ''
 
       # Determine if stamp should be used
       stamp = true
@@ -123,7 +123,7 @@ module Log
 
   def puts(*args)
     @@_monitor.synchronize{
-      str = args.first.is_a?(String) ? args.first : ''
+      str = !args.first.is_a?(Hash) ? args.first.to_s : ''
 
       # Determine if stamp should be used
       stamp = true

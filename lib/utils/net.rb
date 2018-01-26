@@ -38,6 +38,8 @@ module Net
 
   # Accessors
   def self.agents; @@_agents; end
+  def self.proxy_uri; http_proxy ? http_proxy.split(':')[1][2..-1] : nil; end
+  def self.proxy_port; http_proxy ? http_proxy.split(':').last : nil; end
   def self.ftp_proxy; get_proxy if @@_proxy.nil?; @@_proxy['ftp_proxy']; end
   def self.http_proxy; get_proxy if @@_proxy.nil?; @@_proxy['http_proxy']; end
   def self.https_proxy; get_proxy if @@_proxy.nil?; @@_proxy['https_proxy']; end
