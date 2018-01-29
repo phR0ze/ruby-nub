@@ -51,6 +51,11 @@ module Config
     return nil
   end
 
+  # Simple bool whether the config exists or not on disk
+  def exists?
+      return File.exists?(@path)
+  end
+
   # Hash like getter
   def self.[](key)
     return @@_yml[key]
