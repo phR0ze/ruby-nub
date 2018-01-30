@@ -21,6 +21,15 @@
 
 require 'time'
 require 'monitor'
+require 'ostruct'
+
+begin
+  require 'colorize'
+rescue Exception => e
+  mod = e.message.split(' ').last.sub('/', '-')
+  mod = e.message[/.*Could not find '(.*?)'.*/, 1] if e.message.include?("Could not find")
+  !puts("Error: install missing package with 'sudo pacman -S ruby-#{mod}'") and exit
+end
 
 ColorPair = Struct.new(:str, :color)
 ColorMap = {
@@ -35,6 +44,13 @@ ColorMap = {
   "39" => "gray88"   # default
 }
 
+LogLevel = OpenStruct.new({
+  error: 0,
+  warn: 1,
+  info: 2,
+  debug: 3
+})
+
 # Singleton logger for use with both console and gtk+ apps
 # logs to both a file and the console/queue for shell/UI apps
 # uses Mutex.synchronize where required to provide thread safty
@@ -42,6 +58,7 @@ module Log
   extend self
 
   # Private properties
+  @@_level = 3
   @@_queue = nil
   @@_stdout = true
   @@_monitor = Monitor.new
@@ -56,10 +73,12 @@ module Log
   # @param path [String] path to log file
   # @param queue [Bool] use a queue as well
   # @param stdout [Bool] turn on or off stdout
-  def init(path:nil, queue:false, stdout:true)
+  # @param level [LogLevel] level at which to log
+  def init(path:nil, level:LogLevel.debug, queue:false, stdout:true)
     @id ||= 'singleton'.object_id
 
     @path = path ? File.expand_path(path) : nil
+    @@_level = level
     @@_queue = queue ? Queue.new : nil
     @@_stdout = stdout
 
@@ -142,6 +161,32 @@ module Log
 
       return true
     }
+  end
+
+  def error(*args)
+    return puts(*args) if LogLevel.error <= @@_level
+    return true
+  end
+
+  def warn(*args)
+    return puts(*args) if LogLevel.warn <= @@_level
+    return true
+  end
+
+  def info(*args)
+    return puts(*args) if LogLevel.info <= @@_level
+    return true
+  end
+
+  def debug(*args)
+    return puts(*args) if LogLevel.debug <= @@_level
+    return true
+  end
+
+  # Log the given message in red and exit
+  # @param msg [String] message to log
+  def die(msg)
+    puts(msg.colorize(:red)) and exit
   end
 
   # Remove an item from the queue, block until one exists

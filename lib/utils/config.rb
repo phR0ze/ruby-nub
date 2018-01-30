@@ -20,7 +20,15 @@
 #SOFTWARE.
 
 require 'yaml'
-require 'colorize'
+
+begin
+  require 'colorize'
+rescue Exception => e
+  mod = e.message.split(' ').last.sub('/', '-')
+  mod = e.message[/.*Could not find '(.*?)'.*/, 1] if e.message.include?("Could not find")
+  !puts("Error: install missing package with 'sudo pacman -S ruby-#{mod}'") and exit
+end
+
 require_relative 'user'
 require_relative 'log'
 

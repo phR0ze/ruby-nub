@@ -20,7 +20,14 @@
 #SOFTWARE.
 
 require 'optparse'              # cmd line options: OptionParser
-require 'colorize'              # color output for commands
+
+begin
+  require 'colorize'
+rescue Exception => e
+  mod = e.message.split(' ').last.sub('/', '-')
+  mod = e.message[/.*Could not find '(.*?)'.*/, 1] if e.message.include?("Could not find")
+  !puts("Error: install missing package with 'sudo pacman -S ruby-#{mod}'") and exit
+end
 
 # Command option class provides a way to encapsulate a command with
 # any additional properties.
