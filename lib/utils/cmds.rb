@@ -75,6 +75,11 @@ class Cmds
     return @opts[key] if @opts[key]
   end
 
+  # Hash like accessor for editing options
+  def []=(key, value)
+    @opts[key] = value
+  end
+
   # Add a command to the command list
   # Params:
   # +cmd+:: name of the command

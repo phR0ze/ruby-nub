@@ -34,6 +34,18 @@ class TestCmds < Minitest::Test
     opts.parse!
     assert(opts[:fix_links])
   end
+
+  def test_updating_options
+    ARGV.clear and ARGV << 'fix-links'
+    opts = Cmds.new('test', '0.1.2', "")
+    opts.add('fix-links', 'Test hypend commands', [
+      CmdOpt.new('--all', 'List all info'),
+    ])
+    opts.parse!
+    assert(!opts[:bob])
+    opts[:bob] = true
+    assert(opts[:bob])
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
