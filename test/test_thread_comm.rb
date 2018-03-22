@@ -21,7 +21,7 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
-require_relative '../lib/utils/thread_comm'
+require_relative '../lib/nub/thread_comm'
 
 class TestThreadComm < Minitest::Test
 

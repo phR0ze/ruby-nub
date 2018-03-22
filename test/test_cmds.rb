@@ -21,7 +21,7 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
-require_relative '../lib/utils/cmds'
+require_relative '../lib/nub/cmds'
 
 class TestCmds < Minitest::Test
 

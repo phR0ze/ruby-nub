@@ -1,7 +1,7 @@
-# ruby-utils
+# ruby-nub
 Collection of ruby utils I've used in several of my projects and wanted re-usable
 
-[![Build Status](https://travis-ci.org/phR0ze/ruby-utils.svg)](https://travis-ci.org/phR0ze/ruby-utils)
+[![Build Status](https://travis-ci.org/phR0ze/ruby-nub.svg)](https://travis-ci.org/phR0ze/ruby-nub)
 
 ## classes
 

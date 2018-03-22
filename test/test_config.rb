@@ -21,7 +21,7 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
-require_relative '../lib/utils/config'
+require_relative '../lib/nub/config'
 
 class TestConfig < Minitest::Test
 

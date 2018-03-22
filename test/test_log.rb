@@ -22,7 +22,7 @@
 
 require 'time'
 require 'minitest/autorun'
-require_relative '../lib/utils/log'
+require_relative '../lib/nub/log'
 
 class TestLog < Minitest::Test
 

@@ -21,7 +21,7 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
-require_relative '../lib/utils/user'
+require_relative '../lib/nub/user'
 
 class TestUser < Minitest::Test
   def test_root?

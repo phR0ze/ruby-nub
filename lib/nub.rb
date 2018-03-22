@@ -20,14 +20,14 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-module Utils
-  require 'utils/cmds'
-  require 'utils/config'
-  require 'utils/log'
-  require 'utils/net'
-  require 'utils/string'
-  require 'utils/thread_comm'
-  require 'utils/user'
+module Nub
+  require 'nub/cmds'
+  require 'nub/config'
+  require 'nub/log'
+  require 'nub/net'
+  require 'nub/string'
+  require 'nub/thread_comm'
+  require 'nub/user'
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

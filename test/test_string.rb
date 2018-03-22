@@ -21,7 +21,7 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
-require_relative '../lib/utils/string'
+require_relative '../lib/nub/string'
 
 class TestString < Minitest::Test
 
