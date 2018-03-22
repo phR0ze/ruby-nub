@@ -21,6 +21,8 @@
 
 # Monkey patch string with some useful methods
 class String
+
+  # Convert the string to ascii, stripping out or converting all non-ascii characters
   def to_ascii
     options = {
       :invalid => :replace,

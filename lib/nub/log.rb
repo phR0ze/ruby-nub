@@ -51,13 +51,11 @@ LogLevel = OpenStruct.new({
   debug: 3
 })
 
-# Singleton logger for use with both console and gtk+ apps
-# logs to both a file and the console/queue for shell/UI apps
-# uses Mutex.synchronize where required to provide thread safty
+# Singleton logger for use with both console and gtk+ apps.
+# Logs to both a file and the console/queue for shell/UI apps.
+# Uses Mutex.synchronize where required to provide thread safety.
 module Log
   extend self
-
-  # Private properties
   @@_level = 3
   @@_queue = nil
   @@_stdout = true
@@ -68,8 +66,7 @@ module Log
     attr_reader(:id, :path)
   end
 
-  # Singleton new alternate initialize
-  # Can be called multiple times to reset
+  # Singleton's init method can be called multiple times to reset.
   # @param path [String] path to log file
   # @param queue [Bool] use a queue as well
   # @param stdout [Bool] turn on or off stdout

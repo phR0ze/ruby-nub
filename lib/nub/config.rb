@@ -32,8 +32,8 @@ end
 require_relative 'user'
 require_relative 'log'
 
-# Simple YAML configuration for an application
-# uses singleton pattern for single source of truth
+# Simple YAML configuration for an application.
+# Uses singleton pattern for single source of truth
 module Config
 
   # Private properties

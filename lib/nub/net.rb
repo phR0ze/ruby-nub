@@ -21,6 +21,7 @@
 #SOFTWARE.
 require 'ostruct'
 
+# Collection of simply network related helpers
 module Net 
   @@_proxy = nil
   @@_agents = OpenStruct.new({

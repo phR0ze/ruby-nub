@@ -20,6 +20,7 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
+# Nub is the top level module useful for requiring all sub-modules at once.
 module Nub
   require 'nub/cmds'
   require 'nub/config'

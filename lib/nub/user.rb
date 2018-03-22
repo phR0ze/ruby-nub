@@ -20,6 +20,7 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
+# Some user related helper methods
 module User
 
   # Check if the current user has root privileges
