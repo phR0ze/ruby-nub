@@ -14,6 +14,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
     * [Push Gem](#push-gem)
 * [Integrate with Travis-CI](#integrate-with-travis-ci)
     * [Install Travis Client](#install-travis-client)
+    * [Deploy Ruby Gem on Tag](#deploy-ruby-gem-on-tag)
  
 ## Classes <a name="classes"></a>
 Different classes provided with the gem are explained below
@@ -64,3 +65,32 @@ gem list -r nub
 ```bash
 sudo gem install travis --no-user-install
 ```
+
+### Deploy Ruby Gem on Tag <a name="deploy-ruby-gem-on-tag"></a>
+Create the file ***.travis.yml***
+
+* Using ***cache: bundler*** builds the dependencies once and then reuses them in future builds.
+* Script ***rake*** is actually the default for ***ruby*** but calling it out for clarity to run unit tests
+* Deploying using the ***rubygems*** provider on tags
+
+```yaml
+language: ruby
+sudo: false
+cache: bundler
+rvm:
+  - 2.5.0
+before_install:
+  - gem update --system
+script:
+  - rake
+deploy:
+  provider: rubygems
+  api_key:
+    secure: <encrypted key>
+  gem: nub
+  on:
+    tags: true
+notifications:
+  email: false
+```
+
