@@ -12,6 +12,8 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
     * [Build Gem](#build-gem)
     * [Install Gem](#install-gem)
     * [Push Gem](#push-gem)
+* [Integrate with Travis-CI](#integrate-with-travis-ci)
+    * [Install Travis Client](#install-travis-client)
  
 ## Classes <a name="classes"></a>
 Different classes provided with the gem are explained below
@@ -56,3 +58,9 @@ gem push nub-0.0.1.gem
 gem list -r nub
 ```
 
+## Integrate with Travis-CI <a name="integrate-with-travis-ci"></a>
+
+### Install Travis Client <a name="install-travis-client"></a>
+```bash
+sudo gem install travis --no-user-install
+```

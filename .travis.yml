@@ -3,24 +3,16 @@ sudo: false
 cache: bundler
 rvm:
   - 2.5.0
-
-# Update rubygems to fix bundler issue
-# https://github.com/travis-ci/travis-ci/issues/8978
 before_install:
   - gem update --system
-  - gem --version
-
 script:
   - rake
-
-# Build and deploy ruby gem
-deploy: 
+deploy:
   provider: rubygems
+  api_key:
+    secure: hexiyMbnq+oD1qHvcGfEuC8dcKLccv//bE8/p53vzE6gxFW9ANVQTOOPor4EzoOMfPq8jCDP8gzXSH4bIGxv8rgU5iSNv91DR2pjVzrz3riHE3ZZSExFRTPqnZi33EdwDi5+QtWe+hqdC0/jSiG0KqJ8F01JK+S9kAv6gsSqmv7hT8aPn6w0w9Ce/m8yW0pVFCrpRV7YOGc7RSI2vE0/H6HWGv0hcoBzgafmCEiKEzfR525LMlX6UYIw1fw+w4tM04NLxExOkq65QkqEqjNUDemoNnfC4j3zudPLb0/PPzhxNSeg22u0bDiOiZ/mDzDbtlf5Wrcy+4u5JtVjaAPizLUe/JNLkWiHx9acVDavanasJmk9OitY1rjtuTkfixGY630G+p86Skz0k4KUsGCeJ1hs+aGN9ImITY2IjlgoIzxPTexBAdHRYmYd6rAUi51D1F7CsKWKxIf161dzPM3jZ3ruD5JNagBMnyCH0LxsAc/Lbdi1u2LfJrBdW2wSDKYr1L/wkt9zYPnKjdTrVXDNhMASyvLOIFm+dAaLGMMKGKHx/bPq5QpZFe8pcFBmFzrK5QXq9Ldq0L3TW52zQQyGbjsgpvxrKJjejjpq368dWFlWNGVAMTfDbxpyYb2z+UETnvyRTVxgIyqMDQlv6FeHxCN8GGa7iMt0+tHCny7mE9c=
   gem: nub
-  api: "$RUBYGEMS_TOKEN"
   on:
     tags: true
-
-# Configure notifications
 notifications:
   email: false
