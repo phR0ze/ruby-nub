@@ -15,5 +15,6 @@ Gem::Specification.new do |spec|
   # Development dependencies
   spec.add_development_dependency('bundler', '~> 1.16')
   spec.add_development_dependency('rake', '~> 12.0')
+  spec.add_development_dependency('coveralls' '~> 0')
 end
 # vim: ft=ruby:ts=2:sw=2:sts=2

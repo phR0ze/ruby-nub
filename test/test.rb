@@ -20,6 +20,9 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
+require 'coveralls'
+Coveralls.wear!
+
 require_relative 'test_cmds'
 require_relative 'test_config'
 require_relative 'test_log'
