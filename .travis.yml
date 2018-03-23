@@ -17,8 +17,7 @@ script:
 deploy: 
   provider: rubygems
   gem: nub
-  api:
-    secure: ""
+  api: "$RUBYGEMS_TOKEN"
   on:
     tags: true
 
