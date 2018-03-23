@@ -60,6 +60,7 @@ gem list -r nub
 ```
 
 ## Integrate with Travis-CI <a name="integrate-with-travis-ci"></a>
+Example project https://github.com/Integralist/Sinderella
 
 ### Install Travis Client <a name="install-travis-client"></a>
 ```bash
