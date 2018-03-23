@@ -5,6 +5,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 [![Gem Version](https://badge.fury.io/rb/nub.svg)](https://badge.fury.io/rb/nub)
 [![Coverage Status](https://coveralls.io/repos/github/phR0ze/ruby-nub/badge.svg?branch=master)](https://coveralls.io/github/phR0ze/ruby-nub?branch=master)
 [![Dependency Status](https://beta.gemnasium.com/badges/github.com/phR0ze/ruby-nub.svg)](https://beta.gemnasium.com/projects/github.com/phR0ze/ruby-nub)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ### Table of Contents
 * [Classes](#classes)
