@@ -19,11 +19,11 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require 'optparse'
+require 'options'
 require 'colorize'
 
-# Command option class provides a way to encapsulate a command with
-# any additional properties.
+# Command option class provides a way to encapsulate a command with additional
+# properties.
 class CmdOpt
   attr_reader(:key)
   attr_reader(:conf)
@@ -39,19 +39,18 @@ class CmdOpt
   end
 end
 
-# Simple command wrapper around options parsing
-# When multiple commands are given they share the options passed along with them
-class Cmds
+# An implementation of git like command syntax for ruby applications:
+# see https://github.com/phR0ze/ruby-nub
+class Commander
 
   # Option and command names have all hyphens removed
   attr_accessor(:cmds)
   attr_accessor(:opts)
 
   # Initialize the commands for your application
-  # Params:
-  # +app+:: application name e.g. reduce
-  # +version+:: version of the application e.g. 1.0.0
-  # +examples+:: optional examples to list after the title before usage
+  # @param app [String] application name e.g. reduce
+  # @param version [String] version of the application e.g. 1.0.0
+  # @param examples [String] optional examples to list after the title before usage
   def initialize(app, version, examples)
     @opts = {}
     @cmds = {}
@@ -74,10 +73,9 @@ class Cmds
   end
 
   # Add a command to the command list
-  # Params:
-  # +cmd+:: name of the command
-  # +desc+:: description of the command
-  # +opts+:: list of command options
+  # @param cmd [String] name of the command
+  # @param desc [String] description of the command
+  # @param opts [List] list of command options
   def add(cmd, desc, opts)
     @cmds_config[cmd] = {desc: desc, inopts: opts, outopts: OptionParser.new{|parser|
       required = opts.map{|x| x.conf if x.required}.compact * ' '

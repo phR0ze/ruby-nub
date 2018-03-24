@@ -9,7 +9,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 
 ### Table of Contents
 * [Classes](#classes)
-    * [cmds](#cmds)
+    * [Commander](#commander)
 * [Ruby Gem Creation](#ruby-gem-creation)
     * [Package Layout](#package-layout)
     * [Build Gem](#build-gem)
@@ -22,8 +22,54 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 ## Classes <a name="classes"></a>
 Different classes provided with the gem are explained below
 
-### cmds <a name="cmds"></a>
-Command like syntax for Ruby command line parameters
+### Commander <a name="commander"></a>
+Commander was created mainly because all available options parsers seemed complicated and overweight
+and partly because I enjoyed understanding every bit going into it. Commands offers ***git*** like
+command syntax that is becoming so popular. Personally I like the syntax as it feels cleaner and
+faster to type.
+
+There are two kinds of options available for use, ***positional*** and ***named***. Options are any
+non command parameters that come after a command. Commands may be chained together sequentially
+either with their own independent options (i.e. options between the commands) or sharing the next
+command's options. ***Postitional*** options get their position from the order in which they are
+added to your command during configuration. Only positional options are taken into account for
+order. Positional options are identified by the absence of preceding dashes.
+
+Thus you have the ability to form expressions as follows:
+```bash
+# Single command with no options
+./app list
+# Command with a positional option
+./app clean all
+# Command with a positional option and a named option
+./app clean all --minus=iso
+# Chained commands sharing all command options to the right of the next command
+# thus the 'clean' and 'build' commands share the 'all' positional option
+./app clean build all
+# Multiple commands run sequentially with positional options per command
+# thus the 'clean' and 'build' commands each have their own positional arguments
+./app clean all build all
+```
+
+Ruby syntax to configure this behavior would look like:
+```ruby
+# Creates a new instance of commander with app settings as given
+commander = Commander.new('app-name', 'app-version', 'examples')
+# Create a new command with out any options
+commander.add('list', 'List build', [])
+# Create a new command with positional and named options
+commander.add('clean', 'Clean build', [
+  CmdOpt.new(nil, 'Clean given components [all|iso|image]')
+  CmdOpt.new('--minus=COMPONENT', 'Clean all except COMPONENT')
+])
+commander.add('build', 'Build components', [
+  CmdOpt.new(nil, 'Build given components [all|iso|image]')
+])
+commander.parse!
+```
+
+**Required**
+Options can be required using the ***required:true*** options param
 
 ## Ruby Gem Creation <a name="ruby-gem-creation"></a>
 http://guides.rubygems.org/make-your-own-gem/

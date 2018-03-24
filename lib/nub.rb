@@ -22,7 +22,7 @@
 
 # Nub is the top level module useful for requiring all sub-modules at once.
 module Nub
-  require 'nub/cmds'
+  require 'nub/commander'
   require 'nub/config'
   require 'nub/log'
   require 'nub/net'

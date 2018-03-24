@@ -21,31 +21,40 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
-require_relative '../lib/nub/cmds'
+require_relative '../lib/nub/commander'
 
-class TestCmds < Minitest::Test
+class TestCommander < Minitest::Test
 
-  def test_hypens_to_underscores_in_command
-    ARGV.clear and ARGV << 'fix-links'
-    opts = Cmds.new('test', '0.1.2', "")
-    opts.add('fix-links', 'Test hypend commands', [
-      CmdOpt.new('--all', 'List all info'),
-    ])
-    opts.parse!
-    assert(opts[:fix_links])
+  def test_single_command_no_options
+    ARGV.clear and ARGV << 'foo'
+    cmds = Commander.new('test', '0', nil)
+    cmds.add('foo', 'foo command', [])
+    assert_nil(cmds[:foo])
+    cmds.parse!
+    assert(cmds[:foo])
   end
 
-  def test_updating_options
-    ARGV.clear and ARGV << 'fix-links'
-    opts = Cmds.new('test', '0.1.2', "")
-    opts.add('fix-links', 'Test hypend commands', [
-      CmdOpt.new('--all', 'List all info'),
-    ])
-    opts.parse!
-    assert(!opts[:bob])
-    opts[:bob] = true
-    assert(opts[:bob])
-  end
+#  def test_hypens_to_underscores_in_command
+#    ARGV.clear and ARGV << 'fix-links'
+#    opts = Cmds.new('test', '0.1.2', "")
+#    opts.add('fix-links', 'Test hypend commands', [
+#      CmdOpt.new('--all', 'List all info'),
+#    ])
+#    opts.parse!
+#    assert(opts[:fix_links])
+#  end
+#
+#  def test_updating_options
+#    ARGV.clear and ARGV << 'fix-links'
+#    opts = Cmds.new('test', '0.1.2', "")
+#    opts.add('fix-links', 'Test hypend commands', [
+#      CmdOpt.new('--all', 'List all info'),
+#    ])
+#    opts.parse!
+#    assert(!opts[:bob])
+#    opts[:bob] = true
+#    assert(opts[:bob])
+#  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
