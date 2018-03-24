@@ -19,7 +19,7 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require 'options'
+require 'optparse'
 require 'colorize'
 
 # Command option class provides a way to encapsulate a command with additional
