@@ -25,7 +25,7 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
-  def test_app_help
+  def test_app_help_nothing_given
     cmdr = Commander.new('test', '0', nil)
     cmdr.add('list', 'List command', [])
     cmdr.parse!

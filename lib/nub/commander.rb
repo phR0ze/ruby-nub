@@ -41,19 +41,21 @@ end
 # An implementation of git like command syntax for ruby applications:
 # see https://github.com/phR0ze/ruby-nub
 class Commander
-
-  # Option and command names have all hyphens removed
   attr_accessor(:cmds)
-  attr_accessor(:opts)
 
   # Initialize the commands for your application
   # @param app [String] application name e.g. reduce
   # @param version [String] version of the application e.g. 1.0.0
   # @param examples [String] optional examples to list after the title before usage
   def initialize(app, version, examples)
-    @opts = {}
+
+    # Command set are the incoming user set commands/options
+    # {command_name => {}}
     @cmds = {}
-    @cmds_config = {}
+
+    # Command config is the configuration for the command parser
+    # {command_name => {}}
+    @config = {}
 
     @app = app
     @version = version
@@ -63,7 +65,6 @@ class Commander
   # Hash like accessor for checking if a command or option is set
   def [](key)
     return @cmds[key] if @cmds[key]
-    return @opts[key] if @opts[key]
   end
 
   # Hash like accessor for editing options
@@ -76,7 +77,7 @@ class Commander
   # @param desc [String] description of the command
   # @param opts [List] list of command options
   def add(cmd, desc, opts)
-    @cmds_config[cmd] = {
+    @config[cmd] = {
       desc: desc,
       opts: opts,
       banner: "#{banner}\nUsage: "
@@ -94,7 +95,7 @@ class Commander
 
     # Construct help for the application
     help = "COMMANDS:\n"
-    @cmds_config.each{|k,v| help += "    #{k.ljust(33, ' ')}#{v[:desc]}\n" }
+    @config.each{|k,v| help += "    #{k.ljust(33, ' ')}#{v[:desc]}\n" }
     help += "\nsee './#{@app} COMMAND --help' for specific command help"
 
     # Construct top level option parser
@@ -104,10 +105,10 @@ class Commander
 #      parser.separator(help)
 #    end
 
-    # Invoke the option parser with help if any un-recognized commands are given
+    # Invoke help if any un-recognized commands are given
     cmds = ARGV.select{|x| not x.start_with?('-')}
-    ARGV.clear and ARGV << '-h' if ARGV.empty? or cmds.any?{|x| not @cmds_config[x]}
-    cmds.each{|x| puts("Error: Invalid command '#{x}'".colorize(:red)) if not @cmds_config[x]}
+    ARGV.clear and ARGV << '-h' if ARGV.empty? or cmds.any?{|x| not @config[x]}
+    cmds.each{|x| puts("Error: Invalid command '#{x}'".colorize(:red)) if not @config[x]}
     @optparser.order!
 
 #    # Now remove them from ARGV leaving only options
@@ -117,14 +118,14 @@ class Commander
 #    cmds.each do |cmd|
 #      begin
 #        @cmds[cmd.gsub('-', '_').to_sym] = true
-#        @cmds_config[cmd][:outopts].order!
+#        @config[cmd][:outopts].order!
 #
 #        # Ensure that all required options were given
-#        @cmds_config[cmd][:inopts].each{|x|
+#        @config[cmd][:inopts].each{|x|
 #          if x.required and not @opts[x.key]
 #            puts("Error: Missing required option '#{x.key}'".colorize(:red))
 #            ARGV.clear and ARGV << "-h"
-#            @cmds_config[cmd][:outopts].order!
+#            @config[cmd][:outopts].order!
 #          end
 #        }
 #      rescue OptionParser::InvalidOption => e
