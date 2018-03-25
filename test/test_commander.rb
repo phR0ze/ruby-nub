@@ -25,14 +25,32 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
-  def test_single_command_no_options
-    ARGV.clear and ARGV << 'foo'
-    cmds = Commander.new('test', '0', nil)
-    cmds.add('foo', 'foo command', [])
-    assert_nil(cmds[:foo])
-    cmds.parse!
-    assert(cmds[:foo])
+  def test_app_help
+    cmdr = Commander.new('test', '0', nil)
+    cmdr.add('list', 'List command', [])
+    cmdr.parse!
+    #assert(cmdr[:list])
   end
+
+#  def test_single_command_no_options
+#    ARGV.clear and ARGV << 'list'
+#    cmdr = Commander.new('test', '0', nil)
+#    cmdr.add('list', 'List command', [])
+#    assert_nil(cmdr[:list])
+#    cmdr.parse!
+#    assert(cmdr[:list])
+#  end
+  
+#  def test_single_command_position_option
+#    ARGV.clear and ARGV << 'clean all'
+#    cmdr = Commander.new('test', '0', nil)
+#    cmdr.add('clean', 'Clean command', [
+#      CmdOpt.new(nil, 'Clean given components [all|iso|image]')
+#    ])
+#    cmdr.parse!
+#    assert(cmdr[:clean])
+#    #assert(cmdr[:clean_pos0])
+#  end
 
 #  def test_hypens_to_underscores_in_command
 #    ARGV.clear and ARGV << 'fix-links'

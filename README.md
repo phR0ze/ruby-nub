@@ -8,6 +8,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ### Table of Contents
+* [Deploy](#deploy)
 * [Classes](#classes)
     * [Commander](#commander)
 * [Ruby Gem Creation](#ruby-gem-creation)
@@ -19,6 +20,9 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
     * [Install Travis Client](#install-travis-client)
     * [Deploy Ruby Gem on Tag](#deploy-ruby-gem-on-tag)
  
+## Deploy <a name="deploy"></a>
+Run: `bundle install --system`
+
 ## Classes <a name="classes"></a>
 Different classes provided with the gem are explained below
 
@@ -54,18 +58,35 @@ Thus you have the ability to form expressions as follows:
 Ruby syntax to configure this behavior would look like:
 ```ruby
 # Creates a new instance of commander with app settings as given
-commander = Commander.new('app-name', 'app-version', 'examples')
+cmdr = Commander.new('app-name', 'app-version', 'examples')
 # Create a new command with out any options
-commander.add('list', 'List build', [])
+cmdr.add('list', 'List build', [])
 # Create a new command with positional and named options
-commander.add('clean', 'Clean build', [
+cmdr.add('clean', 'Clean build', [
   CmdOpt.new(nil, 'Clean given components [all|iso|image]')
   CmdOpt.new('--minus=COMPONENT', 'Clean all except COMPONENT')
 ])
-commander.add('build', 'Build components', [
+cmdr.add('build', 'Build components', [
   CmdOpt.new(nil, 'Build given components [all|iso|image]')
 ])
-commander.parse!
+cmdr.parse!
+```
+
+Help would look something like:
+```bash
+app_v0.0.1
+--------------------------------------------------------------------------------
+Examples:
+Clean build all: ./app clean build all
+
+Usage: ./app [commands] [options]
+    -h, --help                       Print command/options help
+COMMANDS:
+    list                             List out components
+    clean                            Clean ISO components
+    build                            Build ISO components
+
+see './app COMMAND --help' for specific command help
 ```
 
 **Required**

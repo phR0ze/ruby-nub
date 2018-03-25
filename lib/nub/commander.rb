@@ -19,7 +19,6 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require 'optparse'
 require 'colorize'
 
 # Command option class provides a way to encapsulate a command with additional
@@ -61,7 +60,7 @@ class Commander
     @examples = examples || ''
   end
 
-  # Hash like accessor for checking if a command is set
+  # Hash like accessor for checking if a command or option is set
   def [](key)
     return @cmds[key] if @cmds[key]
     return @opts[key] if @opts[key]
@@ -77,12 +76,11 @@ class Commander
   # @param desc [String] description of the command
   # @param opts [List] list of command options
   def add(cmd, desc, opts)
-    @cmds_config[cmd] = {desc: desc, inopts: opts, outopts: OptionParser.new{|parser|
-      required = opts.map{|x| x.conf if x.required}.compact * ' '
-      required += ' ' if not required.empty?
-      parser.banner = "#{banner}\nUsage: ./#{@app} #{cmd} #{required}[options]"
-      opts.each{|opt| parser.on(opt.conf, opt.type, opt.desc){|x| @opts[opt.key] = x }}
-    }}
+    @cmds_config[cmd] = {
+      desc: desc,
+      opts: opts,
+      banner: "#{banner}\nUsage: "
+    }
   end
 
   # Returns banner string
@@ -97,14 +95,14 @@ class Commander
     # Construct help for the application
     help = "COMMANDS:\n"
     @cmds_config.each{|k,v| help += "    #{k.ljust(33, ' ')}#{v[:desc]}\n" }
-    help += "\nsee './#{@app} COMMAND --help' for specific command info"
+    help += "\nsee './#{@app} COMMAND --help' for specific command help"
 
     # Construct top level option parser
-    @optparser = OptionParser.new do |parser|
-      parser.banner = "#{banner}\n#{@examples}Usage: ./#{@app} commands [options]"
-      parser.on('-h', '--help', 'Print command/options help') {|x| !puts(parser) and exit }
-      parser.separator(help)
-    end
+#    @optparser = OptionParser.new do |parser|
+#      parser.banner = "#{banner}\n#{@examples}Usage: ./#{@app} commands [options]"
+#      parser.on('-h', '--help', 'Print command/options help') {|x| !puts(parser) and exit }
+#      parser.separator(help)
+#    end
 
     # Invoke the option parser with help if any un-recognized commands are given
     cmds = ARGV.select{|x| not x.start_with?('-')}
@@ -112,29 +110,29 @@ class Commander
     cmds.each{|x| puts("Error: Invalid command '#{x}'".colorize(:red)) if not @cmds_config[x]}
     @optparser.order!
 
-    # Now remove them from ARGV leaving only options
-    ARGV.reject!{|x| not x.start_with?('-')}
-
-    # Parse each command which will consume options from ARGV
-    cmds.each do |cmd|
-      begin
-        @cmds[cmd.gsub('-', '_').to_sym] = true
-        @cmds_config[cmd][:outopts].order!
-
-        # Ensure that all required options were given
-        @cmds_config[cmd][:inopts].each{|x|
-          if x.required and not @opts[x.key]
-            puts("Error: Missing required option '#{x.key}'".colorize(:red))
-            ARGV.clear and ARGV << "-h"
-            @cmds_config[cmd][:outopts].order!
-          end
-        }
-      rescue OptionParser::InvalidOption => e
-        # Options parser will raise an invalid exception if it doesn't recognize something
-        # However we want to ignore that as it may be another command's option
-        ARGV << e.to_s[/(-.*)/, 1]
-      end
-    end
+#    # Now remove them from ARGV leaving only options
+#    ARGV.reject!{|x| not x.start_with?('-')}
+#
+#    # Parse each command which will consume options from ARGV
+#    cmds.each do |cmd|
+#      begin
+#        @cmds[cmd.gsub('-', '_').to_sym] = true
+#        @cmds_config[cmd][:outopts].order!
+#
+#        # Ensure that all required options were given
+#        @cmds_config[cmd][:inopts].each{|x|
+#          if x.required and not @opts[x.key]
+#            puts("Error: Missing required option '#{x.key}'".colorize(:red))
+#            ARGV.clear and ARGV << "-h"
+#            @cmds_config[cmd][:outopts].order!
+#          end
+#        }
+#      rescue OptionParser::InvalidOption => e
+#        # Options parser will raise an invalid exception if it doesn't recognize something
+#        # However we want to ignore that as it may be another command's option
+#        ARGV << e.to_s[/(-.*)/, 1]
+#      end
+#    end
 
     # Ensure all options were consumed
     !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?
