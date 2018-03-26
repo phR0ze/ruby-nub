@@ -43,6 +43,7 @@ class Option
     @long = nil
     @short = nil
     @desc = desc
+    @allowed = allowed
     @required = required
 
     # Parse the key into its components (short hand, long hand, and hint)
@@ -56,6 +57,9 @@ class Option
       @hint = key[/.*=(.*)$/, 1]
       @short = key[/^(-\w).*$/, 1]
       @long = key[/(--\w+)(=\w+)*$/, 1]
+    else
+      # Always require positional options
+      @required = true
     end
 
     # Validate and set type
@@ -64,11 +68,39 @@ class Option
     @type = String if !key && !type
     @type = FalseClass if key and !type
     @type = type if type
+  end
 
-#
-#    @conf = conf.gsub(' ', '=')
-#    @key = conf.gsub('-', '').split('=').first.to_sym
-#    @type = type
+  # Parse the given command line parameters
+  # @param key [String] option key
+  # @param val [String] option val
+  # @returns the value if there is a match
+  def parse(key, val)
+    value = nil
+
+    # Positional option
+    if !@key && !val
+      value = params.first
+
+    # Named option flag
+    elsif params.size == 1 && [@short, @long].any?{|x| x == params.first}
+      value = true
+
+    # Named option short with value
+    elsif params.size == 2 && params.first == @short
+      value = params.
+    elsif params.size == 2 && params.first == @short
+    end
+
+    # Convert value to appropriate type
+    if value
+      if @type == Integer
+        value = value.to_i
+      elsif @type == Array
+        value = value.split(',')
+      end
+    end
+  
+    return value
   end
 end
 
