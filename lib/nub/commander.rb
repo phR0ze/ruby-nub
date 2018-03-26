@@ -21,20 +21,54 @@
 
 require 'colorize'
 
-# Command option class provides a way to encapsulate a command with additional
-# properties.
-class CmdOpt
+# Command option encapsulation
+class Option
   attr_reader(:key)
-  attr_reader(:conf)
-  attr_reader(:type)
+  attr_reader(:short)
+  attr_reader(:long)
+  attr_reader(:hint)
   attr_reader(:desc)
+  attr_reader(:type)
+  attr_reader(:allowed)
   attr_reader(:required)
-  def initialize(conf, desc, type:nil, required:false)
-    @conf = conf.gsub(' ', '=')
-    @key = conf.gsub('-', '').split('=').first.to_sym
-    @type = type
+
+  # Create a new option instance
+  # @param key [String] option short hand, long hand and hint e.g. -s|--skip=COMPONENTS
+  # @param desc [String] the option's description
+  # @param type [Type] the option's type
+  # @param required [Bool] require the option if true else optional
+  # @param allowed []
+  def initialize(key, desc, type:nil, required:false, allowed:nil)
+    @hint = nil
+    @long = nil
+    @short = nil
     @desc = desc
     @required = required
+
+    # Parse the key into its components (short hand, long hand, and hint)
+    # Valid forms to look for
+    # -h, --help, --help=HINT, -h|--help, -h|--help=HINT
+    !puts("Error: invalid option key #{key}".colorize(:red)) and
+      exit if key && (key.count('=') > 1 or key.count('|') > 1 or
+        key[/(^-[a-zA-Z]$)|(^--[a-zA-Z0-9\-_]+$)|(^--[a-zA-Z\-_]+=\w+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+=\w+$)/].nil?)
+    @key = key
+    if key
+      @hint = key[/.*=(.*)$/, 1]
+      @short = key[/^(-\w).*$/, 1]
+      @long = key[/(--\w+)(=\w+)*$/, 1]
+    end
+
+    # Validate and set type
+    !puts("Error: invalid option type #{type}".colorize(:red)) and
+      exit if ![String, Integer, Array, nil].any?{|x| type == x}
+    @type = String if !key && !type
+    @type = FalseClass if key and !type
+    @type = type if type
+
+#
+#    @conf = conf.gsub(' ', '=')
+#    @key = conf.gsub('-', '').split('=').first.to_sym
+#    @type = type
   end
 end
 
@@ -42,24 +76,24 @@ end
 # see https://github.com/phR0ze/ruby-nub
 class Commander
   attr_accessor(:cmds)
+  Command = Struct.new(:name, :desc, :opts)
 
   # Initialize the commands for your application
   # @param app [String] application name e.g. reduce
   # @param version [String] version of the application e.g. 1.0.0
   # @param examples [String] optional examples to list after the title before usage
   def initialize(app, version, examples)
-
-    # Command set are the incoming user set commands/options
-    # {command_name => {}}
-    @cmds = {}
-
-    # Command config is the configuration for the command parser
-    # {command_name => {}}
-    @config = {}
-
     @app = app
     @version = version
     @examples = examples || ''
+
+    # Configuration for the command parser
+    # {command_name => {}}
+    @config = {}
+
+    # Incoming user set commands/options
+    # {command_name => {}}
+    @cmds = {}
   end
 
   # Hash like accessor for checking if a command or option is set

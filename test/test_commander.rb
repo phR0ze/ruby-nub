@@ -25,12 +25,99 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
-  def test_app_help_nothing_given
-    cmdr = Commander.new('test', '0', nil)
-    cmdr.add('list', 'List command', [])
-    cmdr.parse!
-    #assert(cmdr[:list])
+  def test_option_type
+    # No type, positional option
+    assert_equal(String, Option.new(nil, "").type) 
+    
+    # No type, named option
+    assert_equal(FalseClass, Option.new("-h|--help", "").type) 
+
+    # Valid types
+    assert_equal(String, Option.new(nil, "", type:String).type) 
+    assert_equal(Integer, Option.new(nil, "", type:Integer).type) 
+    assert_equal(Array, Option.new(nil, "", type:Array).type) 
+
+    # Invalid type
+    $stdout.stub(:write, nil){
+      assert_raises(SystemExit){Option.new(nil, "", type:Hash)}
+    }
   end
+
+  def test_option_desc
+    assert_equal("foobar", Option.new(nil, "foobar").desc) 
+  end
+
+  def test_option_key
+
+    # Error cases
+    $stdout.stub(:write, nil){
+      assert_raises(SystemExit){Option.new("-s=COMPONENTS", nil)}
+      assert_raises(SystemExit){Option.new("-s|--skip=FOO=BAR", nil)}
+      assert_raises(SystemExit){Option.new("-s|--skip|", nil)}
+      assert_raises(SystemExit){Option.new("--skip=FOO=BAR", nil)}
+      assert_raises(SystemExit){Option.new("-s, --skip=FOO", nil)}
+      assert_raises(SystemExit){Option.new("--skip|-s", nil)}
+      assert_raises(SystemExit){Option.new("--skip|", nil)}
+      assert_raises(SystemExit){Option.new("-s|skip", nil)}
+      assert_raises(SystemExit){Option.new("-s|=HINT", nil)}
+    }
+
+    # short only
+    opt = Option.new("-s", nil)
+    assert_nil(opt.hint)
+    assert_equal("-s", opt.key)
+    assert_equal("-s", opt.short)
+    assert_nil(opt.long)
+
+    # long only
+    opt = Option.new("--skip", nil)
+    assert_nil(opt.hint)
+    assert_equal("--skip", opt.key)
+    assert_equal("--skip", opt.long)
+    assert_nil(opt.short)
+
+    # long, hint
+    opt = Option.new("--skip=HINT", nil)
+    assert_equal("HINT", opt.hint)
+    assert_equal("--skip", opt.long)
+    assert_nil(opt.short)
+    
+    # short, long no hint
+    opt = Option.new("-s|--skip", nil)
+    assert_nil(opt.hint)
+    assert_equal("-s|--skip", opt.key)
+    assert_equal("-s", opt.short)
+    assert_equal("--skip", opt.long)
+
+    # short, long, hint
+    opt = Option.new("-s|--skip=HINT", nil)
+    assert_equal("HINT", opt.hint)
+    assert_equal("-s|--skip=HINT", opt.key)
+    assert_equal("-s", opt.short)
+    assert_equal("--skip", opt.long)
+  end
+
+#  def test_command_with_opts
+#    cmd = Command.new("foo", "Foo command")
+#
+#    assert_equal("foo", cmd.name)
+#    assert_equal("Foo command", cmd.desc)
+#    assert_empty(cmd.opts)
+#  end
+
+#  def test_command_no_opts
+#    cmd = Command.new("foo", "Foo command")
+#    assert_equal("foo", cmd.name)
+#    assert_equal("Foo command", cmd.desc)
+#    assert_empty(cmd.opts)
+#  end
+
+#  def test_app_help_nothing_given
+#    cmdr = Commander.new('test', '0', nil)
+#    cmdr.add('list', 'List command', [])
+#    cmdr.parse!
+#    #assert(cmdr[:list])
+#  end
 
 #  def test_single_command_no_options
 #    ARGV.clear and ARGV << 'list'

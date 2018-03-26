@@ -133,18 +133,20 @@ Example ruby configuration:
 ```ruby
 # Creates a new instance of commander with app settings as given
 app = 'builder'
-cmdr = Commander.new(app, '0.0.1', "Full Build: ./#{app} clean build all\n".colorize(:green))
+examples = "Full Build: ./#{app} clean build all\n".colorize(:green)
+examples += "ISO/Image Build: ./#{app} clean build iso,image\n".colorize(:green)
+cmdr = Commander.new(app, '0.0.1', examples)
 # Create command with a positional argument
 cmdr.add('list', 'List components')
 cmdr.add('clean', 'Clean components', options:[
-  Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image'])
+  Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array)
   Option.new('-d|--debug', 'Debug mode')
   Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer)
   Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
 ])
 # Create command with a single positional option with an allowed check for value
 cmdr.add('build', 'Build components', options:[
-  Option.new(nil, 'Build given components', allowed:['all', 'iso', 'image'])
+  Option.new(nil, 'Build given components', allowed:['all', 'iso', 'image', 'boot'], type:Array)
 ])
 cmdr.parse!
 ```
@@ -155,6 +157,7 @@ builder_v0.0.1
 --------------------------------------------------------------------------------
 Examples:
 Full Build: ./builder clean build all
+Image/ISO Build: ./builder clean build iso,image
 
 Usage: ./builder [commands] [options]
     -h, --help                          Print command/options help: Flag
@@ -183,7 +186,7 @@ builder_v0.0.1
 Clean components
 
 Usage: ./builder clean [options]
-    clean0                              Clean given components (all,iso,image): String, Required
+    clean0                              Clean given components (all,iso,image,boot): String, Required
     -h|--help                           Print command/options help: Flag
     -d|--debug                          Debug mode: Flag
     -m|--min=MINIMUM                    Set the minimum clean (1,2,3): Integer
@@ -197,6 +200,7 @@ builder_v0.0.1
 Build components
 
 Usage: ./builder build [options]
+    build0                              Build given components (all,iso,image,boot): String, Required
     -h|--help                           Print command/options help
 ```
 
