@@ -9,8 +9,10 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 
 ### Table of Contents
 * [Deploy](#deploy)
-* [Classes](#classes)
-    * [Commander](#commander)
+* [Commander](#commander)
+    * [Commands](#commands)
+    * [Options](#options)
+    * [Help](#help)
 * [Ruby Gem Creation](#ruby-gem-creation)
     * [Package Layout](#package-layout)
     * [Build Gem](#build-gem)
@@ -51,10 +53,10 @@ Example ruby configuration:
 # Creates a new instance of commander with app settings as given
 cmdr = Commander.new('app-name', 'app-version', 'examples')
 # Create two commands with a chainable positional option
-cmdr.add('clean', 'Clean build', [
+cmdr.add('clean', 'Clean build', options:[
   Option.new(nil, 'Clean given components')
 ])
-cmdr.add('build', 'Build components', [
+cmdr.add('build', 'Build components', options:[
   Option.new(nil, 'Build given components')
 ])
 cmdr.parse!
@@ -70,29 +72,32 @@ Example command line expressions:
 ./app clean all build all
 ```
 
-### Positional vs Named options <a name="positional-vs-named-options"></a>
+### Options <a name="options"></a>
+
 There are two kinds of options available for use, ***positional*** and ***named***. Positional
 options are identified by the absence of preceding dash/dashes and interpreted according to the
 order in which they were found. Positional options are a value being passed into the application.
 Named options have a name that is prefixed with a dash (short hand) or two dashes (long hand) e.g.
-***-h*** or ***--help*** and may simply be a bool flag or pass in a value. Option values require a
-***type*** so that commander can interpret how to use them. The supported value types are
-***Bool|String|Array***. Values may be checked or not checked via the ***allowed*** config param.
-Positional options default to type String while named options default to type Bool.
+***-h*** or ***--help*** and may simply be a flag or pass in a value. Option values require a
+***type*** so that Commander can interpret how to use them. The supported value types are
+***Flag, Integer, String, Array***. Values may be checked or not checked via the ***allowed***
+config param.  Positional options default to type String while named options default to type Flag.
+Positional options are named internally with the command concatted with a an int for order ***e.g.
+clean0*** zero based. Positional params are always required.
 
 Example ruby configuration:
 ```ruby
 # Creates a new instance of commander with app settings as given
 cmdr = Commander.new('app-name', 'app-version', 'examples')
 # Create command with a positional argument
-cmdr.add('clean', 'Clean build', [
-  Option.new(nil, 'Clean given components', allowed=['all', 'iso', 'image'])
+cmdr.add('clean', 'Clean build', options:[
+  Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image'])
   Option.new('-d|--debug', 'Debug mode')
-  Option.new('-s|--skip=COMPONENT', 'Skip the given components', allowed=['iso', 'image'])
+  Option.new('-s|--skip=COMPONENT', 'Skip the given components', allowed:['iso', 'image'], type:String)
 ])
 # Create command with a single positional option with an allowed check for value
-cmdr.add('build', 'Build components', [
-  Option.new(nil, 'Build given components', allowed=['all', 'iso', 'image'])
+cmdr.add('build', 'Build components', options:[
+  Option.new(nil, 'Build given components', allowed:['all', 'iso', 'image'])
 ])
 cmdr.parse!
 ```
@@ -102,81 +107,97 @@ Example command line expressions:
 # The parameter 'all' coming after the command 'clean' is a positional option with a default type of
 # String that is checked against the optional 'allowed' values configuration
 ./app clean all
-# The parameter '-s' coming after the command 'clean' is a named option
-./app clean -m
-# The parameter '--min' coming after the command 'clean' is a named option and is exactly equivalent
-# to the former expression just using the long hand form
-./app clean --min
-# The parameter '-m' coming after the command 'clean' is a named option
-./app clean -m
+# The parameter '-d' coming after the command 'clean' is a named option using short hand form with
+# an input type defaulted to Flag (i.e. a simple flag)
+./app clean -d
+# The parameter '--debug' coming after the command 'clean' is a named option using long hand form with
+# an input type defaulted to Flag (i.e. a simple flag); exactly equivalent to the former expression
+./app clean --debug
+# The parameter '-s' coming after the command 'clean' is a named option using short hand form with
+# an input value 'iso' of type String
+./app clean -s iso
+# The parameter '--skip' coming after the command 'clean' is a named option using long hand form
+# with an input value 'iso' of type String; exactly equivalent to the former expression
+./app clean --skip=iso
 ```
 
-### Command help
--h and --help are automatically supported by all commands
+### Help <a name="help"></a>
+Help for your appliation and commands is automatically supported with the ***-h*** and ***--help***
+flags and is generated from the app ***name***, ***version***, ***examples***, ***commands***,
+***descriptions*** and ***options*** given in Commander's configuration. Examples is just a free
+form string that is displayed before usage so user's have an idea of how to put together the
+commands and options. Allowed checks are added to the end of option descriptions in parenthesis.
+Type and required indicators are added after allowed check descriptions.
 
-### Global vs Command vs Chained options
-Options may affect change at the global level or for a specific command or may affect one or more
-commands if the commands are chained. Options used to the left of all commands are interpreted at
-the global level. Options used after a command affect change for that command. Commands that are
-chained (i.e. have no options separating them) and have options after the last command will apply
-all options that apply to the given commands. 
-
-Thus you have the ability to form expressions as follows:
-```bash
-# Single command with no options
-./app list
-# Command with a positional option
-./app clean all
-# Command with a positional option and a named option
-./app clean all --minus=iso
-```
-
-Ruby syntax to configure this behavior would look like:
+Example ruby configuration:
 ```ruby
 # Creates a new instance of commander with app settings as given
-cmdr = Commander.new('app-name', 'app-version', 'examples')
-# Create a new command with out any options
-cmdr.add('list', 'List build', [])
-# Create a new command with positional and named options
-cmdr.add('clean', 'Clean build', [
-  CmdOpt.new(nil, 'Clean given components [all|iso|image]')
-  CmdOpt.new('--minus=COMPONENT', 'Clean all except COMPONENT')
+app = 'builder'
+cmdr = Commander.new(app, '0.0.1', "Full Build: ./#{app} clean build all\n".colorize(:green))
+# Create command with a positional argument
+cmdr.add('list', 'List components')
+cmdr.add('clean', 'Clean components', options:[
+  Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image'])
+  Option.new('-d|--debug', 'Debug mode')
+  Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer)
+  Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
 ])
-cmdr.add('build', 'Build components', [
-  CmdOpt.new(nil, 'Build given components [all|iso|image]')
+# Create command with a single positional option with an allowed check for value
+cmdr.add('build', 'Build components', options:[
+  Option.new(nil, 'Build given components', allowed:['all', 'iso', 'image'])
 ])
 cmdr.parse!
 ```
 
-App help would look something like:
+App help would look like:
 ```bash
-app_v0.0.1
+builder_v0.0.1
 --------------------------------------------------------------------------------
 Examples:
-Clean build all: ./app clean build all
+Full Build: ./builder clean build all
 
-Usage: ./app [commands] [options]
-    -h, --help                       Print command/options help
+Usage: ./builder [commands] [options]
+    -h, --help                          Print command/options help: Flag
 COMMANDS:
-    list                             List out components
-    clean                            Clean ISO components
-    build                            Build ISO components
+    list                                List components
+    clean                               Clean components
+    build                               Build components
 
-see './app COMMAND --help' for specific command help
+see './builder COMMAND --help' for specific command help
 ```
 
-Command help would look something like:
+Command help for ***./builder list --help*** would look like:
 ```bash
-app_v0.0.1
+builder_v0.0.1
 --------------------------------------------------------------------------------
-Usage: ./app clean [options]
-    -h, --help                       Print command/options help
-COMMANDS:
-    list                             List out components
-    clean                            Clean ISO components
-    build                            Build ISO components
+List components
 
-see './app COMMAND --help' for specific command help
+Usage: ./builder list [options]
+    -h|--help                           Print command/options help: Flag
+```
+
+Command help for ***./builder clean --help*** would look like:
+```bash
+builder_v0.0.1
+--------------------------------------------------------------------------------
+Clean components
+
+Usage: ./builder clean [options]
+    clean0                              Clean given components (all,iso,image): String, Required
+    -h|--help                           Print command/options help: Flag
+    -d|--debug                          Debug mode: Flag
+    -m|--min=MINIMUM                    Set the minimum clean (1,2,3): Integer
+    -s|--skip=COMPONENTS                Skip the given components (iso,image): Array
+```
+
+Command help for ***./builder build --help*** would look like:
+```bash
+builder_v0.0.1
+--------------------------------------------------------------------------------
+Build components
+
+Usage: ./builder build [options]
+    -h|--help                           Print command/options help
 ```
 
 **Required**
