@@ -118,6 +118,7 @@ class Commander
   # @param version [String] version of the application e.g. 1.0.0
   # @param examples [String] optional examples to list after the title before usage
   def initialize(app, version, examples:nil)
+    @help_opt = Option.new('-h|--help', 'Print command/options help')
     @just = 40
     @app = app
     @version = version
@@ -149,7 +150,7 @@ class Commander
 
     # Build help for command
     help = "#{banner}\n#{desc}\n\nUsage: ./#{@app} #{cmd} [options]\n"
-    options << Option.new('-h|--help', 'Print command/options help')
+    options << @help_out
 
     # Add positional options first
     sorted_options = options.select{|x| x.key.nil?}
@@ -189,19 +190,29 @@ class Commander
     return help
   end
 
+  def take_while_not_command(args)
+
   # Construct the command line parser and parse
   def parse!
 
     # Set help if nothing was given
     ARGV.clear and ARGV << '-h' if ARGV.empty?
 
-    # Parse args from the configure commands
-    #for i in 0..ARGV.size
-    @config.each{|cmd|
+    # Process global options
+    args = take_while_not_command(ARGV)
+    
+    #arg = ARGV.shift
+    #loop {
+    #  break if !arg
       
-    }
+      # Process globals first
+      #if @help_opt
+      
+      #@config.each{|cmd|
 
-    end
+    #  arg = ARGV.shift
+    #}
+
     #cmds = ARGV.select{|x| not x.start_with?('-')}
     #cmds.each{|x| puts("Error: Invalid command '#{x}'".colorize(:red)) if not @config[x]}
     #@optparser.order!

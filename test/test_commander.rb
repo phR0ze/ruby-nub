@@ -43,7 +43,7 @@ class TestCommander < Minitest::Test
 
 #  def test_single_command_no_options
 #    ARGV.clear and ARGV << 'list'
-#    cmdr = Commander.new('test', '0', nil)
+#    cmdr = Commander.new('test', '0')
 #    cmdr.add('list', 'List command', [])
 #    assert_nil(cmdr[:list])
 #    cmdr.parse!
@@ -52,7 +52,7 @@ class TestCommander < Minitest::Test
   
 #  def test_single_command_position_option
 #    ARGV.clear and ARGV << 'clean all'
-#    cmdr = Commander.new('test', '0', nil)
+#    cmdr = Commander.new('test', '0')
 #    cmdr.add('clean', 'Clean command', [
 #      CmdOpt.new(nil, 'Clean given components [all|iso|image]')
 #    ])
@@ -101,7 +101,7 @@ Usage: ./test clean [options]
     -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
     -s|--skip=COMPONENTS                    Skip the given components (iso,image): Array
 EOF
-    cmdr = Commander.new('test', '0.0.1', nil)
+    cmdr = Commander.new('test', '0.0.1')
     cmdr.add('clean', 'Clean components', options:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
       Option.new('-d|--debug', 'Debug mode'),
@@ -121,7 +121,7 @@ COMMANDS:
 
 see './test COMMAND --help' for specific command help
 EOF
-    cmdr = Commander.new('test', '0.0.1', nil)
+    cmdr = Commander.new('test', '0.0.1')
     cmdr.add('list', 'List command')
 
     expected = "#{cmdr.banner}\n#{expected}"
@@ -140,7 +140,7 @@ COMMANDS:
 
 see './test COMMAND --help' for specific command help
 EOF
-    cmdr = Commander.new('test', '0.0.1', "List: ./test list")
+    cmdr = Commander.new('test', '0.0.1', examples:"List: ./test list")
     cmdr.add('list', 'List command')
 
     expected = "#{cmdr.banner}\n#{expected}"
