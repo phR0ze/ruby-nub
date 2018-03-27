@@ -21,6 +21,7 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
+require_relative '../lib/nub/sys'
 require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
@@ -81,6 +82,13 @@ class TestCommander < Minitest::Test
 #    opts[:bob] = true
 #    assert(opts[:bob])
 #  end
+
+  def test_help_no_params
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('list', 'List command')
+    capture = Sys.capture{ cmdr.parse! }
+    assert(!capture.stdout.empty?)
+  end
 
   def test_command_help
     expected =<<EOF

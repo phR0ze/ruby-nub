@@ -117,7 +117,7 @@ class Commander
   # @param app [String] application name e.g. reduce
   # @param version [String] version of the application e.g. 1.0.0
   # @param examples [String] optional examples to list after the title before usage
-  def initialize(app, version, examples)
+  def initialize(app, version, examples:nil)
     @just = 40
     @app = app
     @version = version
@@ -192,11 +192,17 @@ class Commander
   # Construct the command line parser and parse
   def parse!
 
-    # Construct help for the application
+    # Set help if nothing was given
+    ARGV.clear and ARGV << '-h' if ARGV.empty?
 
-    # Invoke help if none or un-recognized commands are given
+    # Parse args from the configure commands
+    #for i in 0..ARGV.size
+    @config.each{|cmd|
+      
+    }
+
+    end
     #cmds = ARGV.select{|x| not x.start_with?('-')}
-    #ARGV.clear and ARGV << '-h' if ARGV.empty? or cmds.any?{|x| not @config[x]}
     #cmds.each{|x| puts("Error: Invalid command '#{x}'".colorize(:red)) if not @config[x]}
     #@optparser.order!
 
@@ -225,7 +231,7 @@ class Commander
 #    end
 
     # Ensure all options were consumed
-    !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?
+   # !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?
   end
 end
 
