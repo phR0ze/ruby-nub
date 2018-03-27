@@ -20,11 +20,26 @@
 #SOFTWARE.
 
 require 'io/console'
+require 'ostruct'
+require 'stringio'
 
-class Sys
+module Sys
+
+  # Capture STDOUT to a string
+  # @returns [String] the redirected output
+  def self.capture(&block)
+    stdout, stderr = StringIO.new, StringIO.new
+    $stdout, $stderr = stdout, stderr
+
+    result = block.call
+
+    $stdout, $stderr = STDOUT, STDERR
+
+    return OpenStruct.new(result: result, stdout: stdout.string, stderr: stderr.string)
+  end
 
   # Wait for any key to be pressed  
-  def any_key?
+  def self.any_key?
     begin
       state = `stty -g`
       `stty raw -echo -icanon isig`

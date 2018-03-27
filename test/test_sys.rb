@@ -20,16 +20,15 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require 'coveralls'
-Coveralls.wear!
+require 'minitest/autorun'
+require_relative '../lib/nub/sys'
 
-require_relative 'test_commander'
-require_relative 'test_config'
-require_relative 'test_log'
-require_relative 'test_net'
-require_relative 'test_string'
-require_relative 'test_sys'
-require_relative 'test_thread_comm'
-require_relative 'test_user'
+class TestSys < Minitest::Test
+
+  def test_capture
+    rc = Sys.capture{ puts("test") }
+    assert_equal("test\n", rc.stdout)
+  end
+end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
