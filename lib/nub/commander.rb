@@ -37,7 +37,7 @@ class Option
   # @param desc [String] the option's description
   # @param type [Type] the option's type
   # @param required [Bool] require the option if true else optional
-  # @param allowed []
+  # @param allowed [Array] array of allowed string values
   def initialize(key, desc, type:nil, required:false, allowed:nil)
     @hint = nil
     @long = nil
@@ -108,20 +108,23 @@ end
 # see https://github.com/phR0ze/ruby-nub
 class Commander
   attr_accessor(:cmds)
-  Command = Struct.new(:name, :desc, :opts)
+  attr_reader(:config)
+  attr_reader(:banner)
+
+  Command = Struct.new(:name, :desc, :opts, :help)
 
   # Initialize the commands for your application
   # @param app [String] application name e.g. reduce
   # @param version [String] version of the application e.g. 1.0.0
   # @param examples [String] optional examples to list after the title before usage
   def initialize(app, version, examples)
+    @just = 40
     @app = app
     @version = version
-    @examples = examples || ''
+    @examples = examples
 
-    # Configuration for the command parser
-    # {command_name => {}}
-    @config = {}
+    # Configuration - ordered list of commands
+    @config = []
 
     # Incoming user set commands/options
     # {command_name => {}}
@@ -142,40 +145,60 @@ class Commander
   # @param cmd [String] name of the command
   # @param desc [String] description of the command
   # @param opts [List] list of command options
-  def add(cmd, desc, opts)
-    @config[cmd] = {
-      desc: desc,
-      opts: opts,
-      banner: "#{banner}\nUsage: "
+  def add(cmd, desc, options:[])
+
+    # Build help for command
+    help = "#{banner}\n#{desc}\n\nUsage: ./#{@app} #{cmd} [options]\n"
+    options << Option.new('-h|--help', 'Print command/options help')
+
+    # Add positional options first
+    sorted_options = options.select{|x| x.key.nil?}
+    sorted_options += options.select{|x| !x.key.nil?}.sort{|x,y| x.key <=> y.key}
+    positional_index = -1
+    sorted_options.each{|x| 
+      required = x.required ? ", Required" : ""
+      allowed = x.allowed ? " (#{x.allowed * ','})" : ""
+      positional_index += 1 if x.key.nil?
+      key = x.key.nil? ? "#{cmd}#{positional_index}" : x.key
+      type = x.type == FalseClass ? "Flag" : x.type
+      help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
     }
+
+    # Create the command in the command config
+    @config << Command.new(cmd, desc, sorted_options, help)
   end
 
   # Returns banner string
+  # @returns [String] the app's banner
   def banner
     banner = "#{@app}_v#{@version}\n#{'-' * 80}".colorize(:light_yellow)
     return banner
+  end
+
+  # Return the app's help string
+  # @returns [String] the app's help string
+  def help
+    help = "#{banner}\n"
+    help += "Examples:\n#{@examples}\n\n" if !@examples.nil? && !@examples.empty?
+    help += "Usage: ./#{@app} [commands] [options]\n"
+    help += "    #{'-h|--help'.ljust(@just)}Print command/options help: Flag\n"
+    help += "COMMANDS:\n"
+    @config.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
+    help += "\nsee './#{@app} COMMAND --help' for specific command help\n"
+
+    return help
   end
 
   # Construct the command line parser and parse
   def parse!
 
     # Construct help for the application
-    help = "COMMANDS:\n"
-    @config.each{|k,v| help += "    #{k.ljust(33, ' ')}#{v[:desc]}\n" }
-    help += "\nsee './#{@app} COMMAND --help' for specific command help"
 
-    # Construct top level option parser
-#    @optparser = OptionParser.new do |parser|
-#      parser.banner = "#{banner}\n#{@examples}Usage: ./#{@app} commands [options]"
-#      parser.on('-h', '--help', 'Print command/options help') {|x| !puts(parser) and exit }
-#      parser.separator(help)
-#    end
-
-    # Invoke help if any un-recognized commands are given
-    cmds = ARGV.select{|x| not x.start_with?('-')}
-    ARGV.clear and ARGV << '-h' if ARGV.empty? or cmds.any?{|x| not @config[x]}
-    cmds.each{|x| puts("Error: Invalid command '#{x}'".colorize(:red)) if not @config[x]}
-    @optparser.order!
+    # Invoke help if none or un-recognized commands are given
+    #cmds = ARGV.select{|x| not x.start_with?('-')}
+    #ARGV.clear and ARGV << '-h' if ARGV.empty? or cmds.any?{|x| not @config[x]}
+    #cmds.each{|x| puts("Error: Invalid command '#{x}'".colorize(:red)) if not @config[x]}
+    #@optparser.order!
 
 #    # Now remove them from ARGV leaving only options
 #    ARGV.reject!{|x| not x.start_with?('-')}

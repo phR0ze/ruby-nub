@@ -91,8 +91,8 @@ Example ruby configuration:
 cmdr = Commander.new('app-name', 'app-version', 'examples')
 # Create command with a positional argument
 cmdr.add('clean', 'Clean build', options:[
-  Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image'])
-  Option.new('-d|--debug', 'Debug mode')
+  Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image']),,,,
+  Option.new('-d|--debug', 'Debug mode'),
   Option.new('-s|--skip=COMPONENT', 'Skip the given components', allowed:['iso', 'image'], type:String)
 ])
 # Create command with a single positional option with an allowed check for value
@@ -139,9 +139,9 @@ cmdr = Commander.new(app, '0.0.1', examples)
 # Create command with a positional argument
 cmdr.add('list', 'List components')
 cmdr.add('clean', 'Clean components', options:[
-  Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array)
-  Option.new('-d|--debug', 'Debug mode')
-  Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer)
+  Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
+  Option.new('-d|--debug', 'Debug mode'),
+  Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
   Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
 ])
 # Create command with a single positional option with an allowed check for value
@@ -160,7 +160,7 @@ Full Build: ./builder clean build all
 Image/ISO Build: ./builder clean build iso,image
 
 Usage: ./builder [commands] [options]
-    -h, --help                          Print command/options help: Flag
+    -h|help                             Print command/options help: Flag
 COMMANDS:
     list                                List components
     clean                               Clean components
@@ -186,7 +186,7 @@ builder_v0.0.1
 Clean components
 
 Usage: ./builder clean [options]
-    clean0                              Clean given components (all,iso,image,boot): String, Required
+    clean0                              Clean given components (all,iso,image,boot): Array, Required
     -h|--help                           Print command/options help: Flag
     -d|--debug                          Debug mode: Flag
     -m|--min=MINIMUM                    Set the minimum clean (1,2,3): Integer

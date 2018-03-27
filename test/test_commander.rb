@@ -25,27 +25,141 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
-  def test_option_parse
-    # Named Flag short
-    opt = Option.new('-s', nil)
-    assert_equal(true, opt.parse(['-s']))
+#  def test_command_with_opts
+#    cmd = Command.new("foo", "Foo command")
+#
+#    assert_equal("foo", cmd.name)
+#    assert_equal("Foo command", cmd.desc)
+#    assert_empty(cmd.opts)
+#  end
 
-    # Named Flag long
-    opt = Option.new('--skip', nil)
-    assert_equal(true, opt.parse(['--skip']))
+#  def test_command_no_opts
+#    cmd = Command.new("foo", "Foo command")
+#    assert_equal("foo", cmd.name)
+#    assert_equal("Foo command", cmd.desc)
+#    assert_empty(cmd.opts)
+#  end
 
-    # Positional String
-    opt = Option.new(nil, nil)
-    assert_equal("foo", opt.parse(['foo']))
+#  def test_single_command_no_options
+#    ARGV.clear and ARGV << 'list'
+#    cmdr = Commander.new('test', '0', nil)
+#    cmdr.add('list', 'List command', [])
+#    assert_nil(cmdr[:list])
+#    cmdr.parse!
+#    assert(cmdr[:list])
+#  end
+  
+#  def test_single_command_position_option
+#    ARGV.clear and ARGV << 'clean all'
+#    cmdr = Commander.new('test', '0', nil)
+#    cmdr.add('clean', 'Clean command', [
+#      CmdOpt.new(nil, 'Clean given components [all|iso|image]')
+#    ])
+#    cmdr.parse!
+#    assert(cmdr[:clean])
+#    #assert(cmdr[:clean_pos0])
+#  end
 
-    # Positional Integer
-    opt = Option.new(nil, nil, type:Integer)
-    assert_equal(4, opt.parse(['4']))
+#  def test_hypens_to_underscores_in_command
+#    ARGV.clear and ARGV << 'fix-links'
+#    opts = Cmds.new('test', '0.1.2', "")
+#    opts.add('fix-links', 'Test hypend commands', [
+#      CmdOpt.new('--all', 'List all info'),
+#    ])
+#    opts.parse!
+#    assert(opts[:fix_links])
+#  end
+#
+#  def test_updating_options
+#    ARGV.clear and ARGV << 'fix-links'
+#    opts = Cmds.new('test', '0.1.2', "")
+#    opts.add('fix-links', 'Test hypend commands', [
+#      CmdOpt.new('--all', 'List all info'),
+#    ])
+#    opts.parse!
+#    assert(!opts[:bob])
+#    opts[:bob] = true
+#    assert(opts[:bob])
+#  end
 
-    # Positional Array
-    opt = Option.new(nil, nil, type:Array)
-    assert_equal(['foo', 'bar'], opt.parse(['foo,bar']))
+  def test_command_help
+    expected =<<EOF
+Clean components
+
+Usage: ./test clean [options]
+    clean0                                  Clean given components (all,iso,image,boot): Array, Required
+    -d|--debug                              Debug mode: Flag
+    -h|--help                               Print command/options help: Flag
+    -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
+    -s|--skip=COMPONENTS                    Skip the given components (iso,image): Array
+EOF
+    cmdr = Commander.new('test', '0.0.1', nil)
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    expected = "#{cmdr.banner}\n#{expected}"
+    assert_equal(expected, cmdr.config.find{|x| x.name == "clean"}.help)
   end
+
+  def test_help_without_examples
+    expected =<<EOF
+Usage: ./test [commands] [options]
+    -h|--help                               Print command/options help: Flag
+COMMANDS:
+    list                                    List command
+
+see './test COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new('test', '0.0.1', nil)
+    cmdr.add('list', 'List command')
+
+    expected = "#{cmdr.banner}\n#{expected}"
+    assert_equal(expected, cmdr.help)
+  end
+
+  def test_help_with_examples
+    expected =<<EOF
+Examples:
+List: ./test list
+
+Usage: ./test [commands] [options]
+    -h|--help                               Print command/options help: Flag
+COMMANDS:
+    list                                    List command
+
+see './test COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new('test', '0.0.1', "List: ./test list")
+    cmdr.add('list', 'List command')
+
+    expected = "#{cmdr.banner}\n#{expected}"
+    assert_equal(expected, cmdr.help)
+  end
+
+#  def test_option_parse
+#    # Named Flag short
+#    opt = Option.new('-s', nil)
+#    assert_equal(true, opt.parse(['-s']))
+#
+#    # Named Flag long
+#    opt = Option.new('--skip', nil)
+#    assert_equal(true, opt.parse(['--skip']))
+#
+#    # Positional String
+#    opt = Option.new(nil, nil)
+#    assert_equal("foo", opt.parse(['foo']))
+#
+#    # Positional Integer
+#    opt = Option.new(nil, nil, type:Integer)
+#    assert_equal(4, opt.parse(['4']))
+#
+#    # Positional Array
+#    opt = Option.new(nil, nil, type:Array)
+#    assert_equal(['foo', 'bar'], opt.parse(['foo,bar']))
+#  end
 
   def test_option_allowed
     assert_nil(Option.new(nil, nil).allowed)
@@ -133,69 +247,6 @@ class TestCommander < Minitest::Test
     assert_equal("--skip", opt.long)
   end
 
-#  def test_command_with_opts
-#    cmd = Command.new("foo", "Foo command")
-#
-#    assert_equal("foo", cmd.name)
-#    assert_equal("Foo command", cmd.desc)
-#    assert_empty(cmd.opts)
-#  end
-
-#  def test_command_no_opts
-#    cmd = Command.new("foo", "Foo command")
-#    assert_equal("foo", cmd.name)
-#    assert_equal("Foo command", cmd.desc)
-#    assert_empty(cmd.opts)
-#  end
-
-#  def test_app_help_nothing_given
-#    cmdr = Commander.new('test', '0', nil)
-#    cmdr.add('list', 'List command', [])
-#    cmdr.parse!
-#    #assert(cmdr[:list])
-#  end
-
-#  def test_single_command_no_options
-#    ARGV.clear and ARGV << 'list'
-#    cmdr = Commander.new('test', '0', nil)
-#    cmdr.add('list', 'List command', [])
-#    assert_nil(cmdr[:list])
-#    cmdr.parse!
-#    assert(cmdr[:list])
-#  end
-  
-#  def test_single_command_position_option
-#    ARGV.clear and ARGV << 'clean all'
-#    cmdr = Commander.new('test', '0', nil)
-#    cmdr.add('clean', 'Clean command', [
-#      CmdOpt.new(nil, 'Clean given components [all|iso|image]')
-#    ])
-#    cmdr.parse!
-#    assert(cmdr[:clean])
-#    #assert(cmdr[:clean_pos0])
-#  end
-
-#  def test_hypens_to_underscores_in_command
-#    ARGV.clear and ARGV << 'fix-links'
-#    opts = Cmds.new('test', '0.1.2', "")
-#    opts.add('fix-links', 'Test hypend commands', [
-#      CmdOpt.new('--all', 'List all info'),
-#    ])
-#    opts.parse!
-#    assert(opts[:fix_links])
-#  end
-#
-#  def test_updating_options
-#    ARGV.clear and ARGV << 'fix-links'
-#    opts = Cmds.new('test', '0.1.2', "")
-#    opts.add('fix-links', 'Test hypend commands', [
-#      CmdOpt.new('--all', 'List all info'),
-#    ])
-#    opts.parse!
-#    assert(!opts[:bob])
-#    opts[:bob] = true
-#    assert(opts[:bob])
-#  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
