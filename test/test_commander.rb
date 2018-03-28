@@ -51,7 +51,7 @@ class TestCommander < Minitest::Test
 #  end
   
 #  def test_single_command_position_option
-#    ARGV.clear and ARGV << 'clean all'
+#    ARGV.clear and ARGV << 'clean' << 'all'
 #    cmdr = Commander.new('test', '0')
 #    cmdr.add('clean', 'Clean command', [
 #      CmdOpt.new(nil, 'Clean given components [all|iso|image]')
@@ -82,6 +82,76 @@ class TestCommander < Minitest::Test
 #    opts[:bob] = true
 #    assert(opts[:bob])
 #  end
+
+  def test_positional_integer_good
+    ARGV.clear and ARGV << 'clean' << '3'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
+    ])
+    cmdr.parse!
+    assert_equal(3, cmdr[:clean][:clean0])
+  end
+
+  def test_positional_invalid_integer_value
+    ARGV.clear and ARGV << 'clean' << '2'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid integer value '2'"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
+  def test_positional_array_good
+    ARGV.clear and ARGV << 'clean' << 'all'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array)
+    ])
+    cmdr.parse!
+    assert_equal(["all"], cmdr[:clean][:clean0])
+  end
+
+  def test_positional_invalid_array_value
+    ARGV.clear and ARGV << 'clean' << 'foo'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid array value 'foo'"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
+  def test_positional_option_too_many
+    ARGV.clear and ARGV << 'clean' << 'foo' << 'bar'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components')
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: too many positional options given"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
+  def test_positional_option_not_given
+    ARGV.clear and ARGV << 'clean'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components')
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: positional option required"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
+  def test_app_and_version_should_not_be_nil
+    Sys.capture{ assert_raises(SystemExit){ Commander.new(nil, "0.0.1") } }
+    Sys.capture{ assert_raises(SystemExit){ Commander.new("app", nil) } }
+    Sys.capture{ assert_raises(SystemExit){ Commander.new(nil, nil) } }
+  end
 
   def test_command_help
     expected =<<EOF
@@ -150,8 +220,15 @@ EOF
     assert_equal(expected, capture.stdout)
   end
 
+  def test_mixed_types_in_allow_should_fail
+    capture = Sys.capture{ assert_raises(SystemExit){
+      Option.new(nil, nil, allowed:[1, 'foo'])
+    }}
+    assert(capture.stdout.include?("Error: mixed allowed types"))
+  end
+
   def test_option_allowed
-    assert_nil(Option.new(nil, nil).allowed)
+    assert_empty(Option.new(nil, nil).allowed)
     assert_equal(['foo', 'bar'], Option.new(nil, nil, allowed:['foo', 'bar']).allowed)
   end
 

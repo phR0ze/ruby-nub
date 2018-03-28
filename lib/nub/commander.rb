@@ -38,13 +38,13 @@ class Option
   # @param type [Type] the option's type
   # @param required [Bool] require the option if true else optional
   # @param allowed [Array] array of allowed string values
-  def initialize(key, desc, type:nil, required:false, allowed:nil)
+  def initialize(key, desc, type:nil, required:false, allowed:[])
     @hint = nil
     @long = nil
     @short = nil
     @desc = desc
-    @allowed = allowed
-    @required = required
+    @allowed = allowed || []
+    @required = required || false
 
     # Parse the key into its components (short hand, long hand, and hint)
     #https://bneijt.nl/pr/ruby-regular-expressions/
@@ -69,6 +69,13 @@ class Option
     @type = String if !key && !type
     @type = FalseClass if key and !type
     @type = type if type
+
+    # Validate allowed
+    if @allowed.any?
+      allowed_type = @allowed.first.class
+      !puts("Error: mixed allowed types".colorize(:red)) and
+        exit if @allowed.any?{|x| x.class != allowed_type}
+    end
   end
 end
 
@@ -86,11 +93,14 @@ class Commander
   # @param version [String] version of the application e.g. 1.0.0
   # @param examples [String] optional examples to list after the title before usage
   def initialize(app, version, examples:nil)
-    @help_opt = Option.new('-h|--help', 'Print command/options help')
-    @just = 40
     @app = app
     @version = version
     @examples = examples
+    !puts("Error: app name and version are required".colorize(:red)) and
+      exit if @app.nil? or @app.empty? or @version.nil? or @version.empty?
+
+    @help_opt = Option.new('-h|--help', 'Print command/options help')
+    @just = 40
 
     # Configuration - ordered list of commands
     @config = []
@@ -103,11 +113,6 @@ class Commander
   # Hash like accessor for checking if a command or option is set
   def [](key)
     return @cmds[key] if @cmds[key]
-  end
-
-  # Hash like accessor for editing options
-  def []=(key, value)
-    @opts[key] = value
   end
 
   # Add a command to the command list
@@ -126,7 +131,7 @@ class Commander
     positional_index = -1
     sorted_options.each{|x| 
       required = x.required ? ", Required" : ""
-      allowed = x.allowed ? " (#{x.allowed * ','})" : ""
+      allowed = x.allowed.empty? ? "" : " (#{x.allowed * ','})"
       positional_index += 1 if x.key.nil?
       key = x.key.nil? ? "#{cmd}#{positional_index}" : x.key
       type = x.type == FalseClass ? "Flag" : x.type
@@ -179,16 +184,29 @@ class Commander
       if !(cmd = @config.find{|x| x.name == ARGV.first}).nil?
 
         # Set command and remove from possible command names
-        @cmds[ARGV.shift.to_sym] = true
+        @cmds[ARGV.shift.to_sym] = {}
         cmd_names.reject!{|x| x == cmd.name}
 
         # Collect command options
         opts = ARGV.take_while{|x| !cmd_names.include?(x) }
+        ARGV.shift(opts.size)
         cmd_pos_opts = cmd.opts.select{|x| x.key.nil? }
         cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
+
+        # Validate positional option number
+        !puts("Error: positional option required".colorize(:red)) && !puts(cmd.help) and
+          exit if opts.size < cmd_pos_opts.size
+        !puts("Error: too many positional options given".colorize(:red)) && !puts(cmd.help) and
+          exit if opts.size > cmd_pos_opts.size
+
+        # Process command options
+        pos = -1
         loop {
           break if opts.first.nil?
           opt = opts.shift
+          cmd_opt = nil
+          value = nil
+          sym = nil
 
           # Validate/set named options
           # e.g. -s, --skip, --skip=VALUE
@@ -197,27 +215,50 @@ class Commander
             long = opt[/(--\w+)(=\w+)*$/, 1]
             value = opt[/.*=(.*)$/, 1]
 
-            # Get or set value
-
-            if (cmd_opt = cmd_names_opts.find{|x| x.short == short})
-            elsif (cmd_opt = cmd_names_opts.find{|x| x.long == long})
+            # Set symbol converting dashes to underscores for named options
+            if (cmd_opt = cmd_names_opts.find{|x| x.short == short || x.long == long})
+              sym = cmd_opt.long[2..-1].gsub("-", "_").to_sym
+            else
+              !puts("Error: unknown named option '#{opt}' given".colorize(:red)) && !puts(cmd.help) and exit
             end
 
           # Validate/set positional options
           else
-            puts("positional")
+            pos += 1
+            cmd_opt = cmd_pos_opts[pos]
+            value = opt
+            sym = "#{cmd.name}#{pos}".to_sym
           end
+
+          # Convert value to appropriate type
+          if value
+            if cmd_opt.type == Integer
+              value = value.to_i
+
+              # Validate allowed values
+              if cmd_opt.allowed.any?
+                !puts("Error: invalid integer value '#{value}'".colorize(:red)) && !puts(cmd.help) and
+                  exit if !cmd_opt.allowed.include?(value)
+              end
+
+            elsif cmd_opt.type == Array
+              value = value.split(',')
+
+              # Validate allowed values
+              if cmd_opt.allowed.any?
+                value.each{|x|
+                  !puts("Error: invalid array value '#{x}'".colorize(:red)) && !puts(cmd.help) and
+                    exit if !cmd_opt.allowed.include?(x)
+                }
+              end
+            end
+          end
+
+          # Set option with value
+          @cmds[cmd.name.to_sym][sym] = value
         }
       end
     }
-#
-#    # Convert value to appropriate type
-#    if value
-#      if @type == Integer
-#        value = value.to_i
-#      elsif @type == Array
-#        value = value.split(',')
-#  end
 
     # Ensure all options were consumed
     !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?
