@@ -73,7 +73,6 @@ Example command line expressions:
 ```
 
 ### Options <a name="options"></a>
-
 There are two kinds of options available for use, ***positional*** and ***named***. Positional
 options are identified by the absence of preceding dash/dashes and interpreted according to the
 order in which they were found. Positional options are a value being passed into the application.
@@ -81,9 +80,14 @@ Named options have a name that is prefixed with a dash (short hand) or two dashe
 ***-h*** or ***--help*** and may simply be a flag or pass in a value. Option values require a
 ***type*** so that Commander can interpret how to use them. The supported value types are
 ***Flag, Integer, String, Array***. Values may be checked or not checked via the ***allowed***
-config param.  Positional options default to type String while named options default to type Flag.
+config param. Positional options default to type String while named options default to type Flag.
 Positional options are named internally with the command concatted with a an int for order ***e.g.
 clean0*** zero based. Positional params are always required.
+
+**Long Hand** form is always required for named options, short hand may or may not be given.
+
+**Values** are indicated by the hint given e.g. ***-s|--skip=COMPONENTS*** indicates there is an
+incoming value/values to be expected because of the hint ***COMPONENTS***.
 
 Example ruby configuration:
 ```ruby

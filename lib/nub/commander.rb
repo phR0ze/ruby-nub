@@ -47,16 +47,17 @@ class Option
     @required = required
 
     # Parse the key into its components (short hand, long hand, and hint)
-    # Valid forms to look for
-    # -h, --help, --help=HINT, -h|--help, -h|--help=HINT
+    #https://bneijt.nl/pr/ruby-regular-expressions/
+    # Valid forms to look for with chars [a-zA-Z0-9-_=|] 
+    # --help, --help=HINT, -h|--help, -h|--help=HINT
     !puts("Error: invalid option key #{key}".colorize(:red)) and
-      exit if key && (key.count('=') > 1 or key.count('|') > 1 or
-        key[/(^-[a-zA-Z]$)|(^--[a-zA-Z0-9\-_]+$)|(^--[a-zA-Z\-_]+=\w+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+=\w+$)/].nil?)
+      exit if key && (key.count('=') > 1 or key.count('|') > 1 or !key[/[^\w\-=|]/].nil? or
+        key[/(^--[a-zA-Z0-9\-_]+$)|(^--[a-zA-Z\-_]+=\w+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+=\w+$)/].nil?)
     @key = key
     if key
       @hint = key[/.*=(.*)$/, 1]
       @short = key[/^(-\w).*$/, 1]
-      @long = key[/(--\w+)(=\w+)*$/, 1]
+      @long = key[/(--[\w\-]+)(=\w+)*$/, 1]
     else
       # Always require positional options
       @required = true
@@ -68,39 +69,6 @@ class Option
     @type = String if !key && !type
     @type = FalseClass if key and !type
     @type = type if type
-  end
-
-  # Parse the given command line parameters
-  # @param key [String] option key
-  # @param val [String] option val
-  # @returns the value if there is a match
-  def parse(key, val)
-    value = nil
-
-    # Positional option
-    if !@key && !val
-      value = params.first
-
-    # Named option flag
-    elsif params.size == 1 && [@short, @long].any?{|x| x == params.first}
-      value = true
-
-    # Named option short with value
-    elsif params.size == 2 && params.first == @short
-      value = params.
-    elsif params.size == 2 && params.first == @short
-    end
-
-    # Convert value to appropriate type
-    if value
-      if @type == Integer
-        value = value.to_i
-      elsif @type == Array
-        value = value.split(',')
-      end
-    end
-  
-    return value
   end
 end
 
@@ -210,17 +178,46 @@ class Commander
       # Process command
       if !(cmd = @config.find{|x| x.name == ARGV.first}).nil?
 
-        # Set command
+        # Set command and remove from possible command names
         @cmds[ARGV.shift.to_sym] = true
-
-        # Remove from possible options
-        cmd_names.reject!{|x| x == cmd}
+        cmd_names.reject!{|x| x == cmd.name}
 
         # Collect command options
         opts = ARGV.take_while{|x| !cmd_names.include?(x) }
+        cmd_pos_opts = cmd.opts.select{|x| x.key.nil? }
+        cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
+        loop {
+          break if opts.first.nil?
+          opt = opts.shift
 
+          # Validate/set named options
+          # e.g. -s, --skip, --skip=VALUE
+          if opt.start_with?('-')
+            short = opt[/^(-\w).*$/, 1]
+            long = opt[/(--\w+)(=\w+)*$/, 1]
+            value = opt[/.*=(.*)$/, 1]
+
+            # Get or set value
+
+            if (cmd_opt = cmd_names_opts.find{|x| x.short == short})
+            elsif (cmd_opt = cmd_names_opts.find{|x| x.long == long})
+            end
+
+          # Validate/set positional options
+          else
+            puts("positional")
+          end
+        }
       end
     }
+#
+#    # Convert value to appropriate type
+#    if value
+#      if @type == Integer
+#        value = value.to_i
+#      elsif @type == Array
+#        value = value.split(',')
+#  end
 
     # Ensure all options were consumed
     !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?

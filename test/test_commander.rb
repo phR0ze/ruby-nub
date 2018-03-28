@@ -150,28 +150,6 @@ EOF
     assert_equal(expected, capture.stdout)
   end
 
-#  def test_option_parse
-#    # Named Flag short
-#    opt = Option.new('-s', nil)
-#    assert_equal(true, opt.parse(['-s']))
-#
-#    # Named Flag long
-#    opt = Option.new('--skip', nil)
-#    assert_equal(true, opt.parse(['--skip']))
-#
-#    # Positional String
-#    opt = Option.new(nil, nil)
-#    assert_equal("foo", opt.parse(['foo']))
-#
-#    # Positional Integer
-#    opt = Option.new(nil, nil, type:Integer)
-#    assert_equal(4, opt.parse(['4']))
-#
-#    # Positional Array
-#    opt = Option.new(nil, nil, type:Array)
-#    assert_equal(['foo', 'bar'], opt.parse(['foo,bar']))
-#  end
-
   def test_option_allowed
     assert_nil(Option.new(nil, nil).allowed)
     assert_equal(['foo', 'bar'], Option.new(nil, nil, allowed:['foo', 'bar']).allowed)
@@ -221,20 +199,21 @@ EOF
       assert_raises(SystemExit){Option.new("--skip|", nil)}
       assert_raises(SystemExit){Option.new("-s|skip", nil)}
       assert_raises(SystemExit){Option.new("-s|=HINT", nil)}
+      assert_raises(SystemExit){Option.new("-s", nil)}
     }
-
-    # short only
-    opt = Option.new("-s", nil)
-    assert_nil(opt.hint)
-    assert_equal("-s", opt.key)
-    assert_equal("-s", opt.short)
-    assert_nil(opt.long)
 
     # long only
     opt = Option.new("--skip", nil)
     assert_nil(opt.hint)
     assert_equal("--skip", opt.key)
     assert_equal("--skip", opt.long)
+    assert_nil(opt.short)
+
+    # long only with dash
+    opt = Option.new("--skip-foo", nil)
+    assert_nil(opt.hint)
+    assert_equal("--skip-foo", opt.key)
+    assert_equal("--skip-foo", opt.long)
     assert_nil(opt.short)
 
     # long, hint
