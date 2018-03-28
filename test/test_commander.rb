@@ -83,13 +83,6 @@ class TestCommander < Minitest::Test
 #    assert(opts[:bob])
 #  end
 
-  def test_help_no_params
-    cmdr = Commander.new('test', '0.0.1')
-    cmdr.add('list', 'List command')
-    capture = Sys.capture{ cmdr.parse! }
-    assert(!capture.stdout.empty?)
-  end
-
   def test_command_help
     expected =<<EOF
 Clean components
@@ -124,8 +117,13 @@ EOF
     cmdr = Commander.new('test', '0.0.1')
     cmdr.add('list', 'List command')
 
+    # Test raw
     expected = "#{cmdr.banner}\n#{expected}"
     assert_equal(expected, cmdr.help)
+
+    # Test invoked help
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
   end
 
   def test_help_with_examples
@@ -143,8 +141,13 @@ EOF
     cmdr = Commander.new('test', '0.0.1', examples:"List: ./test list")
     cmdr.add('list', 'List command')
 
+    # Test raw help
     expected = "#{cmdr.banner}\n#{expected}"
     assert_equal(expected, cmdr.help)
+
+    # Test invoked help
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
   end
 
 #  def test_option_parse

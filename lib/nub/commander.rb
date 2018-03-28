@@ -150,7 +150,7 @@ class Commander
 
     # Build help for command
     help = "#{banner}\n#{desc}\n\nUsage: ./#{@app} #{cmd} [options]\n"
-    options << @help_out
+    options << @help_opt
 
     # Add positional options first
     sorted_options = options.select{|x| x.key.nil?}
@@ -190,8 +190,6 @@ class Commander
     return help
   end
 
-  def take_while_not_command(args)
-
   # Construct the command line parser and parse
   def parse!
 
@@ -199,50 +197,33 @@ class Commander
     ARGV.clear and ARGV << '-h' if ARGV.empty?
 
     # Process global options
-    args = take_while_not_command(ARGV)
+    #---------------------------------------------------------------------------
+    cmd_names = @config.map{|x| x.name }
+    globals = ARGV.take_while{|x| !cmd_names.include?(x)}
+    !puts(help) and exit if globals.any?
     
-    #arg = ARGV.shift
-    #loop {
-    #  break if !arg
-      
-      # Process globals first
-      #if @help_opt
-      
-      #@config.each{|cmd|
+    # Process command options
+    #---------------------------------------------------------------------------
+    loop {
+      break if ARGV.first.nil?
 
-    #  arg = ARGV.shift
-    #}
+      # Process command
+      if !(cmd = @config.find{|x| x.name == ARGV.first}).nil?
 
-    #cmds = ARGV.select{|x| not x.start_with?('-')}
-    #cmds.each{|x| puts("Error: Invalid command '#{x}'".colorize(:red)) if not @config[x]}
-    #@optparser.order!
+        # Set command
+        @cmds[ARGV.shift.to_sym] = true
 
-#    # Now remove them from ARGV leaving only options
-#    ARGV.reject!{|x| not x.start_with?('-')}
-#
-#    # Parse each command which will consume options from ARGV
-#    cmds.each do |cmd|
-#      begin
-#        @cmds[cmd.gsub('-', '_').to_sym] = true
-#        @config[cmd][:outopts].order!
-#
-#        # Ensure that all required options were given
-#        @config[cmd][:inopts].each{|x|
-#          if x.required and not @opts[x.key]
-#            puts("Error: Missing required option '#{x.key}'".colorize(:red))
-#            ARGV.clear and ARGV << "-h"
-#            @config[cmd][:outopts].order!
-#          end
-#        }
-#      rescue OptionParser::InvalidOption => e
-#        # Options parser will raise an invalid exception if it doesn't recognize something
-#        # However we want to ignore that as it may be another command's option
-#        ARGV << e.to_s[/(-.*)/, 1]
-#      end
-#    end
+        # Remove from possible options
+        cmd_names.reject!{|x| x == cmd}
+
+        # Collect command options
+        opts = ARGV.take_while{|x| !cmd_names.include?(x) }
+
+      end
+    }
 
     # Ensure all options were consumed
-   # !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?
+    !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?
   end
 end
 
