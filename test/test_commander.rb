@@ -160,8 +160,8 @@ EOF
     assert(Option.new(nil, nil).required)
 
     # Named options may be optional
-    assert(!Option.new("-h", nil).required)
-    assert(Option.new("-h", nil, required:true).required)
+    assert(!Option.new("-h|--help", nil).required)
+    assert(Option.new("-h|--help", nil, required:true).required)
   end
 
   def test_option_type
