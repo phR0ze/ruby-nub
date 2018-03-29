@@ -66,6 +66,8 @@ class Option
     # Validate and set type
     !puts("Error: invalid option type #{type}".colorize(:red)) and
       exit if ![String, Integer, Array, nil].any?{|x| type == x}
+    !puts("Error: option type must be set".colorize(:red)) and
+      exit if @hint && !type
     @type = String if !key && !type
     @type = FalseClass if key and !type
     @type = type if type
@@ -212,13 +214,19 @@ class Commander
             short = opt[/^(-\w).*$/, 1]
             long = opt[/(--\w+)(=\w+)*$/, 1]
             value = opt[/.*=(.*)$/, 1]
-            value = true if not value
 
             # Set symbol converting dashes to underscores for named options
             if (cmd_opt = cmd_named_opts.find{|x| x.short == short || x.long == long})
               sym = cmd_opt.long[2..-1].gsub("-", "_").to_sym
             else
               !puts("Error: unknown named option '#{opt}' given".colorize(:red)) && !puts(cmd.help) and exit
+            end
+
+            # Collect value
+            if cmd_opt.type == FalseClass
+              value = true if !value
+            elsif !value
+              value = opts.shift
             end
 
           # Validate/set positional options

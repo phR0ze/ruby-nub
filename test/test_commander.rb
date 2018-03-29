@@ -26,21 +26,111 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
-#  def test_named_option_short_int
-#    ARGV.clear and ARGV << 'clean' << '-m' << '1'
-#    cmdr = Commander.new('test', '0.0.1')
-#    cmdr.add('clean', 'Clean components', options:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    cmdr.parse!
-#    assert_equal(true, cmdr[:clean][:debug])
-#    assert_nil(cmdr[:min])
-#    assert_nil(cmdr[:skip])
-#    assert_nil(cmdr[:clean0])
-#  end
+  def test_named_option_long_array_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar=foo1,foo2,foo3'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('bar', 'bar it up', options:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
+    ])
+    cmdr.parse!
+    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_short_array
+    ARGV.clear and ARGV << 'bar' << '-f' << 'foo1,foo2,foo3'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('bar', 'bar it up', options:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
+    ])
+    cmdr.parse!
+    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_string_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar=foo'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('bar', 'bar it up', options:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
+    ])
+    cmdr.parse!
+    assert_equal("foo", cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_string
+    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('bar', 'bar it up', options:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
+    ])
+    cmdr.parse!
+    assert_equal("foo", cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_short_string
+    ARGV.clear and ARGV << 'bar' << '-f' << 'foo'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('bar', 'bar it up', options:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
+    ])
+    cmdr.parse!
+    assert_equal("foo", cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_int_equal
+    ARGV.clear and ARGV << 'clean' << '--min=3'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    cmdr.parse!
+    assert_equal(3, cmdr[:clean][:min])
+  end
+
+  def test_named_option_long_int
+    ARGV.clear and ARGV << 'clean' << '--min' << '3'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    cmdr.parse!
+    assert_equal(3, cmdr[:clean][:min])
+    assert_nil(cmdr[:clean][:debug])
+    assert_nil(cmdr[:clean][:skip])
+    assert_nil(cmdr[:clean][:clean0])
+  end
+
+  def test_named_option_short_invalid_int
+    ARGV.clear and ARGV << 'clean' << '-m' << '4'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid integer value '4'"))
+    assert(capture.stdout.include?("Set the minimum"))
+  end
+
+  def test_named_option_short_int
+    ARGV.clear and ARGV << 'clean' << '-m' << '1'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    cmdr.parse!
+    assert_equal(1, cmdr[:clean][:min])
+    assert_nil(cmdr[:clean][:debug])
+    assert_nil(cmdr[:clean][:skip])
+    assert_nil(cmdr[:clean][:clean0])
+  end
 
   def test_named_option_long_flag
     ARGV.clear and ARGV << 'clean' << '--debug'
@@ -63,9 +153,9 @@ class TestCommander < Minitest::Test
     ])
     cmdr.parse!
     assert_equal(true, cmdr[:clean][:debug])
-    assert_nil(cmdr[:min])
-    assert_nil(cmdr[:skip])
-    assert_nil(cmdr[:clean0])
+    assert_nil(cmdr[:clean][:min])
+    assert_nil(cmdr[:clean][:skip])
+    assert_nil(cmdr[:clean][:clean0])
   end
 
   def test_update_option
@@ -248,6 +338,11 @@ EOF
     assert(Option.new("-h|--help", nil, required:true).required)
   end
 
+  def test_type_not_set_for_named_consuming_option
+    capture = Sys.capture{ assert_raises(SystemExit){ Option.new("-f|--file=HINT", "desc")}}
+    assert(capture.stdout.include?("Error: option type must be set"))
+  end
+ 
   def test_option_type
     # No type, positional option
     assert_equal(String, Option.new(nil, "").type) 
@@ -301,7 +396,7 @@ EOF
     assert_nil(opt.short)
 
     # long, hint
-    opt = Option.new("--skip=HINT", nil)
+    opt = Option.new("--skip=HINT", nil, type:String)
     assert_equal("HINT", opt.hint)
     assert_equal("--skip", opt.long)
     assert_nil(opt.short)
@@ -314,7 +409,7 @@ EOF
     assert_equal("--skip", opt.long)
 
     # short, long, hint
-    opt = Option.new("-s|--skip=HINT", nil)
+    opt = Option.new("-s|--skip=HINT", nil, type:String)
     assert_equal("HINT", opt.hint)
     assert_equal("-s|--skip=HINT", opt.key)
     assert_equal("-s", opt.short)
