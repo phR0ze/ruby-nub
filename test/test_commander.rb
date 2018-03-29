@@ -26,6 +26,20 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
+  def test_multi_positional_and_named_options
+    ARGV.clear and ARGV << 'delete' << 'deployment' << 'tron' << '-n' << 'trondom'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('delete', 'Delete the given component', options:[
+      Option.new(nil, 'Component type'),
+      Option.new(nil, 'Component name'),
+      Option.new('-n|--namespace=NAMESPACE', 'Namespace to use', type:String),
+    ])
+    cmdr.parse!
+    assert_equal('deployment', cmdr[:delete][:delete0])
+    assert_equal('tron', cmdr[:delete][:delete1])
+    assert_equal('trondom', cmdr[:delete][:namespace])
+  end
+
   def test_named_option_long_quotes_equal
     ARGV.clear and ARGV << 'bar' << '--foobar=foo foo'
     cmdr = Commander.new('test', '0.0.1')
