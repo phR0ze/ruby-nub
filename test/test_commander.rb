@@ -26,6 +26,26 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
+  def test_named_option_long_quotes_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar=foo foo'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('bar', 'bar it up', options:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', type:String),
+    ])
+    cmdr.parse!
+    assert_equal('foo foo', cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_array_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo1,foo2,foo3'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('bar', 'bar it up', options:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
+    ])
+    cmdr.parse!
+    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
+  end
+
   def test_named_option_long_array_equal
     ARGV.clear and ARGV << 'bar' << '--foobar=foo1,foo2,foo3'
     cmdr = Commander.new('test', '0.0.1')

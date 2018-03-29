@@ -57,7 +57,7 @@ class Option
     if key
       @hint = key[/.*=(.*)$/, 1]
       @short = key[/^(-\w).*$/, 1]
-      @long = key[/(--[\w\-]+)(=\w+)*$/, 1]
+      @long = key[/(--[\w\-]+)(=.+)*$/, 1]
     else
       # Always require positional options
       @required = true
@@ -184,10 +184,7 @@ class Commander
     loop {
       break if ARGV.first.nil?
 
-      # Process command
       if !(cmd = @config.find{|x| x.name == ARGV.first}).nil?
-
-        # Set command and remove from possible command names
         @cmds[ARGV.shift.to_sym] = {}
         cmd_names.reject!{|x| x == cmd.name}
 
@@ -209,27 +206,27 @@ class Commander
           sym = nil
 
           # Validate/set named options
+          # --------------------------------------------------------------------
           # e.g. -s, --skip, --skip=VALUE
           if opt.start_with?('-')
             short = opt[/^(-\w).*$/, 1]
-            long = opt[/(--\w+)(=\w+)*$/, 1]
+            long = opt[/(--[\w\-]+)(=.+)*$/, 1]
             value = opt[/.*=(.*)$/, 1]
 
             # Set symbol converting dashes to underscores for named options
             if (cmd_opt = cmd_named_opts.find{|x| x.short == short || x.long == long})
               sym = cmd_opt.long[2..-1].gsub("-", "_").to_sym
-            else
-              !puts("Error: unknown named option '#{opt}' given".colorize(:red)) && !puts(cmd.help) and exit
-            end
 
-            # Collect value
-            if cmd_opt.type == FalseClass
-              value = true if !value
-            elsif !value
-              value = opts.shift
+              # Collect value
+              if cmd_opt.type == FalseClass
+                value = true if !value
+              elsif !value
+                value = opts.shift
+              end
             end
 
           # Validate/set positional options
+          # --------------------------------------------------------------------
           else
             pos += 1
             cmd_opt = cmd_pos_opts.shift
@@ -240,6 +237,7 @@ class Commander
           end
 
           # Convert value to appropriate type
+          # --------------------------------------------------------------------
           if value
             if cmd_opt.type == Integer
               value = value.to_i
@@ -264,6 +262,8 @@ class Commander
           end
 
           # Set option with value
+          # --------------------------------------------------------------------
+          !puts("Error: unknown named option '#{opt}' given".colorize(:red)) && !puts(cmd.help) and exit if !sym
           @cmds[cmd.name.to_sym][sym] = value
         }
       end
