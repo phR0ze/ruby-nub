@@ -26,62 +26,59 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
-#  def test_command_with_opts
-#    cmd = Command.new("foo", "Foo command")
-#
-#    assert_equal("foo", cmd.name)
-#    assert_equal("Foo command", cmd.desc)
-#    assert_empty(cmd.opts)
-#  end
-
-#  def test_command_no_opts
-#    cmd = Command.new("foo", "Foo command")
-#    assert_equal("foo", cmd.name)
-#    assert_equal("Foo command", cmd.desc)
-#    assert_empty(cmd.opts)
-#  end
-
-#  def test_single_command_no_options
-#    ARGV.clear and ARGV << 'list'
-#    cmdr = Commander.new('test', '0')
-#    cmdr.add('list', 'List command', [])
-#    assert_nil(cmdr[:list])
-#    cmdr.parse!
-#    assert(cmdr[:list])
-#  end
-  
-#  def test_single_command_position_option
-#    ARGV.clear and ARGV << 'clean' << 'all'
-#    cmdr = Commander.new('test', '0')
-#    cmdr.add('clean', 'Clean command', [
-#      CmdOpt.new(nil, 'Clean given components [all|iso|image]')
+#  def test_named_option_short_int
+#    ARGV.clear and ARGV << 'clean' << '-m' << '1'
+#    cmdr = Commander.new('test', '0.0.1')
+#    cmdr.add('clean', 'Clean components', options:[
+#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+#      Option.new('-d|--debug', 'Debug mode'),
+#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
 #    ])
 #    cmdr.parse!
-#    assert(cmdr[:clean])
-#    #assert(cmdr[:clean_pos0])
+#    assert_equal(true, cmdr[:clean][:debug])
+#    assert_nil(cmdr[:min])
+#    assert_nil(cmdr[:skip])
+#    assert_nil(cmdr[:clean0])
 #  end
 
-#  def test_hypens_to_underscores_in_command
-#    ARGV.clear and ARGV << 'fix-links'
-#    opts = Cmds.new('test', '0.1.2', "")
-#    opts.add('fix-links', 'Test hypend commands', [
-#      CmdOpt.new('--all', 'List all info'),
-#    ])
-#    opts.parse!
-#    assert(opts[:fix_links])
-#  end
-#
-#  def test_updating_options
-#    ARGV.clear and ARGV << 'fix-links'
-#    opts = Cmds.new('test', '0.1.2', "")
-#    opts.add('fix-links', 'Test hypend commands', [
-#      CmdOpt.new('--all', 'List all info'),
-#    ])
-#    opts.parse!
-#    assert(!opts[:bob])
-#    opts[:bob] = true
-#    assert(opts[:bob])
-#  end
+  def test_named_option_long_flag
+    ARGV.clear and ARGV << 'clean' << '--debug'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new('-d|--debug', 'Debug mode'),
+    ])
+    cmdr.parse!
+    assert_equal(true, cmdr[:clean][:debug])
+  end
+
+  def test_named_option_short_flag
+    ARGV.clear and ARGV << 'clean' << '-d'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    cmdr.parse!
+    assert_equal(true, cmdr[:clean][:debug])
+    assert_nil(cmdr[:min])
+    assert_nil(cmdr[:skip])
+    assert_nil(cmdr[:clean0])
+  end
+
+  def test_update_option
+    ARGV.clear and ARGV << 'clean' << '3'
+    cmdr = Commander.new('test', '0.0.1')
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
+    ])
+    cmdr.parse!
+    assert_equal(3, cmdr[:clean][:clean0])
+    cmdr[:clean][:clean0] = 2
+    assert_equal(2, cmdr[:clean][:clean0])
+  end
 
   def test_positional_integer_good
     ARGV.clear and ARGV << 'clean' << '3'
@@ -132,8 +129,18 @@ class TestCommander < Minitest::Test
       Option.new(nil, 'Clean given components')
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-    assert(capture.stdout.include?("Error: too many positional options given"))
+    assert(capture.stdout.include?("Error: invalid positional option"))
     assert(capture.stdout.include?("clean0"))
+  end
+
+  def test_command_name_with_non_lowercase_letters_should_fail
+    cmdr = Commander.new('test', '0.0.1')
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('clean-er', nil)}}
+    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('CLEAN', nil)}}
+    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('clean1', nil)}}
+    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
   end
 
   def test_positional_option_not_given

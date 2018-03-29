@@ -120,6 +120,8 @@ class Commander
   # @param desc [String] description of the command
   # @param opts [List] list of command options
   def add(cmd, desc, options:[])
+    !puts("Error: command names must be pure lowercase letters".colorize(:red)) and
+      exit if cmd =~ /[^a-z]/
 
     # Build help for command
     help = "#{banner}\n#{desc}\n\nUsage: ./#{@app} #{cmd} [options]\n"
@@ -192,12 +194,8 @@ class Commander
         ARGV.shift(opts.size)
         cmd_pos_opts = cmd.opts.select{|x| x.key.nil? }
         cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
-
-        # Validate positional option number
         !puts("Error: positional option required".colorize(:red)) && !puts(cmd.help) and
           exit if opts.size < cmd_pos_opts.size
-        !puts("Error: too many positional options given".colorize(:red)) && !puts(cmd.help) and
-          exit if opts.size > cmd_pos_opts.size
 
         # Process command options
         pos = -1
@@ -214,9 +212,10 @@ class Commander
             short = opt[/^(-\w).*$/, 1]
             long = opt[/(--\w+)(=\w+)*$/, 1]
             value = opt[/.*=(.*)$/, 1]
+            value = true if not value
 
             # Set symbol converting dashes to underscores for named options
-            if (cmd_opt = cmd_names_opts.find{|x| x.short == short || x.long == long})
+            if (cmd_opt = cmd_named_opts.find{|x| x.short == short || x.long == long})
               sym = cmd_opt.long[2..-1].gsub("-", "_").to_sym
             else
               !puts("Error: unknown named option '#{opt}' given".colorize(:red)) && !puts(cmd.help) and exit
@@ -225,7 +224,9 @@ class Commander
           # Validate/set positional options
           else
             pos += 1
-            cmd_opt = cmd_pos_opts[pos]
+            cmd_opt = cmd_pos_opts.shift
+            !puts("Error: invalid positional option '#{opt}'".colorize(:red)) && !puts(cmd.help) and
+              exit if cmd_opt.nil?
             value = opt
             sym = "#{cmd.name}#{pos}".to_sym
           end
