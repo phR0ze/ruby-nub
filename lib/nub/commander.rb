@@ -157,8 +157,10 @@ class Commander
   # @returns [String] the app's help string
   def help
     help = "#{banner}\n"
-    newline = (!@examples.nil? && !@examples.empty? && @examples[-1] != "\n") ? "\n" : ""
-    help += "Examples:\n#{@examples}\n#{newline}" if !@examples.nil? && !@examples.empty?
+    if !@examples.nil? && !@examples.empty?
+      newline = Sys.strip_colorize(@examples)[-1] != "\n" ? "\n" : ""
+      help += "Examples:\n#{@examples}\n#{newline}"
+    end
     help += "Usage: ./#{@app} [commands] [options]\n"
     help += "    #{'-h|--help'.ljust(@just)}Print command/options help: Flag\n"
     help += "COMMANDS:\n"

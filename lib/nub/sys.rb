@@ -49,6 +49,14 @@ module Sys
     end
 
   end
+
+  # Strip the ansi color codes from the given string
+  # @param str [String] string with ansi color codes
+  # @returns [String] string without any ansi codes
+  def self.strip_colorize(str)
+    return str.gsub(/\e\[0;[39]\d;49m/, '').gsub(/\e\[0m/, '')
+  end
+
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

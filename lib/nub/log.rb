@@ -121,7 +121,7 @@ module Log
       str = format(str) if stamp
 
       if !str.empty?
-        @file << strip_colorize(str) if @path
+        @file << Sys.strip_colorize(str) if @path
         @@_queue << str if @@_queue
         $stdout.print(str) if @@_stdout
       end
@@ -145,7 +145,7 @@ module Log
       str = format(str) if stamp
 
       # Handle output
-      @file.puts(strip_colorize(str)) if @path
+      @file.puts(Sys.strip_colorize(str)) if @path
       @@_queue << "#{str}\n" if @@_queue
       $stdout.puts(str) if @@_stdout
 
@@ -187,15 +187,6 @@ module Log
   # Check if the log queue is empty
   def empty?
     return @@_queue ? @@_queue.empty? : true
-  end
-
-  # Strip the ansi color codes from the given string
-  # @param str [String] string with ansi color codes
-  # @returns [String] string without any ansi codes
-  def strip_colorize(str)
-    @@_monitor.synchronize{
-      return str.gsub(/\e\[0;[39]\d;49m/, '').gsub(/\e\[0m/, '')
-    }
   end
 
   # Tokenize the given colorized string
