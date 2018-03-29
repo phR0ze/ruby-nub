@@ -13,6 +13,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
     * [Commands](#commands)
     * [Options](#options)
     * [Help](#help)
+* [Config](#config)
 * [Ruby Gem Creation](#ruby-gem-creation)
     * [Package Layout](#package-layout)
     * [Build Gem](#build-gem)
@@ -210,6 +211,17 @@ Usage: ./builder build [options]
 
 **Required**
 Options can be required using the ***required:true*** options param
+
+## Config <a name="config"></a>
+Config is a simple YAML wrapper with some extra features. Since it implements the ***Singleton***
+pattern you can easily use it through out your app without carrying around instances everywhere.
+It creates config files in memory and saves them to the config ***~/.config*** directory when saved.
+If the config file already exists it simply reads it.
+
+Initialize once on entry of your app and leverage throughout:
+```ruby
+Config.init("openvpn.yml")
+```
 
 ## Ruby Gem Creation <a name="ruby-gem-creation"></a>
 http://guides.rubygems.org/make-your-own-gem/
