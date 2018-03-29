@@ -275,6 +275,9 @@ class Commander
 
     # Ensure all options were consumed
     !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?
+
+    # Print banner on success
+    puts(banner)
   end
 end
 

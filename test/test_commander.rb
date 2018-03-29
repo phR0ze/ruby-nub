@@ -34,7 +34,8 @@ class TestCommander < Minitest::Test
       Option.new(nil, 'Component name'),
       Option.new('-n|--namespace=NAMESPACE', 'Namespace to use', type:String),
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal('deployment', cmdr[:delete][:delete0])
     assert_equal('tron', cmdr[:delete][:delete1])
     assert_equal('trondom', cmdr[:delete][:namespace])
@@ -46,7 +47,8 @@ class TestCommander < Minitest::Test
     cmdr.add('bar', 'bar it up', options:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', type:String),
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal('foo foo', cmdr[:bar][:foobar])
   end
 
@@ -56,7 +58,8 @@ class TestCommander < Minitest::Test
     cmdr.add('bar', 'bar it up', options:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
   end
 
@@ -66,7 +69,8 @@ class TestCommander < Minitest::Test
     cmdr.add('bar', 'bar it up', options:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
   end
 
@@ -76,7 +80,8 @@ class TestCommander < Minitest::Test
     cmdr.add('bar', 'bar it up', options:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
   end
 
@@ -86,7 +91,8 @@ class TestCommander < Minitest::Test
     cmdr.add('bar', 'bar it up', options:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal("foo", cmdr[:bar][:foobar])
   end
 
@@ -96,7 +102,8 @@ class TestCommander < Minitest::Test
     cmdr.add('bar', 'bar it up', options:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal("foo", cmdr[:bar][:foobar])
   end
 
@@ -106,7 +113,8 @@ class TestCommander < Minitest::Test
     cmdr.add('bar', 'bar it up', options:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal("foo", cmdr[:bar][:foobar])
   end
 
@@ -119,7 +127,8 @@ class TestCommander < Minitest::Test
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
       Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(3, cmdr[:clean][:min])
   end
 
@@ -132,7 +141,8 @@ class TestCommander < Minitest::Test
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
       Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(3, cmdr[:clean][:min])
     assert_nil(cmdr[:clean][:debug])
     assert_nil(cmdr[:clean][:skip])
@@ -159,7 +169,8 @@ class TestCommander < Minitest::Test
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
       Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(1, cmdr[:clean][:min])
     assert_nil(cmdr[:clean][:debug])
     assert_nil(cmdr[:clean][:skip])
@@ -172,7 +183,8 @@ class TestCommander < Minitest::Test
     cmdr.add('clean', 'Clean components', options:[
       Option.new('-d|--debug', 'Debug mode'),
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(true, cmdr[:clean][:debug])
   end
 
@@ -185,7 +197,8 @@ class TestCommander < Minitest::Test
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
       Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(true, cmdr[:clean][:debug])
     assert_nil(cmdr[:clean][:min])
     assert_nil(cmdr[:clean][:skip])
@@ -198,7 +211,8 @@ class TestCommander < Minitest::Test
     cmdr.add('clean', 'Clean components', options:[
       Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(3, cmdr[:clean][:clean0])
     cmdr[:clean][:clean0] = 2
     assert_equal(2, cmdr[:clean][:clean0])
@@ -210,7 +224,8 @@ class TestCommander < Minitest::Test
     cmdr.add('clean', 'Clean components', options:[
       Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(3, cmdr[:clean][:clean0])
   end
 
@@ -231,7 +246,8 @@ class TestCommander < Minitest::Test
     cmdr.add('clean', 'Clean components', options:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array)
     ])
-    cmdr.parse!
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(["all"], cmdr[:clean][:clean0])
   end
 
