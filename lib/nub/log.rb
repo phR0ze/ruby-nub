@@ -23,6 +23,7 @@ require 'time'
 require 'monitor'
 require 'ostruct'
 require 'colorize'
+require_relative 'sys'
 
 ColorPair = Struct.new(:str, :color)
 ColorMap = {

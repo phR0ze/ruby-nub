@@ -20,6 +20,7 @@
 #SOFTWARE.
 
 require 'colorize'
+require_relative 'sys'
 
 # Command option encapsulation
 class Option
