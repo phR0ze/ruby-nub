@@ -74,7 +74,7 @@ module Log
 
       # Skip first 3 on stack (i.e. 0 = block in format, 1 = synchronize, 2 = format) 
       stack = caller_locations(3, 10)
-      stack.each{|x| $stdout.puts(x.label)}
+      #stack.each{|x| $stdout.puts(x.label)}
 
       # Skip past any calls in 'log.rb' or 'monitor.rb'
       i = -1
@@ -88,15 +88,16 @@ module Log
 
       # Skip over block type functions to use method.
       # Note: there may not be a non block method e.g. in thread case
-      nested = ['rescue in ', 'block in ']
-      while nested.any?{|x| stack[i].label.include?(x) || stack[i].label == "each"} do
+      regexps = [Regexp.new('^rescue\s.*in\s'), Regexp.new('^block\s.*in\s'), Regexp.new('^each$')]
+      while regexps.any?{|regexp| stack[i].label =~ regexp} do
         break if i + 1 == stack.size
         i += 1
       end
 
       # Set label, clean up for block case
       label = stack[i].label
-      nested.each{|x| label = label.gsub(x, "") if stack[i].label.include?(x)}
+      regexps.each{|x| label = label.gsub(label[x], "") if stack[i].label =~ x}
+      label = stack[i].label if label.empty?
 
       # Construct stamp
       loc = ":#{File.basename(stack[i].path, '.rb')}:#{label}:#{lineno}"

@@ -32,7 +32,7 @@ class TestLog < Minitest::Test
   end
 
   def test_each_inside_thread
-    Log.init(path:nil, queue: true, stdout: true)
+    Log.init(path:nil, queue: true, stdout: false)
     Thread.new{
       ['foo'].each{|x| Log.puts(x) }
     }    
@@ -40,7 +40,7 @@ class TestLog < Minitest::Test
     assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
     assert(msg.include?(":: "))
     assert(msg.include?(":test_each_inside_thread:"))
-    assert(msg.end_with?("foobar\n"))
+    assert(msg.end_with?("foo\n"))
   end
 
   def test_rescue_inside_thread
@@ -84,7 +84,7 @@ class TestLog < Minitest::Test
   end
 
   def test_log_parent_of_each_with_index
-    Log.init(path:nil, queue: true, stdout: true)
+    Log.init(path:nil, queue: true, stdout: false)
     ['foo','bar'].each{|x|
       Log.puts(x)
     }
@@ -98,7 +98,7 @@ class TestLog < Minitest::Test
   end
 
   def test_log_parent_of_each
-    Log.init(path:nil, queue: true, stdout: true)
+    Log.init(path:nil, queue: true, stdout: false)
     ['foo','bar'].each{|x|
       Log.puts(x)
     }
@@ -112,7 +112,7 @@ class TestLog < Minitest::Test
   end
 
   def test_log_parent_of_each
-    Log.init(path:nil, queue: true, stdout: true)
+    Log.init(path:nil, queue: true, stdout: false)
     ['foo','bar'].each{|x|
       Log.puts(x)
     }
