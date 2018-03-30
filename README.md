@@ -215,8 +215,8 @@ Options can be required using the ***required:true*** options param
 ## Config <a name="config"></a>
 Config is a simple YAML wrapper with some extra features. Since it implements the ***Singleton***
 pattern you can easily use it through out your app without carrying around instances everywhere.
-It creates config files in memory and saves them to the config ***~/.config*** directory when saved.
-If the config file already exists it simply reads it.
+It creates config files in memory and saves them to the config ***~/.config*** directory when saved
+unless the given config exists along side the app's path. If the config file already exists it simply reads it.
 
 Initialize once on entry of your app and leverage throughout:
 ```ruby

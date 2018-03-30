@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name        = 'nub'
-  spec.version     = '0.0.34'
+  spec.version     = '0.0.35'
   spec.summary     = "Collection of useful utilities"
   spec.authors     = ["Patrick Crummett"]
   spec.homepage    = 'https://github.com/phR0ze/ruby-nub'
@@ -13,7 +13,7 @@ Gem::Specification.new do |spec|
   spec.add_dependency('rake', '~> 12.0')
 
   # Development dependencies
- spec.add_development_dependency('coveralls', '~> 0.8')
+  spec.add_development_dependency('coveralls', '~> 0.8')
   spec.add_development_dependency('bundler', '~> 1.16')
   spec.add_development_dependency('rake', '~> 12.0')
 end

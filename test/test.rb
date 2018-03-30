@@ -20,8 +20,11 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require 'coveralls'
-Coveralls.wear!
+# Enable code coverage for CI
+if ENV['TRAVIS']
+  require 'coveralls'
+  Coveralls.wear!
+end
 
 require_relative 'test_commander'
 require_relative 'test_config'

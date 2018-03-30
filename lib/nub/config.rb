@@ -38,9 +38,15 @@ module Config
   end
 
   # Singleton new alternate
-  # @param config_name [String] name of the config file
-  def self.init(config_name)
-    @path = "/home/#{User.name}/.config/#{config_name}"
+  # @param config [String] name or path of the config file
+  def self.init(config)
+
+    # Determine caller's file path to look for sidecar config
+    caller_path = caller_locations(1, 1).first.path
+    @path = File.expand_path(File.join(File.dirname(caller_path), config))
+    if !File.exists?(@path)
+      @path = "/home/#{User.name}/.config/#{config.split('/').first}"
+    end
 
     # Open the config file or create in memory yml
     begin

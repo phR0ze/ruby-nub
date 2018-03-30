@@ -21,9 +21,20 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
+require_relative '../lib/nub/sys'
 require_relative '../lib/nub/config'
 
 class TestConfig < Minitest::Test
+
+  def test_config_sidecar
+    path = File.expand_path(File.join(File.dirname(__FILE__), 'foo.conf'))
+    File.stub(:exists?, true) {
+      Sys.capture{
+        assert_raises(SystemExit){ Config.init('foo.conf') }
+        assert_equal(path, Config.path)
+      }
+    }
+  end
 
   def test_init
     Config.init('foo.bar')
