@@ -68,13 +68,12 @@ module Log
     end
   end
 
-  # Format the given string for use in log
-  def format(str)
+  # Get timestamp and location of call
+  def call_details
     @@_monitor.synchronize{
 
-      # Skip first 3 on stack (i.e. 0 = block in format, 1 = synchronize, 2 = format) 
+      # Skip first 3 on stack (i.e. 0 = block in call_details, 1 = synchronize, 2 = call_detail) 
       stack = caller_locations(3, 10)
-      #stack.each{|x| $stdout.puts(x.label)}
 
       # Skip past any calls in 'log.rb' or 'monitor.rb'
       i = -1
@@ -100,8 +99,8 @@ module Log
       label = stack[i].label if label.empty?
 
       # Construct stamp
-      loc = ":#{File.basename(stack[i].path, '.rb')}:#{label}:#{lineno}"
-      return "#{Time.now.utc.iso8601(3)}#{loc}:: #{str}"
+      location = ":#{File.basename(stack[i].path, '.rb')}:#{label}:#{lineno}"
+      return Time.now.utc.iso8601(3), location
     }
   end
 
@@ -109,16 +108,19 @@ module Log
     @@_monitor.synchronize{
       str = !args.first.is_a?(Hash) ? args.first.to_s : ''
 
-      # Determine if stamp should be used
-      stamp = true
+      # Format message
       opts = args.find{|x| x.is_a?(Hash)}
-      if opts and opts.key?(:stamp)
-        stamp = opts[:stamp]
+      loc = (opts && opts.key?(:loc)) ? opts[:loc] : false
+      type = (opts && opts.key?(:type)) ? opts[:type] : ""
+      stamp = (opts && opts.key?(:stamp)) ? opts[:stamp] : true
+      if stamp or loc
+        timestamp, location = call_details
+        location = loc ? location : ""
+        type = ":#{type}" if !type.empty?
+        str = "#{timestamp}#{location}#{type}:: #{str}"
       end
 
-      # Format message
-      str = format(str) if stamp
-
+      # Handle output
       if !str.empty?
         @file << Sys.strip_colorize(str) if @path
         @@_queue << str if @@_queue
@@ -133,15 +135,17 @@ module Log
     @@_monitor.synchronize{
       str = !args.first.is_a?(Hash) ? args.first.to_s : ''
 
-      # Determine if stamp should be used
-      stamp = true
-      opts = args.find{|x| x.is_a?(Hash)}
-      if opts and opts.key?(:stamp)
-        stamp = opts[:stamp]
-      end
-
       # Format message
-      str = format(str) if stamp
+      opts = args.find{|x| x.is_a?(Hash)}
+      loc = (opts && opts.key?(:loc)) ? opts[:loc] : false
+      type = (opts && opts.key?(:type)) ? opts[:type] : ""
+      stamp = (opts && opts.key?(:stamp)) ? opts[:stamp] : true
+      if stamp or loc
+        timestamp, location = call_details
+        location = loc ? location : ""
+        type = ":#{type}" if !type.empty?
+        str = "#{timestamp}#{location}#{type}:: #{str}"
+      end
 
       # Handle output
       @file.puts(Sys.strip_colorize(str)) if @path
@@ -153,28 +157,47 @@ module Log
   end
 
   def error(*args)
+    opts = args.find{|x| x.is_a?(Hash)}
+    opts[:loc] = true and opts[:type] = 'E' if opts
+    args << {:loc => true, :type => 'E'} if !opts
+
     return puts(*args)
   end
 
   def warn(*args)
-    return puts(*args) if LogLevel.warn <= @@_level
+    if LogLevel.warn <= @@_level
+      opts = args.find{|x| x.is_a?(Hash)}
+      opts[:type] = 'W' if opts
+      args << {:type => 'W'} if !opts
+      return puts(*args)
+    end
     return true
   end
 
   def info(*args)
-    return puts(*args) if LogLevel.info <= @@_level
+    if LogLevel.info <= @@_level
+      opts = args.find{|x| x.is_a?(Hash)}
+      opts[:type] = 'I' if opts
+      args << {:type => 'I'} if !opts
+      return puts(*args)
+    end
     return true
   end
 
   def debug(*args)
-    return puts(*args) if LogLevel.debug <= @@_level
+    if LogLevel.debug <= @@_level
+      opts = args.find{|x| x.is_a?(Hash)}
+      opts[:type] = 'D' if opts
+      args << {:type => 'D'} if !opts
+      return puts(*args)
+    end
     return true
   end
 
   # Log the given message in red and exit
   # @param msg [String] message to log
   def die(msg)
-    puts(msg.colorize(:red)) and exit
+    puts(msg.colorize(:red), loc:true, type:'DIE') and exit
   end
 
   # Remove an item from the queue, block until one exists

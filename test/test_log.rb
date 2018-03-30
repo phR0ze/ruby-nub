@@ -34,13 +34,12 @@ class TestLog < Minitest::Test
   def test_each_inside_thread
     Log.init(path:nil, queue: true, stdout: false)
     Thread.new{
-      ['foo'].each{|x| Log.puts(x) }
+      ['foo'].each{|x| Log.info(x) }
     }    
     msg = Log.pop
     assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-    assert(msg.include?(":: "))
-    assert(msg.include?(":test_each_inside_thread:"))
-    assert(msg.end_with?("foo\n"))
+    assert(!msg.include?(":test_each_inside_thread:"))
+    assert(msg.end_with?("I:: foo\n"))
   end
 
   def test_rescue_inside_thread
@@ -49,14 +48,13 @@ class TestLog < Minitest::Test
       begin
         raise
       rescue Exception => e
-        Log.puts("foobar")
+        Log.error("foobar")
       end
     }    
     msg = Log.pop
     assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-    assert(msg.include?(":: "))
     assert(msg.include?(":test_rescue_inside_thread:"))
-    assert(msg.end_with?("foobar\n"))
+    assert(msg.end_with?("E:: foobar\n"))
   end
 
   def test_multiaccess
@@ -76,52 +74,54 @@ class TestLog < Minitest::Test
     assert_mock(mock)
   end
 
-  def test_format
-    msg = Log.format("foo.bar")
+  def test_no_location_is_not_given_by_default
+    Log.init(path:nil, queue: true, stdout: false)
+    Log.puts("foo")
+    msg = Log.pop
     assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-    assert(msg.include?(":: "))
-    assert(msg.end_with?('foo.bar'))
+    assert(!msg.include?(":test_no_location_is_not_given_by_default:"))
+    assert(msg.end_with?(":: foo\n"))
+  end
+
+  def test_no_location_is_given_by_default
+    Log.init(path:nil, queue: true, stdout: false)
+    Log.info("foo")
+    msg = Log.pop
+    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+    assert(!msg.include?(":test_no_location_is_given_by_default:"))
+    assert(msg.end_with?("I:: foo\n"))
+  end
+
+  def test_call_details
+    stamp, loc = Log.call_details
+    assert(stamp.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+    assert(loc.include?(":test_log:test_call_details:"))
   end
 
   def test_log_parent_of_each_with_index
     Log.init(path:nil, queue: true, stdout: false)
     ['foo','bar'].each{|x|
-      Log.puts(x)
+      Log.warn(x)
     }
     ["foo\n", "bar\n"].each_with_index{|x, i|
       msg = Log.pop
       assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
-      assert(msg.include?(":test_log_parent_of_each_with_index:"))
-      assert(msg.end_with?(x))
+      assert(!msg.include?(":test_log_parent_of_each_with_index:"))
+      assert(msg.end_with?("W:: #{x}"))
     }
   end
 
   def test_log_parent_of_each
     Log.init(path:nil, queue: true, stdout: false)
     ['foo','bar'].each{|x|
-      Log.puts(x)
+      Log.debug(x)
     }
     ["foo\n", "bar\n"].each{|x|
       msg = Log.pop
       assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
-      assert(msg.include?(":test_log_parent_of_each:"))
+      assert(!msg.include?(":test_log_parent_of_each:"))
       assert(msg.end_with?(x))
-    }
-  end
-
-  def test_log_parent_of_each
-    Log.init(path:nil, queue: true, stdout: false)
-    ['foo','bar'].each{|x|
-      Log.puts(x)
-    }
-    ["foo\n", "bar\n"].each{|x|
-      msg = Log.pop
-      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
-      assert(msg.include?(":test_log_parent_of_each:"))
-      assert(msg.end_with?(x))
+      assert(msg.end_with?("D:: #{x}"))
     }
   end
 
@@ -130,12 +130,11 @@ class TestLog < Minitest::Test
     begin
       raise('raise exception')
     rescue
-      Log.info("foo.bar")
+      Log.error("foo.bar")
       msg = Log.pop
       assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
       assert(msg.include?(":test_log_parent_of_rescue:"))
-      assert(msg.end_with?("foo.bar\n"))
+      assert(msg.end_with?("E:: foo.bar\n"))
     end
   end
 
@@ -143,11 +142,9 @@ class TestLog < Minitest::Test
 
     # format
     ['1', '2'].each{|x|
-      msg = Log.format("foo.bar")
-      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
-      assert(msg.include?(":test_log_parent_of_block_not_block:"))
-      assert(msg.end_with?('foo.bar'))
+      stamp, loc = Log.call_details
+      assert(stamp.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(loc.include?(":test_log:test_log_parent_of_block_not_block:"))
     }
 
     # print
@@ -156,9 +153,8 @@ class TestLog < Minitest::Test
       Log.print("foo.bar")
       msg = Log.pop
       assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
-      assert(msg.include?(":test_log_parent_of_block_not_block:"))
-      assert(msg.end_with?("foo.bar"))
+      assert(!msg.include?(":test_log_parent_of_block_not_block:"))
+      assert(msg.end_with?(":: foo.bar"))
     }
 
     # puts
@@ -166,9 +162,8 @@ class TestLog < Minitest::Test
       Log.puts("foo.bar")
       msg = Log.pop
       assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
-      assert(msg.include?(":test_log_parent_of_block_not_block:"))
-      assert(msg.end_with?("foo.bar\n"))
+      assert(!msg.include?(":test_log_parent_of_block_not_block:"))
+      assert(msg.end_with?(":: foo.bar\n"))
     }
 
     # debug
@@ -176,9 +171,8 @@ class TestLog < Minitest::Test
       Log.debug("foo.bar")
       msg = Log.pop
       assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
-      assert(msg.include?(":test_log_parent_of_block_not_block:"))
-      assert(msg.end_with?("foo.bar\n"))
+      assert(!msg.include?(":test_log_parent_of_block_not_block:"))
+      assert(msg.end_with?("D:: foo.bar\n"))
     }
   end
 
@@ -262,7 +256,7 @@ class TestLog < Minitest::Test
     Log.init(path:nil, queue: true, stdout: false)
     Log.info("info")
     assert(!Log.empty?)
-    assert(Log.pop.include?("test_log:test_info"))
+    assert(Log.pop.end_with?("I:: info\n"))
     assert(Log.empty?)
   end
 
@@ -276,7 +270,7 @@ class TestLog < Minitest::Test
     Log.init(path:nil, queue: true, stdout: false)
     Log.debug("debug")
     assert(!Log.empty?)
-    assert(Log.pop.include?("test_log:test_debug"))
+    assert(Log.pop.end_with?("D:: debug\n"))
     assert(Log.empty?)
   end
 
