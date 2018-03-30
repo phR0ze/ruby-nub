@@ -25,19 +25,6 @@ require 'ostruct'
 require 'colorize'
 require_relative 'sys'
 
-ColorPair = Struct.new(:str, :color)
-ColorMap = {
-  "30" => "black",
-  "31" => "red",
-  "32" => "green",
-  "33" => "yellow",
-  "34" => "blue",
-  "35" => "magenta",
-  "36" => "cyan",
-  "37" => "white",
-  "39" => "gray88"   # default
-}
-
 LogLevel = OpenStruct.new({
   error: 0,
   warn: 1,
@@ -181,55 +168,13 @@ module Log
   end
 
   # Remove an item from the queue, block until one exists
-  def pop()
+  def pop
     return @@_queue ? @@_queue.pop : nil
   end
 
   # Check if the log queue is empty
   def empty?
     return @@_queue ? @@_queue.empty? : true
-  end
-
-  # Tokenize the given colorized string
-  # @param str [String] string with ansi color codes
-  # @returns [Array] array of Token
-  def tokenize_colorize(str)
-    @@_monitor.synchronize{
-      tokens = []
-      matches = str.to_enum(:scan, /\e\[0;[39]\d;49m(.*?[\s]*)\e\[0m/).map{Regexp.last_match}
-
-      i, istart, iend = 0, 0, 0
-      match = matches[i]
-      while istart < str.size
-        color = "39"
-        iend = str.size
-        token = str[istart..iend]
-
-        # Current token is not a match
-        if match && match.begin(0) != istart
-          iend = match.begin(0)-1
-          token = str[istart..iend]
-          istart = iend + 1
-
-        # Current token is a match
-        elsif match && match.begin(0) == istart
-          iend = match.end(0)
-          token = match.captures.first
-          color = match.to_s[/\e\[0;(\d+);49m.*/, 1]
-          i += 1; match = matches[i]
-          istart = iend
-
-        # Ending
-        else
-          istart = iend
-        end
-
-        # Create token and advance
-        tokens << ColorPair.new(token, color)
-      end
-
-      return tokens
-    }
   end
 end
 

@@ -23,6 +23,7 @@
 require 'time'
 require 'minitest/autorun'
 require_relative '../lib/nub/log'
+require_relative '../lib/nub/sys'
 
 class TestLog < Minitest::Test
 
@@ -30,65 +31,113 @@ class TestLog < Minitest::Test
     Log.init(path:nil, queue: false, stdout: false)
   end
 
-  def test_multiaccess
+#  def test_multiaccess
+#    mock = Minitest::Mock.new
+#    mock.expect(:sync=, nil, [true])
+#    mock.expect(:sync=, nil, [true])
+#
+#    File.stub(:exist?, true){
+#      File.stub(:open, mock){
+#        Log.init(path: 'foo.bar', queue:false, stdout:false)
+#        id = Log.id
+#        Log.init(path: 'foo.bar', queue:false, stdout:false)
+#        assert_equal(id, Log.id)
+#      }
+#    }
+#
+#    assert_mock(mock)
+#  end
+#
+#  def test_queue
+#    Log.init(path:nil, queue: true, stdout: false)
+#    Log.print('foo.bar')
+#    assert(!Log.empty?)
+#    msg = Log.pop
+#    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+#    assert(msg.include?(":: "))
+#    assert(msg.end_with?('foo.bar'))
+#    assert(Log.empty?)
+#  end
+#
+#  def test_format
+#    msg = Log.format("foo.bar")
+#    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+#    assert(msg.include?(":: "))
+#    assert(msg.end_with?('foo.bar'))
+#  end
+#
+#  def test_parent_log_rescue
+#    begin
+#      raise('raise and exception')
+#    rescue
+#      msg = Log.format("foo.bar")
+#      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+#      assert(msg.include?(":: "))
+#      assert(msg.include?(":test_parent_log_rescue:"))
+#      assert(msg.end_with?('foo.bar'))
+#    end
+#  end
+#
+#  def test_parent_log_block
+#    ['1', '2'].each{|x|
+#      msg = Log.format("foo.bar")
+#      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+#      assert(msg.include?(":: "))
+#      assert(msg.include?(":test_parent_log_block:"))
+#      assert(msg.end_with?('foo.bar'))
+#    }
+#  end
+  #
+  def test_file_puts_print
     mock = Minitest::Mock.new
     mock.expect(:sync=, nil, [true])
-    mock.expect(:sync=, nil, [true])
+    mock.expect(:puts, nil, ["foobar"])
+    mock.expect(:<<, nil, ["foobar"])
 
-    File.stub(:exist?, true){
-      File.stub(:open, mock){
-        Log.init(path: 'foo.bar', queue:false, stdout:false)
-        id = Log.id
-        Log.init(path: 'foo.bar', queue:false, stdout:false)
-        assert_equal(id, Log.id)
+    File.stub(:exist?, false){
+      FileUtils.stub(:mkdir_p, true){
+        File.stub(:open, mock){
+          Log.init(path: '/foo/bar', queue:false, stdout:false)
+          Log.puts("foobar".colorize(:cyan), stamp:false)
+          Log.print("foobar".colorize(:blue), stamp:false)
+        }
       }
     }
-
-    assert_mock(mock)
   end
 
-  def test_queue
+  def test_stdout_print
+    Log.init(path:nil, queue: false, stdout: true)
+    capture = Sys.capture{ Log.print("foobar", stamp:false) }
+    assert_equal("foobar", capture.stdout)
+  end
+
+  def test_stdout_puts
+    Log.init(path:nil, queue: false, stdout: true)
+    capture = Sys.capture{ Log.puts("foobar", stamp:false) }
+    assert_equal("foobar\n", capture.stdout)
+  end
+
+  def test_stamp_print
     Log.init(path:nil, queue: true, stdout: false)
-    Log.print('foo.bar')
-    assert(!Log.empty?)
-    msg = Log.pop
-    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-    assert(msg.include?(":: "))
-    assert(msg.end_with?('foo.bar'))
-    assert(Log.empty?)
+    Log.print("foobar", stamp:false)
+    assert_equal("foobar", Log.pop)
+    Log.print("foobar")
+    assert("foobar" != Log.pop)
   end
 
-  def test_format
-    msg = Log.format("foo.bar")
-    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-    assert(msg.include?(":: "))
-    assert(msg.end_with?('foo.bar'))
-  end
-
-  def test_parent_log_rescue
-    begin
-      raise('raise and exception')
-    rescue
-      msg = Log.format("foo.bar")
-      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
-      assert(msg.include?(":test_parent_log_rescue:"))
-      assert(msg.end_with?('foo.bar'))
-    end
-  end
-
-  def test_parent_log_block
-    ['1', '2'].each{|x|
-      msg = Log.format("foo.bar")
-      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-      assert(msg.include?(":: "))
-      assert(msg.include?(":test_parent_log_block:"))
-      assert(msg.end_with?('foo.bar'))
-    }
+  def test_stamp_puts
+    Log.init(path:nil, queue: true, stdout: false)
+    Log.puts("foobar", stamp:false)
+    assert_equal("foobar\n", Log.pop)
+    Log.puts("foobar")
+    assert("foobar\n" != Log.pop)
   end
 
   def test_die
-    assert_raises(SystemExit){Log.die("This is a test")}
+    assert_raises(SystemExit){
+      Log.die("This is a test")
+      assert(Log.pop.include?("This is a test"))
+    }
   end
 
   def test_error
@@ -117,7 +166,7 @@ class TestLog < Minitest::Test
     Log.init(path:nil, queue: true, stdout: false)
     Log.info("info")
     assert(!Log.empty?)
-    Log.pop
+    assert(Log.pop.include?("test_log:test_info"))
     assert(Log.empty?)
   end
 
@@ -131,14 +180,37 @@ class TestLog < Minitest::Test
     Log.init(path:nil, queue: true, stdout: false)
     Log.debug("debug")
     assert(!Log.empty?)
-    Log.pop
+    assert(Log.pop.include?("test_log:test_debug"))
     assert(Log.empty?)
   end
 
-  def test_debug_dropped
+  def test_logs_are_drooped_when_level_not_met
     Log.init(path:nil, level:LogLevel.info, queue: true, stdout: false)
+    Log.info("info")
+    assert(!Log.empty?)
+    assert(Log.pop.include?("info"))
+    assert(Log.empty?)
+
+    Log.error("error")
+    assert(!Log.empty?)
+    assert(Log.pop.include?("error"))
+    assert(Log.empty?)
+
     Log.debug("debug")
     assert(Log.empty?)
+  end
+
+  def test_open_log_file
+    mock = Minitest::Mock.new
+    mock.expect(:sync=, nil, [true])
+
+    File.stub(:exist?, false){
+      FileUtils.stub(:mkdir_p, true){
+        File.stub(:open, mock){
+          Log.init(path: '/foodir/foolog', queue:false, stdout:false)
+        }
+      }
+    }
   end
 end
 
