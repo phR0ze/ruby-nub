@@ -73,7 +73,8 @@ module Log
     @@_monitor.synchronize{
 
       # Skip first 3 on stack (i.e. 0 = block in format, 1 = synchronize, 2 = format) 
-      stack = caller_locations(3, 20)
+      stack = caller_locations(3, 10)
+      stack.each{|x| $stdout.puts(x.label)}
 
       # Skip past any calls in 'log.rb' or 'monitor.rb'
       i = -1
@@ -85,14 +86,20 @@ module Log
       # Save lineno from original location
       lineno = stack[i].lineno
 
-      # Skip over block type functions to use method
-      nested = ['rescue in', 'block in', 'each']
-      while nested.any?{|x| stack[i].label.include?(x)} do
+      # Skip over block type functions to use method.
+      # Note: there may not be a non block method e.g. in thread case
+      nested = ['rescue in ', 'block in ']
+      while nested.any?{|x| stack[i].label.include?(x) || stack[i].label == "each"} do
+        break if i + 1 == stack.size
         i += 1
       end
 
+      # Set label, clean up for block case
+      label = stack[i].label
+      nested.each{|x| label = label.gsub(x, "") if stack[i].label.include?(x)}
+
       # Construct stamp
-      loc = ":#{File.basename(stack[i].path, '.rb')}:#{stack[i].label}:#{lineno}"
+      loc = ":#{File.basename(stack[i].path, '.rb')}:#{label}:#{lineno}"
       return "#{Time.now.utc.iso8601(3)}#{loc}:: #{str}"
     }
   end

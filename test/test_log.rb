@@ -31,8 +31,32 @@ class TestLog < Minitest::Test
     Log.init(path:nil, queue: false, stdout: false)
   end
 
-  def test_inside_thread
+  def test_each_inside_thread
+    Log.init(path:nil, queue: true, stdout: true)
+    Thread.new{
+      ['foo'].each{|x| Log.puts(x) }
+    }    
+    msg = Log.pop
+    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+    assert(msg.include?(":: "))
+    assert(msg.include?(":test_each_inside_thread:"))
+    assert(msg.end_with?("foobar\n"))
+  end
 
+  def test_rescue_inside_thread
+    Log.init(path:nil, queue: true, stdout: false)
+    Thread.new{
+      begin
+        raise
+      rescue Exception => e
+        Log.puts("foobar")
+      end
+    }    
+    msg = Log.pop
+    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+    assert(msg.include?(":: "))
+    assert(msg.include?(":test_rescue_inside_thread:"))
+    assert(msg.end_with?("foobar\n"))
   end
 
   def test_multiaccess
@@ -57,6 +81,48 @@ class TestLog < Minitest::Test
     assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
     assert(msg.include?(":: "))
     assert(msg.end_with?('foo.bar'))
+  end
+
+  def test_log_parent_of_each_with_index
+    Log.init(path:nil, queue: true, stdout: true)
+    ['foo','bar'].each{|x|
+      Log.puts(x)
+    }
+    ["foo\n", "bar\n"].each_with_index{|x, i|
+      msg = Log.pop
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_log_parent_of_each_with_index:"))
+      assert(msg.end_with?(x))
+    }
+  end
+
+  def test_log_parent_of_each
+    Log.init(path:nil, queue: true, stdout: true)
+    ['foo','bar'].each{|x|
+      Log.puts(x)
+    }
+    ["foo\n", "bar\n"].each{|x|
+      msg = Log.pop
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_log_parent_of_each:"))
+      assert(msg.end_with?(x))
+    }
+  end
+
+  def test_log_parent_of_each
+    Log.init(path:nil, queue: true, stdout: true)
+    ['foo','bar'].each{|x|
+      Log.puts(x)
+    }
+    ["foo\n", "bar\n"].each{|x|
+      msg = Log.pop
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_log_parent_of_each:"))
+      assert(msg.end_with?(x))
+    }
   end
 
   def test_log_parent_of_rescue
