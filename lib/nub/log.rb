@@ -145,8 +145,7 @@ module Log
   end
 
   def error(*args)
-    return puts(*args) if LogLevel.error <= @@_level
-    return true
+    return puts(*args)
   end
 
   def warn(*args)
