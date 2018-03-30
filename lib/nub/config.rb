@@ -53,7 +53,7 @@ module Config
   end
 
   # Simple bool whether the config exists or not on disk
-  def exists?
+  def self.exists?
       return File.exists?(@path)
   end
 
@@ -69,7 +69,7 @@ module Config
 
   # Save the config file
   def self.save
-    File.open(@path, 'w'){|f| f << @@_yml.to_yaml } if @@_yml
+    File.write(@path, @@_yml.to_yaml) if @@_yml
   end
 end
 

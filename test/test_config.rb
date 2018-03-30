@@ -28,13 +28,14 @@ class TestConfig < Minitest::Test
   def test_init
     Config.init('foo.bar')
     assert_equal(Config.path, "/home/#{ENV['USER']}/.config/foo.bar")
+    assert(!Config.exists?)
   end
 
   def test_modifications
     Config.init('foofoo.yml')
     Config['vpns'] = ['foo1', 'foo2']
     assert_equal(Config['vpns'], ['foo1', 'foo2'])
-    Config.save
+    File.stub(:write, nil){ Config.save }
   end
 end
 

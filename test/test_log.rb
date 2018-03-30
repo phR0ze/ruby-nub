@@ -131,6 +131,8 @@ class TestLog < Minitest::Test
         }
       }
     }
+
+    assert_mock(mock)
   end
 
   def test_stdout_print
@@ -239,6 +241,8 @@ class TestLog < Minitest::Test
         }
       }
     }
+
+    assert_mock(mock)
   end
 end
 
