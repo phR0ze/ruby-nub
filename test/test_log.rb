@@ -31,6 +31,10 @@ class TestLog < Minitest::Test
     Log.init(path:nil, queue: false, stdout: false)
   end
 
+  def test_inside_thread
+
+  end
+
   def test_multiaccess
     mock = Minitest::Mock.new
     mock.expect(:sync=, nil, [true])
