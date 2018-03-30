@@ -66,30 +66,33 @@ module Log
       @file = File.open(@path, 'a')
       @file.sync = true
     end
-
-    return nil
   end
 
   # Format the given string for use in log
   def format(str)
     @@_monitor.synchronize{
 
-      # Locate caller
-      stack = caller_locations(3,10)
+      # Skip first 3 on stack (i.e. 0 = block in format, 1 = synchronize, 2 = format) 
+      stack = caller_locations(3, 20)
+
+      # Skip past any calls in 'log.rb' or 'monitor.rb'
       i = -1
       while i += 1 do
         mod = File.basename(stack[i].path, '.rb')
         break if !['log', 'monitor'].include?(mod)
       end
 
-      # Save lineno from non log call but use method name rather than rescue or block
+      # Save lineno from original location
       lineno = stack[i].lineno
+
+      # Skip over block type functions to use method
       nested = ['rescue in', 'block in', 'each']
       while nested.any?{|x| stack[i].label.include?(x)} do
         i += 1
       end
-      loc = ":#{File.basename(stack[i].path, '.rb')}:#{stack[i].label}:#{lineno}"
 
+      # Construct stamp
+      loc = ":#{File.basename(stack[i].path, '.rb')}:#{stack[i].label}:#{lineno}"
       return "#{Time.now.utc.iso8601(3)}#{loc}:: #{str}"
     }
   end

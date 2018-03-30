@@ -31,63 +31,87 @@ class TestLog < Minitest::Test
     Log.init(path:nil, queue: false, stdout: false)
   end
 
-#  def test_multiaccess
-#    mock = Minitest::Mock.new
-#    mock.expect(:sync=, nil, [true])
-#    mock.expect(:sync=, nil, [true])
-#
-#    File.stub(:exist?, true){
-#      File.stub(:open, mock){
-#        Log.init(path: 'foo.bar', queue:false, stdout:false)
-#        id = Log.id
-#        Log.init(path: 'foo.bar', queue:false, stdout:false)
-#        assert_equal(id, Log.id)
-#      }
-#    }
-#
-#    assert_mock(mock)
-#  end
-#
-#  def test_queue
-#    Log.init(path:nil, queue: true, stdout: false)
-#    Log.print('foo.bar')
-#    assert(!Log.empty?)
-#    msg = Log.pop
-#    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-#    assert(msg.include?(":: "))
-#    assert(msg.end_with?('foo.bar'))
-#    assert(Log.empty?)
-#  end
-#
-#  def test_format
-#    msg = Log.format("foo.bar")
-#    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-#    assert(msg.include?(":: "))
-#    assert(msg.end_with?('foo.bar'))
-#  end
-#
-#  def test_parent_log_rescue
-#    begin
-#      raise('raise and exception')
-#    rescue
-#      msg = Log.format("foo.bar")
-#      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-#      assert(msg.include?(":: "))
-#      assert(msg.include?(":test_parent_log_rescue:"))
-#      assert(msg.end_with?('foo.bar'))
-#    end
-#  end
-#
-#  def test_parent_log_block
-#    ['1', '2'].each{|x|
-#      msg = Log.format("foo.bar")
-#      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
-#      assert(msg.include?(":: "))
-#      assert(msg.include?(":test_parent_log_block:"))
-#      assert(msg.end_with?('foo.bar'))
-#    }
-#  end
-  #
+  def test_multiaccess
+    mock = Minitest::Mock.new
+    mock.expect(:sync=, nil, [true])
+    mock.expect(:sync=, nil, [true])
+
+    File.stub(:exist?, true){
+      File.stub(:open, mock){
+        Log.init(path: 'foo.bar', queue:false, stdout:false)
+        id = Log.id
+        Log.init(path: 'foo.bar', queue:false, stdout:false)
+        assert_equal(id, Log.id)
+      }
+    }
+
+    assert_mock(mock)
+  end
+
+  def test_format
+    msg = Log.format("foo.bar")
+    assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+    assert(msg.include?(":: "))
+    assert(msg.end_with?('foo.bar'))
+  end
+
+  def test_log_parent_of_rescue
+    Log.init(path:nil, queue: true, stdout: false)
+    begin
+      raise('raise exception')
+    rescue
+      Log.info("foo.bar")
+      msg = Log.pop
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_log_parent_of_rescue:"))
+      assert(msg.end_with?("foo.bar\n"))
+    end
+  end
+
+  def test_log_parent_of_block_not_block
+
+    # format
+    ['1', '2'].each{|x|
+      msg = Log.format("foo.bar")
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_log_parent_of_block_not_block:"))
+      assert(msg.end_with?('foo.bar'))
+    }
+
+    # print
+    Log.init(path:nil, queue: true, stdout: false)
+    ['1', '2'].each{|x|
+      Log.print("foo.bar")
+      msg = Log.pop
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_log_parent_of_block_not_block:"))
+      assert(msg.end_with?("foo.bar"))
+    }
+
+    # puts
+    ['1', '2'].each{|x|
+      Log.puts("foo.bar")
+      msg = Log.pop
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_log_parent_of_block_not_block:"))
+      assert(msg.end_with?("foo.bar\n"))
+    }
+
+    # debug
+    ['1', '2'].each{|x|
+      Log.debug("foo.bar")
+      msg = Log.pop
+      assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
+      assert(msg.include?(":: "))
+      assert(msg.include?(":test_log_parent_of_block_not_block:"))
+      assert(msg.end_with?("foo.bar\n"))
+    }
+  end
+
   def test_file_puts_print
     mock = Minitest::Mock.new
     mock.expect(:sync=, nil, [true])
