@@ -54,7 +54,7 @@ class TestLog < Minitest::Test
     msg = Log.pop
     assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
     assert(msg.include?(":test_rescue_inside_thread:"))
-    assert(msg.end_with?("E:: foobar\n"))
+    assert(msg.end_with?("E:: #{'foobar'.colorize(:red)}\n"))
   end
 
   def test_multiaccess
@@ -103,11 +103,11 @@ class TestLog < Minitest::Test
     ['foo','bar'].each{|x|
       Log.warn(x)
     }
-    ["foo\n", "bar\n"].each_with_index{|x, i|
+    ["foo", "bar"].each_with_index{|x, i|
       msg = Log.pop
       assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
       assert(!msg.include?(":test_log_parent_of_each_with_index:"))
-      assert(msg.end_with?("W:: #{x}"))
+      assert(msg.end_with?("W:: #{x.colorize(:light_yellow)}\n"))
     }
   end
 
@@ -134,7 +134,7 @@ class TestLog < Minitest::Test
       msg = Log.pop
       assert(msg.start_with?(Time.now.utc.strftime('%Y-%m-%d')))
       assert(msg.include?(":test_log_parent_of_rescue:"))
-      assert(msg.end_with?("E:: foo.bar\n"))
+      assert(msg.end_with?("E:: #{'foo.bar'.colorize(:red)}\n"))
     end
   end
 

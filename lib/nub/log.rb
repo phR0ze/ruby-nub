@@ -140,6 +140,10 @@ module Log
       loc = (opts && opts.key?(:loc)) ? opts[:loc] : false
       type = (opts && opts.key?(:type)) ? opts[:type] : ""
       stamp = (opts && opts.key?(:stamp)) ? opts[:stamp] : true
+
+      str = str.colorize(:red) if type == 'E'
+      str = str.colorize(:light_yellow) if type == 'W'
+
       if stamp or loc
         timestamp, location = call_details
         location = loc ? location : ""
