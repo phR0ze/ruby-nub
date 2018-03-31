@@ -201,7 +201,7 @@ module Log
   # Log the given message in red and exit
   # @param msg [String] message to log
   def die(msg)
-    puts(msg.colorize(:red), stamp: false) and exit
+    puts("Error: #{msg}".colorize(:red), stamp: false) and exit
   end
 
   # Remove an item from the queue, block until one exists
