@@ -49,15 +49,16 @@ syntax allows one to have a cleaner multi-command line expression with reusable 
 said to apply in a chained command syntax when they are of the same type in the positional case or
 same type and name in the named case.
 
+***Commander.new*** must be run from the app's executable file for it to pick up the app's filename
+properly.
+
 Example ruby configuration:
 ```ruby
 if __FILE__ == $0
-  app = 'reduce'
-  version = '0.0.1'
   examples = "Clean all: sudo ./#{app} clean all\n".colorize(:green)
 
-  # Creates a new instance of commander with app settings as given
-  cmdr = Commander.new(app, version, examples:examples)
+  # Creates a new instance of commander
+  cmdr = Commander.new(examples:examples)
 
   # Create two commands with a chainable positional option
   cmdr.add('clean', 'Clean build', options:[

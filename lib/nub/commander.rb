@@ -95,13 +95,11 @@ class Commander
   # @param app [String] application name e.g. reduce
   # @param version [String] version of the application e.g. 1.0.0
   # @param examples [String] optional examples to list after the title before usage
-  def initialize(app, version, examples:nil)
+  def initialize(app:nil, version:nil, examples:nil)
     @app = app
+    @app_default = Sys.caller_filename
     @version = version
     @examples = examples
-    !puts("Error: app name and version are required".colorize(:red)) and
-      exit if @app.nil? or @app.empty? or @version.nil? or @version.empty?
-
     @help_opt = Option.new('-h|--help', 'Print command/options help')
     @just = 40
 
@@ -127,7 +125,9 @@ class Commander
       exit if cmd =~ /[^a-z]/
 
     # Build help for command
-    help = "#{banner}\n#{desc}\n\nUsage: ./#{@app} #{cmd} [options]\n"
+    app = @app || @app_default
+    help = "#{desc}\n\nUsage: ./#{app} #{cmd} [options]\n"
+    help = "#{banner}\n#{help}" if @app
     options << @help_opt
 
     # Add positional options first
@@ -150,23 +150,25 @@ class Commander
   # Returns banner string
   # @returns [String] the app's banner
   def banner
-    banner = "#{@app}_v#{@version}\n#{'-' * 80}".colorize(:light_yellow)
+    version = @version.nil? ? "" : "_v#{@version}"
+    banner = "#{@app}#{version}\n#{'-' * 80}".colorize(:light_yellow)
     return banner
   end
 
   # Return the app's help string
   # @returns [String] the app's help string
   def help
-    help = "#{banner}\n"
+    help = @app.nil? ? "" : "#{banner}\n"
     if !@examples.nil? && !@examples.empty?
       newline = Sys.strip_colorize(@examples)[-1] != "\n" ? "\n" : ""
       help += "Examples:\n#{@examples}\n#{newline}"
     end
-    help += "Usage: ./#{@app} [commands] [options]\n"
+    app = @app || @app_default
+    help += "Usage: ./#{app} [commands] [options]\n"
     help += "    #{'-h|--help'.ljust(@just)}Print command/options help: Flag\n"
     help += "COMMANDS:\n"
     @config.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
-    help += "\nsee './#{@app} COMMAND --help' for specific command help\n"
+    help += "\nsee './#{app} COMMAND --help' for specific command help\n"
 
     return help
   end
@@ -277,7 +279,7 @@ class Commander
     !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?
 
     # Print banner on success
-    puts(banner)
+    puts(banner) if @app
   end
 end
 

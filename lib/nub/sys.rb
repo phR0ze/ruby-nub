@@ -38,6 +38,25 @@ ColorMap = {
 
 module Sys
 
+  # Wait for any key to be pressed  
+  def self.any_key?
+    begin
+      state = `stty -g`
+      `stty raw -echo -icanon isig`
+      STDIN.getc.chr
+    ensure
+      `stty #{state}`
+    end
+  end
+
+  # Get the caller's filename for the caller of the function this call is nested in
+  # not the function this call is called in
+  # @returns [String] the caller's filename
+  def self.caller_filename
+    path = caller_locations(2, 1).first.path
+    return File.basename(path)
+  end
+
   # Capture STDOUT to a string
   # @returns [String] the redirected output
   def self.capture(&block)
@@ -49,17 +68,6 @@ module Sys
     $stdout, $stderr = STDOUT, STDERR
 
     return OpenStruct.new(result: result, stdout: stdout.string, stderr: stderr.string)
-  end
-
-  # Wait for any key to be pressed  
-  def self.any_key?
-    begin
-      state = `stty -g`
-      `stty raw -echo -icanon isig`
-      STDIN.getc.chr
-    ensure
-      `stty #{state}`
-    end
   end
 
   # Strip the ansi color codes from the given string

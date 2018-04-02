@@ -26,6 +26,10 @@ require_relative '../lib/nub/sys'
 
 class TestSys < Minitest::Test
 
+  def test_caller_filename
+    assert_equal("test.rb", Sys.caller_filename)
+  end
+
   def test_capture
     capture = Sys.capture{ puts("test") }
     assert_equal("test\n", capture.stdout)
