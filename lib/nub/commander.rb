@@ -242,22 +242,22 @@ class Commander
             sym = "#{cmd.name}#{pos}".to_sym
           end
 
-          # Convert value to appropriate type
+          # Convert value to appropriate type and validate against allowed
           # --------------------------------------------------------------------
           if value
-            if cmd_opt.type == Integer
+            if cmd_opt.type == String
+              if cmd_opt.allowed.any?
+                !puts("Error: invalid string value '#{value}'".colorize(:red)) && !puts(cmd.help) and
+                  exit if !cmd_opt.allowed.include?(value)
+              end
+            elsif cmd_opt.type == Integer
               value = value.to_i
-
-              # Validate allowed values
               if cmd_opt.allowed.any?
                 !puts("Error: invalid integer value '#{value}'".colorize(:red)) && !puts(cmd.help) and
                   exit if !cmd_opt.allowed.include?(value)
               end
-
             elsif cmd_opt.type == Array
               value = value.split(',')
-
-              # Validate allowed values
               if cmd_opt.allowed.any?
                 value.each{|x|
                   !puts("Error: invalid array value '#{x}'".colorize(:red)) && !puts(cmd.help) and

@@ -254,6 +254,17 @@ class TestCommander < Minitest::Test
     assert(capture.stdout.include?("clean0"))
   end
 
+  def test_positional_invalid_string_value
+    ARGV.clear and ARGV << 'clean' << 'foo'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'])
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid string value 'foo'"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
   def test_positional_option_too_many
     ARGV.clear and ARGV << 'clean' << 'foo' << 'bar'
     cmdr = Commander.new
