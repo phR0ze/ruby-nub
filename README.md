@@ -51,16 +51,23 @@ same type and name in the named case.
 
 Example ruby configuration:
 ```ruby
-# Creates a new instance of commander with app settings as given
-cmdr = Commander.new('app-name', 'app-version', 'examples')
-# Create two commands with a chainable positional option
-cmdr.add('clean', 'Clean build', options:[
-  Option.new(nil, 'Clean given components')
-])
-cmdr.add('build', 'Build components', options:[
-  Option.new(nil, 'Build given components')
-])
-cmdr.parse!
+if __FILE__ == $0
+  app = 'reduce'
+  version = '0.0.1'
+  examples = "Clean all: sudo ./#{app} clean all\n".colorize(:green)
+
+  # Creates a new instance of commander with app settings as given
+  cmdr = Commander.new(app, version, examples:examples)
+
+  # Create two commands with a chainable positional option
+  cmdr.add('clean', 'Clean build', options:[
+    Option.new(nil, 'Clean given components', allowed:['all', 'iso'])
+  ])
+  cmdr.add('build', 'Build components', options:[
+    Option.new(nil, 'Build given components')
+  ])
+  cmdr.parse!
+end
 ```
 
 Example command line expressions:
