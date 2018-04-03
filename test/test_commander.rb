@@ -26,14 +26,37 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
-  def test_chained_commands
-    #ARGV.clear and ARGV << 'delete' << 'deployment' << 'tron' << '-n' << 'trondom'
+  def test_required_named_option_missing
+    expected =<<EOF
+Error: required option -c|--comp not given
+Build components
+
+Usage: ./test_commander.rb build [options]
+    -c|--comp                               Component to build: Flag, Required
+    -h|--help                               Print command/options help: Flag
+EOF
+    ARGV.clear and ARGV << 'build'
     cmdr = Commander.new
-    cmdr.add('build', '', options:[Option.new(nil, 'Component to build')])
-    cmdr.add('publish', '', options:[Option.new(nil, 'Component to publish')])
-    cmdr.add('deploy', '', options:[Option.new(nil, 'Component to deply')])
-    out = Sys.capture{ cmdr.parse! }.stdout
-    puts(out)
+    cmdr.add('build', 'Build components', options:[
+      Option.new('-c|--comp', 'Component to build', required:true)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, Sys.strip_colorize(capture.stdout))
+  end
+
+  def test_chained_named
+  end
+
+  def test_chained_positional
+    ARGV.clear and ARGV << 'build' << 'publish' << 'deploy' << 'debug'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', options:[Option.new(nil, 'Component to build')])
+    cmdr.add('publish', 'Publish components', options:[Option.new(nil, 'Component to publish')])
+    cmdr.add('deploy', 'Deploy components', options:[Option.new(nil, 'Component to deply')])
+    cmdr.parse!
+    assert_equal("debug", cmdr[:build][:build0])
+    assert_equal("debug", cmdr[:publish][:publish0])
+    assert_equal("debug", cmdr[:deploy][:deploy0])
   end
 
   def test_multi_positional_and_named_options

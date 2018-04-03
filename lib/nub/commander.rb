@@ -194,13 +194,46 @@ class Commander
         @cmds[ARGV.shift.to_sym] = {}
         cmd_names.reject!{|x| x == cmd.name}
 
-        # Collect command options
-        opts = ARGV.take_while{|x| !cmd_names.include?(x) }
-        ARGV.shift(opts.size)
+        # Command options as defined in configuration
         cmd_pos_opts = cmd.opts.select{|x| x.key.nil? }
         cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
+
+        # Collect command options from args to compare against
+        opts = ARGV.take_while{|x| !cmd_names.include?(x) }
+        ARGV.shift(opts.size)
+
+        # All positional options are required. If they are not given then check for the 'chained
+        # command expression' case for positional options in the next command that satisfy the
+        # previous command's requirements and so on and so forth.
+        if opts.size == 0 && (cmd_pos_opts.any? || cmd_named_opts.any?{|x| x.required})
+          i = 0
+          while (i += 1) < ARGV.size do
+            opts = ARGV[i..-1].take_while{|x| !cmd_names.include?(x) }
+            break if opts.any? 
+          end
+
+          # Check that the chained command options at least match types and size
+          if opts.any?
+            other_pos_opts = @config.find{|x| x.name == ARGV[i-1]}.opts.select{|x| x.key.nil?}
+            !puts("Error: equal positional options are required for chained commands".colorize(:red)) && !puts(cmd.help) and
+              exit if cmd_pos_opts.size != other_pos_opts.size
+            cmd_pos_opts.each_with_index{|x,i|
+              !puts("Error: chained command options are not type consistent".colorize(:red)) && !puts(cmd.help) and
+                exit if x.type != other_pos_opts[i].type
+            }
+          end
+        end
+
+        # Check that all positional options were given
         !puts("Error: positional option required".colorize(:red)) && !puts(cmd.help) and
           exit if opts.size < cmd_pos_opts.size
+
+        # Check that all required named options where given
+        named_opts = opts.select{|x| x.start_with?('-')}
+        cmd_named_opts.select{|x| x.required}.each{|x|
+          !puts("Error: required option #{x.key} not given".colorize(:red)) && !puts(cmd.help) and
+            exit if !named_opts.find{|y| y.start_with?(x.short) || y.start_with?(x.long)}
+        }
 
         # Process command options
         pos = -1

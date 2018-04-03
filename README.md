@@ -44,10 +44,10 @@ interpreted as being a ***chained command expression***. Chained command express
 left to right, such that you can execute the ***clean*** command then the ***build*** command or
 more in a single command line expression. Each command in a chained command expression may have its
 own specific options (those coming after the command but before the next command) or if options are
-omitted those options that apply from the next command will be used. The chained command options
-syntax allows one to have a cleaner multi-command line expression with reusable options. Options are
-said to apply in a chained command syntax when they are of the same type in the positional case or
-same type and name in the named case.
+omitted the options from the next command will be used. The chained command options syntax allows
+one to have a cleaner multi-command line expression with reusable options. Options are said to apply
+in a chained command syntax when they are of the same type in the positional case or same type and
+name in the named case.
 
 ***Commander.new*** must be run from the app's executable file for it to pick up the app's filename
 properly.
