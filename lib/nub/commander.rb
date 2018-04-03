@@ -214,12 +214,15 @@ class Commander
 
           # Check that the chained command options at least match types and size
           if opts.any?
-            other_pos_opts = @config.find{|x| x.name == ARGV[i-1]}.opts.select{|x| x.key.nil?}
-            !puts("Error: equal positional options are required for chained commands".colorize(:red)) && !puts(cmd.help) and
-              exit if cmd_pos_opts.size != other_pos_opts.size
-            cmd_pos_opts.each_with_index{|x,i|
+            cmd_required = cmd.opts.select{|x| x.key.nil? || x.required}
+            other = @config.find{|x| x.name == ARGV[i-1]}
+            other_required = other.opts.select{|x| x.key.nil? || x.required}
+
+            !puts("Error: chained commands must have equal numbers of required optiosn".colorize(:red)) && !puts(cmd.help) and
+              exit if cmd_required.size != other_required.size
+            cmd_required.each_with_index{|x,i|
               !puts("Error: chained command options are not type consistent".colorize(:red)) && !puts(cmd.help) and
-                exit if x.type != other_pos_opts[i].type
+                exit if x.type != other_required[i].type || x.key != other_required[i].key
             }
           end
         end

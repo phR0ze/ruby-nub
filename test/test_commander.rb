@@ -45,6 +45,62 @@ EOF
   end
 
   def test_chained_named
+    ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', options:[
+      Option.new('-c|--comp', 'Component to build', required:true)
+    ])
+    cmdr.add('publish', 'Publish components', options:[
+      Option.new('-c|--comp', 'Component to publish', required:true)
+    ])
+    cmdr.parse!
+    assert(cmdr[:build][:comp])
+    assert(cmdr[:publish][:comp])
+  end
+
+  def test_chained_named_inconsistent_types
+expected =<<EOF
+Error: chained command options are not type consistent
+Build components
+
+Usage: ./test_commander.rb build [options]
+    -c|--comp                               Component to build: Flag, Required
+    -h|--help                               Print command/options help: Flag
+EOF
+
+    ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', options:[
+      Option.new('-c|--comp', 'Component to build', required:true)
+    ])
+    cmdr.add('publish', 'Publish components', options:[
+      Option.new('-c|--comp', 'Component to publish', required:true, type:String)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, Sys.strip_colorize(capture.stdout))
+  end
+
+  def test_chained_positional_inconsistent_numbers
+expected =<<EOF
+Error: chained commands must have equal numbers of required optiosn
+Build components
+
+Usage: ./test_commander.rb build [options]
+    build0                                  Component to build: String, Required
+    -h|--help                               Print command/options help: Flag
+EOF
+
+    ARGV.clear and ARGV << 'build' << 'publish' << 'debug'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', options:[
+      Option.new(nil, 'Component to build')
+    ])
+    cmdr.add('publish', 'Publish components', options:[
+      Option.new(nil, 'Component to publish'),
+      Option.new(nil, 'Extra positional')
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, Sys.strip_colorize(capture.stdout))
   end
 
   def test_chained_positional
