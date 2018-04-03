@@ -26,6 +26,16 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
+  def test_chained_commands
+    #ARGV.clear and ARGV << 'delete' << 'deployment' << 'tron' << '-n' << 'trondom'
+    cmdr = Commander.new
+    cmdr.add('build', '', options:[Option.new(nil, 'Component to build')])
+    cmdr.add('publish', '', options:[Option.new(nil, 'Component to publish')])
+    cmdr.add('deploy', '', options:[Option.new(nil, 'Component to deply')])
+    out = Sys.capture{ cmdr.parse! }.stdout
+    puts(out)
+  end
+
   def test_multi_positional_and_named_options
     ARGV.clear and ARGV << 'delete' << 'deployment' << 'tron' << '-n' << 'trondom'
     cmdr = Commander.new(app:'test', version:'0.0.1')
