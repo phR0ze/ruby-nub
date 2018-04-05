@@ -24,6 +24,7 @@ require 'monitor'
 require 'ostruct'
 require 'colorize'
 require_relative 'sys'
+require_relative 'string'
 
 LogLevel = OpenStruct.new({
   error: 0,
@@ -122,7 +123,7 @@ module Log
 
       # Handle output
       if !str.empty?
-        @file << Sys.strip_colorize(str) if @path
+        @file << str.strip_color if @path
         @@_queue << str if @@_queue
         $stdout.print(str) if @@_stdout
       end
@@ -152,7 +153,7 @@ module Log
       end
 
       # Handle output
-      @file.puts(Sys.strip_colorize(str)) if @path
+      @file.puts(str.strip_color) if @path
       @@_queue << "#{str}\n" if @@_queue
       $stdout.puts(str) if @@_stdout
 

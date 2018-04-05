@@ -22,6 +22,7 @@
 
 require 'minitest/autorun'
 require_relative '../lib/nub/sys'
+require_relative '../lib/nub/string'
 require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
@@ -123,7 +124,7 @@ EOF
       Option.new(nil, 'Component name'),
       Option.new('-n|--namespace=NAMESPACE', 'Namespace to use', type:String),
     ])
-    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
     assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal('deployment', cmdr[:delete][:delete0])
     assert_equal('tron', cmdr[:delete][:delete1])
@@ -136,7 +137,7 @@ EOF
     cmdr.add('bar', 'bar it up', options:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', type:String),
     ])
-    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
     assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal('foo foo', cmdr[:bar][:foobar])
   end
@@ -197,7 +198,7 @@ EOF
     cmdr.add('bar', 'bar it up', options:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
     ])
-    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
     assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal("foo", cmdr[:bar][:foobar])
   end
@@ -211,7 +212,7 @@ EOF
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
       Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
     ])
-    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
     assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(3, cmdr[:clean][:min])
   end
@@ -265,7 +266,7 @@ EOF
     cmdr.add('clean', 'Clean components', options:[
       Option.new('-d|--debug', 'Debug mode'),
     ])
-    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
     assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(true, cmdr[:clean][:debug])
   end
@@ -292,7 +293,7 @@ EOF
     cmdr.add('clean', 'Clean components', options:[
       Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
     ])
-    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
     assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(3, cmdr[:clean][:clean0])
     cmdr[:clean][:clean0] = 2
@@ -305,7 +306,7 @@ EOF
     cmdr.add('clean', 'Clean components', options:[
       Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
     ])
-    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| Sys.strip_colorize(x)}
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
     assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal(3, cmdr[:clean][:clean0])
   end

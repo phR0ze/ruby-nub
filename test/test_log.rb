@@ -21,6 +21,7 @@
 #SOFTWARE.
 
 require 'time'
+require 'colorize'
 require 'minitest/autorun'
 require_relative '../lib/nub/log'
 require_relative '../lib/nub/sys'

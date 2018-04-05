@@ -21,6 +21,7 @@
 
 require 'colorize'
 require_relative 'sys'
+require_relative 'string'
 
 # Command option encapsulation
 class Option
@@ -160,7 +161,7 @@ class Commander
   def help
     help = @app.nil? ? "" : "#{banner}\n"
     if !@examples.nil? && !@examples.empty?
-      newline = Sys.strip_colorize(@examples)[-1] != "\n" ? "\n" : ""
+      newline = @examples.strip_color[-1] != "\n" ? "\n" : ""
       help += "Examples:\n#{@examples}\n#{newline}"
     end
     app = @app || @app_default

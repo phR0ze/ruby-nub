@@ -20,13 +20,33 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
+require 'colorize'
 require 'minitest/autorun'
 require_relative '../lib/nub/string'
 
 class TestString < Minitest::Test
 
+  def test_strip_color
+    color = "foo bar".colorize(:cyan)
+    assert("foo bar" != color)
+    assert_equal("foo bar", color.strip_color)
+  end
+
   def test_to_ascii
     assert_equal("test", "test".to_ascii)
+  end
+
+  def test_tokenize_color
+    #colors = [:light_black, :light_red, :light_green, :light_yellow, :light_blue, :light_magenta, :light_cyan, :light_white]
+    assert_equal([ColorPair.new("foobar", 30, 'black')], "foobar".colorize(:black).tokenize_color)
+    assert_equal([ColorPair.new("foobar", 31, 'red')], "foobar".colorize(:red).tokenize_color)
+    assert_equal([ColorPair.new("foobar", 32, 'green')], "foobar".colorize(:green).tokenize_color)
+    assert_equal([ColorPair.new("foobar", 33, 'yellow')], "foobar".colorize(:yellow).tokenize_color)
+    assert_equal([ColorPair.new("foobar", 34, 'blue')], "foobar".colorize(:blue).tokenize_color)
+    assert_equal([ColorPair.new("foobar", 35, 'magenta')], "foobar".colorize(:magenta).tokenize_color)
+    assert_equal([ColorPair.new("foobar", 36, 'cyan')], "foobar".colorize(:cyan).tokenize_color)
+    assert_equal([ColorPair.new("foobar", 37, 'white')], "foobar".colorize(:white).tokenize_color)
+    assert_equal([ColorPair.new("foobar", 39, 'gray88')], "foobar".colorize(:default).tokenize_color)
   end
 end
 
