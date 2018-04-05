@@ -27,6 +27,7 @@ require_relative '../lib/nub/string'
 class TestSys < Minitest::Test
 
   def test_env_die_when_not_exist
+    Log.init(path:nil, queue: false, stdout: true)
     assert_nil(Sys.env('FOO_BAR', required:false))
     capture = Sys.capture{ assert_raises(SystemExit){ Sys.env('FOO_BAR') }}
     assert_equal("Error: FOO_BAR env variable is required!\n", capture.stdout.strip_color)
