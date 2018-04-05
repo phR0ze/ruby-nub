@@ -74,7 +74,7 @@ module Log
     @@_monitor.synchronize{
 
       # Skip first 3 on stack (i.e. 0 = block in call_details, 1 = synchronize, 2 = call_detail) 
-      stack = caller_locations(3, 10)
+      stack = caller_locations(3, 20)
 
       # Skip past any calls in 'log.rb' or 'monitor.rb'
       i = -1
@@ -115,7 +115,7 @@ module Log
       type = (opts && opts.key?(:type)) ? opts[:type] : ""
       stamp = (opts && opts.key?(:stamp)) ? opts[:stamp] : true
       if stamp or loc
-        timestamp, location = call_details
+        timestamp, location = self.call_details
         location = loc ? location : ""
         type = ":#{type}" if !type.empty?
         str = "#{timestamp}#{location}#{type}:: #{str}"
@@ -146,7 +146,7 @@ module Log
       str = str.colorize(:light_yellow) if type == 'W'
 
       if stamp or loc
-        timestamp, location = call_details
+        timestamp, location = self.call_details
         location = loc ? location : ""
         type = ":#{type}" if !type.empty?
         str = "#{timestamp}#{location}#{type}:: #{str}"
@@ -166,7 +166,7 @@ module Log
     opts[:loc] = true and opts[:type] = 'E' if opts
     args << {:loc => true, :type => 'E'} if !opts
 
-    return puts(*args)
+    return self.puts(*args)
   end
 
   def warn(*args)
@@ -174,7 +174,7 @@ module Log
       opts = args.find{|x| x.is_a?(Hash)}
       opts[:type] = 'W' if opts
       args << {:type => 'W'} if !opts
-      return puts(*args)
+      return self.puts(*args)
     end
     return true
   end
@@ -184,7 +184,7 @@ module Log
       opts = args.find{|x| x.is_a?(Hash)}
       opts[:type] = 'I' if opts
       args << {:type => 'I'} if !opts
-      return puts(*args)
+      return self.puts(*args)
     end
     return true
   end
@@ -194,7 +194,7 @@ module Log
       opts = args.find{|x| x.is_a?(Hash)}
       opts[:type] = 'D' if opts
       args << {:type => 'D'} if !opts
-      return puts(*args)
+      return self.puts(*args)
     end
     return true
   end
@@ -202,7 +202,7 @@ module Log
   # Log the given message in red and exit
   # @param msg [String] message to log
   def die(msg)
-    puts("Error: #{msg}".colorize(:red), stamp: false) and exit
+    self.puts("Error: #{msg}".colorize(:red), stamp: false) and exit
   end
 
   # Remove an item from the queue, block until one exists

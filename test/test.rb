@@ -28,7 +28,6 @@ end
 
 require_relative 'test_commander'
 require_relative 'test_config'
-require_relative 'test_log'
 require_relative 'test_net'
 require_relative 'test_string'
 require_relative 'test_sys'

@@ -20,7 +20,7 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require 'minitest/autorun'
+#require 'minitest/autorun'
 require_relative '../lib/nub/sys'
 require_relative '../lib/nub/string'
 

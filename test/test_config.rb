@@ -26,7 +26,7 @@ require_relative '../lib/nub/config'
 
 class TestConfig < Minitest::Test
 
-  def test_config_sidecar
+  def test_config_sidecar_config
     path = File.expand_path(File.join(File.dirname(__FILE__), 'foo.conf'))
     File.stub(:exists?, true) {
       Sys.capture{

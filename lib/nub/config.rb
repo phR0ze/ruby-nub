@@ -28,8 +28,7 @@ require_relative 'log'
 # Simple YAML configuration for an application.
 # Uses singleton pattern for single source of truth
 module Config
-
-  # Private properties
+  extend self
   @@_yml = nil
 
   # Public properties
@@ -39,7 +38,7 @@ module Config
 
   # Singleton new alternate
   # @param config [String] name or path of the config file
-  def self.init(config)
+  def init(config)
 
     # Determine caller's file path to look for sidecar config
     caller_path = caller_locations(1, 1).first.path
@@ -52,29 +51,29 @@ module Config
     begin
       @@_yml = File.exists?(@path) ? YAML.load_file(@path) : {}
     rescue Exception => e
-      Log.puts("Error: #{e}".colorize(:red)) and exit
+      Log.die(e)
     end
 
     return nil
   end
 
   # Simple bool whether the config exists or not on disk
-  def self.exists?
+  def exists?
       return File.exists?(@path)
   end
 
   # Hash like getter
-  def self.[](key)
+  def [](key)
     return @@_yml[key]
   end
 
   # Hash like setter
-  def self.[]=(key, val)
+  def []=(key, val)
     return @@_yml[key] = val
   end
 
   # Save the config file
-  def self.save
+  def save
     File.write(@path, @@_yml.to_yaml) if @@_yml
   end
 end

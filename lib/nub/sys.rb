@@ -25,18 +25,19 @@ require 'stringio'
 require_relative 'log'
 
 module Sys
+  extend self
 
   # Get the given environment variable by nam
   # @param var [String] name of the environment var
   # @param required [Bool] require that the variable exists by default
-  def self.env(var, required:true)
+  def env(var, required:true)
     value = ENV[var]
     Log.die("#{var} env variable is required!") if required && !value
     return value
   end
 
   # Wait for any key to be pressed  
-  def self.any_key?
+  def any_key?
     begin
       state = `stty -g`
       `stty raw -echo -icanon isig`
@@ -49,14 +50,14 @@ module Sys
   # Get the caller's filename for the caller of the function this call is nested in
   # not the function this call is called in
   # @returns [String] the caller's filename
-  def self.caller_filename
+  def caller_filename
     path = caller_locations(2, 1).first.path
     return File.basename(path)
   end
 
   # Capture STDOUT to a string
   # @returns [String] the redirected output
-  def self.capture(&block)
+  def capture(&block)
     stdout, stderr = StringIO.new, StringIO.new
     $stdout, $stderr = stdout, stderr
 

@@ -42,7 +42,7 @@ EOF
       Option.new('-c|--comp', 'Component to build', required:true)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-    assert_equal(expected, Sys.strip_colorize(capture.stdout))
+    assert_equal(expected, capture.stdout.strip_color)
   end
 
   def test_chained_named
@@ -78,7 +78,7 @@ EOF
       Option.new('-c|--comp', 'Component to publish', required:true, type:String)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-    assert_equal(expected, Sys.strip_colorize(capture.stdout))
+    assert_equal(expected, capture.stdout.strip_color)
   end
 
   def test_chained_positional_inconsistent_numbers
@@ -101,7 +101,7 @@ EOF
       Option.new(nil, 'Extra positional')
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-    assert_equal(expected, Sys.strip_colorize(capture.stdout))
+    assert_equal(expected, capture.stdout.strip_color)
   end
 
   def test_chained_positional
