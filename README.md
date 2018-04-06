@@ -50,7 +50,8 @@ to apply in a chained command syntax when they are of the same type in the posit
 type and name in the named case.
 
 ***Global*** options are options that are added with the command ***add_global*** and will show up
-set in the commands results using the ***:global*** symbol.
+set in the commands results using the ***:global*** symbol. Global options are given on the command
+line before anything else.
 
 ***Commander.new*** must be run from the app's executable file for it to pick up the app's filename
 properly.

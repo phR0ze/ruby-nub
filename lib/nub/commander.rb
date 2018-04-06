@@ -183,13 +183,6 @@ class Commander
     #---------------------------------------------------------------------------
     cmd_names = @config.map{|x| x.name }
     ARGV.unshift('global') if ARGV.take_while{|x| !cmd_names.include?(x)}.any?
-    #globals = ARGV.take_while{|x| !cmd_names.include?(x)}
-    #!puts(help) and exit if globals.any?#{|x| x.name }
-    #!puts(help) and exit if ARGV.take_while{|x| !cmd_names.include?(x)}
-    #  .any?{|x| x == '-h' || x == '--help' }
-    #if ARGV.take_while{|x| !cmd_names.include?(x)}.any?
-    #  #ARGV.unshift('global')
-    #end
     
     # Process command options
     #---------------------------------------------------------------------------

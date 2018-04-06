@@ -32,11 +32,24 @@ class TestCommander < Minitest::Test
     ARGV.clear
   end
 
+  def test_global_set_multiple
+    ARGV.clear and ARGV << '-d' << '--skip'
+    cmdr = Commander.new
+    cmdr.add_global([
+      Option.new('-d|--debug', 'Debug'),
+      Option.new('-s|--skip', 'Skip')
+    ])
+    cmdr.parse!
+    assert(cmdr[:global][:debug])
+    assert(cmdr[:global][:skip])
+  end
+
   def test_global_set
     ARGV.clear and ARGV << '-d'
     cmdr = Commander.new
     cmdr.add_global(Option.new('-d|--debug', 'Debug'))
     cmdr.parse!
+    assert(cmdr[:global][:debug])
   end
 
   def test_global_is_reserved_command
