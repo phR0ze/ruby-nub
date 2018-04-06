@@ -32,6 +32,16 @@ class TestCommander < Minitest::Test
     ARGV.clear
   end
 
+  def test_global_always_exists
+    ARGV.clear and ARGV << 'build' << 'foo'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', options:[
+      Option.new(nil, 'Component to build', required:true)
+    ])
+    cmdr.parse!
+    assert(cmdr.key?(:global))
+  end
+
   def test_global_set_multiple
     ARGV.clear and ARGV << '-d' << '--skip'
     cmdr = Commander.new

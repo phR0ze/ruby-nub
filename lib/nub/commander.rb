@@ -121,6 +121,11 @@ class Commander
     return @cmds[key] if @cmds[key]
   end
 
+  # Test if the key exists
+  def key?(key)
+    return @cmds.key?(key)
+  end
+
   # Add a command to the command list
   # @param cmd [String] name of the command
   # @param desc [String] description of the command
@@ -313,6 +318,9 @@ class Commander
         }
       end
     }
+
+    # Ensure global is always set
+    @cmds[:global] = {} if !@cmds[:global]
 
     # Ensure all options were consumed
     Log.die("invalid options #{ARGV}") if ARGV.any?
