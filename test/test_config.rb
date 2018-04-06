@@ -21,13 +21,17 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
+require_relative '../lib/nub/log'
 require_relative '../lib/nub/sys'
 require_relative '../lib/nub/config'
 
 class TestConfig < Minitest::Test
 
+  def setup
+    Log.init(path:nil, queue: false, stdout: true)
+  end
+
   def test_config_sidecar_config
-    Log.init(path:nil, queue: true, stdout: false)
     path = File.expand_path(File.join(File.dirname(__FILE__), 'foo.conf'))
     File.stub(:exists?, true) {
       Sys.capture{

@@ -162,48 +162,58 @@ module Log
   end
 
   def error(*args)
-    opts = args.find{|x| x.is_a?(Hash)}
-    opts[:loc] = true and opts[:type] = 'E' if opts
-    args << {:loc => true, :type => 'E'} if !opts
+    @@_monitor.synchronize{
+      opts = args.find{|x| x.is_a?(Hash)}
+      opts[:loc] = true and opts[:type] = 'E' if opts
+      args << {:loc => true, :type => 'E'} if !opts
 
-    return self.puts(*args)
+      return self.puts(*args)
+    }
   end
 
   def warn(*args)
-    if LogLevel.warn <= @@_level
-      opts = args.find{|x| x.is_a?(Hash)}
-      opts[:type] = 'W' if opts
-      args << {:type => 'W'} if !opts
-      return self.puts(*args)
-    end
-    return true
+    @@_monitor.synchronize{
+      if LogLevel.warn <= @@_level
+        opts = args.find{|x| x.is_a?(Hash)}
+        opts[:type] = 'W' if opts
+        args << {:type => 'W'} if !opts
+        return self.puts(*args)
+      end
+      return true
+    }
   end
 
   def info(*args)
-    if LogLevel.info <= @@_level
-      opts = args.find{|x| x.is_a?(Hash)}
-      opts[:type] = 'I' if opts
-      args << {:type => 'I'} if !opts
-      return self.puts(*args)
-    end
-    return true
+    @@_monitor.synchronize{
+      if LogLevel.info <= @@_level
+        opts = args.find{|x| x.is_a?(Hash)}
+        opts[:type] = 'I' if opts
+        args << {:type => 'I'} if !opts
+        return self.puts(*args)
+      end
+      return true
+    }
   end
 
   def debug(*args)
-    if LogLevel.debug <= @@_level
-      opts = args.find{|x| x.is_a?(Hash)}
-      opts[:type] = 'D' if opts
-      args << {:type => 'D'} if !opts
-      return self.puts(*args)
-    end
-    return true
+    @@_monitor.synchronize{
+      if LogLevel.debug <= @@_level
+        opts = args.find{|x| x.is_a?(Hash)}
+        opts[:type] = 'D' if opts
+        args << {:type => 'D'} if !opts
+        return self.puts(*args)
+      end
+      return true
+    }
   end
 
   # Log the given message in red and exit
   # @param msg [String] message to log
   def die(msg)
-    msg += "!" if msg[-1] != "!"
-    self.puts("Error: #{msg}".colorize(:red), stamp: false) and exit
+    @@_monitor.synchronize{
+      msg += "!" if msg.is_a?(String) && msg[-1] != "!"
+      self.puts("Error: #{msg}".colorize(:red), stamp: false) and exit
+    }
   end
 
   # Remove an item from the queue, block until one exists

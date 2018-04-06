@@ -184,6 +184,11 @@ class Commander
     cmd_names = @config.map{|x| x.name }
     globals = ARGV.take_while{|x| !cmd_names.include?(x)}
     !puts(help) and exit if globals.any?#{|x| x.name }
+    #!puts(help) and exit if ARGV.take_while{|x| !cmd_names.include?(x)}
+    #  .any?{|x| x == '-h' || x == '--help' }
+    #if ARGV.take_while{|x| !cmd_names.include?(x)}.any?
+    #  #ARGV.unshift('global')
+    #end
     
     # Process command options
     #---------------------------------------------------------------------------
@@ -251,9 +256,9 @@ class Commander
           # --------------------------------------------------------------------
           # e.g. -s, --skip, --skip=VALUE
           if opt.start_with?('-')
-            short = opt[/^(-\w).*$/, 1]
-            long = opt[/(--[\w\-]+)(=.+)*$/, 1]
-            value = opt[/.*=(.*)$/, 1]
+            short = opt[@short_regex, 1]
+            long = opt[@long_regex, 1]
+            value = opt[@value_regex, 1]
 
             # Set symbol converting dashes to underscores for named options
             if (cmd_opt = cmd_named_opts.find{|x| x.short == short || x.long == long})

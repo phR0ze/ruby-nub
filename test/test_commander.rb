@@ -31,12 +31,20 @@ class TestCommander < Minitest::Test
     Log.init(path:nil, queue: false, stdout: true)
   end
 
-#  def test_global_set
-#    ARGV.clear and ARGV << '-d'
-#    cmdr = Commander.new
-#    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
-#    cmdr.parse!
-#  end
+  def test_global_set
+    #ARGV.clear and ARGV << '-d'
+    #cmdr = Commander.new
+    #cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    #cmdr.parse!
+  end
+
+  def test_global_is_reserved_command
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add('global', 'global is reserved')
+    }}
+    assert_equal("Error: 'global' is a reserved command name!\n", capture.stdout.strip_color)
+  end
 
   def test_global_named_help_with_banner
     expected =<<EOF
@@ -50,6 +58,7 @@ COMMANDS:
 
 see './test COMMAND --help' for specific command help
 EOF
+    ARGV.clear and ARGV << '-h'
     cmdr = Commander.new(app:'test', version:'0.0.1')
     cmdr.add_global(Option.new('-d|--debug', 'Debug'))
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -580,14 +589,6 @@ EOF
       ])
     }}
     assert_equal("Error: 'help' is a reserved option name!\n", capture.stdout.strip_color)
-  end
-
-  def test_global_is_reserved_command
-    cmdr = Commander.new
-    capture = Sys.capture{ assert_raises(SystemExit){
-      cmdr.add('global', 'global is reserved')
-    }}
-    assert_equal("Error: 'global' is a reserved command name!\n", capture.stdout.strip_color)
   end
 
   def test_mixed_types_in_allow_should_fail
