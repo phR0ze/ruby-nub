@@ -20,6 +20,7 @@
 #SOFTWARE.
 
 require 'colorize'
+require_relative 'log'
 require_relative 'sys'
 require_relative 'string'
 
@@ -52,9 +53,8 @@ class Option
     #https://bneijt.nl/pr/ruby-regular-expressions/
     # Valid forms to look for with chars [a-zA-Z0-9-_=|] 
     # --help, --help=HINT, -h|--help, -h|--help=HINT
-    !puts("Error: invalid option key #{key}".colorize(:red)) and
-      exit if key && (key.count('=') > 1 or key.count('|') > 1 or !key[/[^\w\-=|]/].nil? or
-        key[/(^--[a-zA-Z0-9\-_]+$)|(^--[a-zA-Z\-_]+=\w+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+=\w+$)/].nil?)
+    Log.die("invalid option key #{key}") if key && (key.count('=') > 1 or key.count('|') > 1 or !key[/[^\w\-=|]/].nil? or
+      key[/(^--[a-zA-Z0-9\-_]+$)|(^--[a-zA-Z\-_]+=\w+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+=\w+$)/].nil?)
     @key = key
     if key
       @hint = key[/.*=(.*)$/, 1]
@@ -66,10 +66,8 @@ class Option
     end
 
     # Validate and set type
-    !puts("Error: invalid option type #{type}".colorize(:red)) and
-      exit if ![String, Integer, Array, nil].any?{|x| type == x}
-    !puts("Error: option type must be set".colorize(:red)) and
-      exit if @hint && !type
+    Log.die("invalid option type #{type}") if ![String, Integer, Array, nil].any?{|x| type == x}
+    Log.die("option type must be set") if @hint && !type
     @type = String if !key && !type
     @type = FalseClass if key and !type
     @type = type if type
@@ -77,8 +75,7 @@ class Option
     # Validate allowed
     if @allowed.any?
       allowed_type = @allowed.first.class
-      !puts("Error: mixed allowed types".colorize(:red)) and
-        exit if @allowed.any?{|x| x.class != allowed_type}
+      Log.die("mixed allowed types") if @allowed.any?{|x| x.class != allowed_type}
     end
   end
 end
@@ -101,15 +98,22 @@ class Commander
     @app_default = Sys.caller_filename
     @version = version
     @examples = examples
-    @help_opt = Option.new('-h|--help', 'Print command/options help')
     @just = 40
 
-    # Configuration - ordered list of commands
-    @config = []
+    # Regexps
+    @short_regex = /^(-\w).*$/
+    @long_regex = /(--[\w\-]+)(=.+)*$/
+    @value_regex = /.*=(.*)$/
 
     # Incoming user set commands/options
     # {command_name => {}}
     @cmds = {}
+
+    # Configuration - ordered list of commands
+    @config = []
+
+    # Configure default global options
+    add_global(Option.new('-h|--help', 'Print command/options help'))
   end
 
   # Hash like accessor for checking if a command or option is set
@@ -122,30 +126,25 @@ class Commander
   # @param desc [String] description of the command
   # @param opts [List] list of command options
   def add(cmd, desc, options:[])
-    !puts("Error: command names must be pure lowercase letters".colorize(:red)) and
-      exit if cmd =~ /[^a-z]/
+    Log.die("'global' is a reserved command name") if cmd == 'global'
+    Log.die("'help' is a reserved option name") if options.any?{|x| !x.key.nil? && x.key.include?('help')}
 
-    # Build help for command
-    app = @app || @app_default
-    help = "#{desc}\n\nUsage: ./#{app} #{cmd} [options]\n"
-    help = "#{banner}\n#{help}" if @app
-    options << @help_opt
+    cmd = add_cmd(cmd, desc, options)
+    @config << cmd
+  end
 
-    # Add positional options first
-    sorted_options = options.select{|x| x.key.nil?}
-    sorted_options += options.select{|x| !x.key.nil?}.sort{|x,y| x.key <=> y.key}
-    positional_index = -1
-    sorted_options.each{|x| 
-      required = x.required ? ", Required" : ""
-      allowed = x.allowed.empty? ? "" : " (#{x.allowed * ','})"
-      positional_index += 1 if x.key.nil?
-      key = x.key.nil? ? "#{cmd}#{positional_index}" : x.key
-      type = x.type == FalseClass ? "Flag" : x.type
-      help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
-    }
+  # Add global options
+  # @param option/s [Array/Option] array or single option/s
+  def add_global(options)
+    options = [options] if options.class == Option
+    Log.die("only named global options are allowed") if options.any?{|x| x.key.nil?}
 
-    # Create the command in the command config
-    @config << Command.new(cmd, desc, sorted_options, help)
+    # Process the global options, removed the old ones and add new ones
+    if (global = @config.find{|x| x.name == 'global'})
+      global.opts.each{|x| options << x}
+      @config.reject!{|x| x.name == 'global'}
+    end
+    @config << add_cmd('global', 'Global options:', options)
   end
 
   # Returns banner string
@@ -166,9 +165,9 @@ class Commander
     end
     app = @app || @app_default
     help += "Usage: ./#{app} [commands] [options]\n"
-    help += "    #{'-h|--help'.ljust(@just)}Print command/options help: Flag\n"
+    help += @config.find{|x| x.name == 'global'}.help
     help += "COMMANDS:\n"
-    @config.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
+    @config.select{|x| x.name != 'global'}.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
     help += "\nsee './#{app} COMMAND --help' for specific command help\n"
 
     return help
@@ -184,7 +183,7 @@ class Commander
     #---------------------------------------------------------------------------
     cmd_names = @config.map{|x| x.name }
     globals = ARGV.take_while{|x| !cmd_names.include?(x)}
-    !puts(help) and exit if globals.any?
+    !puts(help) and exit if globals.any?#{|x| x.name }
     
     # Process command options
     #---------------------------------------------------------------------------
@@ -219,23 +218,23 @@ class Commander
             other = @config.find{|x| x.name == ARGV[i-1]}
             other_required = other.opts.select{|x| x.key.nil? || x.required}
 
-            !puts("Error: chained commands must have equal numbers of required optiosn".colorize(:red)) && !puts(cmd.help) and
+            !puts("Error: chained commands must have equal numbers of required options!".colorize(:red)) && !puts(cmd.help) and
               exit if cmd_required.size != other_required.size
             cmd_required.each_with_index{|x,i|
-              !puts("Error: chained command options are not type consistent".colorize(:red)) && !puts(cmd.help) and
+              !puts("Error: chained command options are not type consistent!".colorize(:red)) && !puts(cmd.help) and
                 exit if x.type != other_required[i].type || x.key != other_required[i].key
             }
           end
         end
 
         # Check that all positional options were given
-        !puts("Error: positional option required".colorize(:red)) && !puts(cmd.help) and
+        !puts("Error: positional option required!".colorize(:red)) && !puts(cmd.help) and
           exit if opts.size < cmd_pos_opts.size
 
         # Check that all required named options where given
         named_opts = opts.select{|x| x.start_with?('-')}
         cmd_named_opts.select{|x| x.required}.each{|x|
-          !puts("Error: required option #{x.key} not given".colorize(:red)) && !puts(cmd.help) and
+          !puts("Error: required option #{x.key} not given!".colorize(:red)) && !puts(cmd.help) and
             exit if !named_opts.find{|y| y.start_with?(x.short) || y.start_with?(x.long)}
         }
 
@@ -273,7 +272,7 @@ class Commander
           else
             pos += 1
             cmd_opt = cmd_pos_opts.shift
-            !puts("Error: invalid positional option '#{opt}'".colorize(:red)) && !puts(cmd.help) and
+            !puts("Error: invalid positional option '#{opt}'!".colorize(:red)) && !puts(cmd.help) and
               exit if cmd_opt.nil?
             value = opt
             sym = "#{cmd.name}#{pos}".to_sym
@@ -284,20 +283,20 @@ class Commander
           if value
             if cmd_opt.type == String
               if cmd_opt.allowed.any?
-                !puts("Error: invalid string value '#{value}'".colorize(:red)) && !puts(cmd.help) and
+                !puts("Error: invalid string value '#{value}'!".colorize(:red)) && !puts(cmd.help) and
                   exit if !cmd_opt.allowed.include?(value)
               end
             elsif cmd_opt.type == Integer
               value = value.to_i
               if cmd_opt.allowed.any?
-                !puts("Error: invalid integer value '#{value}'".colorize(:red)) && !puts(cmd.help) and
+                !puts("Error: invalid integer value '#{value}'!".colorize(:red)) && !puts(cmd.help) and
                   exit if !cmd_opt.allowed.include?(value)
               end
             elsif cmd_opt.type == Array
               value = value.split(',')
               if cmd_opt.allowed.any?
                 value.each{|x|
-                  !puts("Error: invalid array value '#{x}'".colorize(:red)) && !puts(cmd.help) and
+                  !puts("Error: invalid array value '#{x}'!".colorize(:red)) && !puts(cmd.help) and
                     exit if !cmd_opt.allowed.include?(x)
                 }
               end
@@ -306,17 +305,56 @@ class Commander
 
           # Set option with value
           # --------------------------------------------------------------------
-          !puts("Error: unknown named option '#{opt}' given".colorize(:red)) && !puts(cmd.help) and exit if !sym
+          !puts("Error: unknown named option '#{opt}' given!".colorize(:red)) && !puts(cmd.help) and exit if !sym
           @cmds[cmd.name.to_sym][sym] = value
         }
       end
     }
 
     # Ensure all options were consumed
-    !puts("Error: invalid options #{ARGV}".colorize(:red)) and exit if ARGV.any?
+    Log.die("invalid options #{ARGV}") if ARGV.any?
 
     # Print banner on success
     puts(banner) if @app
+  end
+
+  #-----------------------------------------------------------------------------
+  # Private methods
+  #-----------------------------------------------------------------------------
+  private
+
+  # Add a command to the command list
+  # @param cmd [String] name of the command
+  # @param desc [String] description of the command
+  # @param opts [List] list of command options
+  # @returns cmd [Command] new command
+  def add_cmd(cmd, desc, options)
+    Log.die("command names must be pure lowercase letters") if cmd =~ /[^a-z]/
+
+    # Build help for command
+    app = @app || @app_default
+    help = "#{desc}\n"
+    help += "\nUsage: ./#{app} #{cmd} [options]\n" if cmd != 'global'
+    help = "#{banner}\n#{help}" if @app && cmd != 'global'
+
+    # Add help option if not global command
+    options << @config.find{|x| x.name == 'global'}.opts.find{|x| x.long == '--help'} if cmd != 'global'
+
+    # Add positional options first
+    sorted_options = options.select{|x| x.key.nil?}
+    sorted_options += options.select{|x| !x.key.nil?}.sort{|x,y| x.key <=> y.key}
+    positional_index = -1
+    sorted_options.each{|x| 
+      required = x.required ? ", Required" : ""
+      allowed = x.allowed.empty? ? "" : " (#{x.allowed * ','})"
+      positional_index += 1 if x.key.nil?
+      key = x.key.nil? ? "#{cmd}#{positional_index}" : x.key
+      type = x.type == FalseClass ? "Flag" : x.type
+      help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
+    }
+
+    # Create the command in the command config
+    return Command.new(cmd, desc, sorted_options, help)
   end
 end
 

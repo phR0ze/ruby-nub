@@ -27,9 +27,62 @@ require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test
 
+  def setup
+    Log.init(path:nil, queue: false, stdout: true)
+  end
+
+#  def test_global_set
+#    ARGV.clear and ARGV << '-d'
+#    cmdr = Commander.new
+#    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+#    cmdr.parse!
+#  end
+
+  def test_global_named_help_with_banner
+    expected =<<EOF
+test_v0.0.1
+--------------------------------------------------------------------------------
+Usage: ./test [commands] [options]
+Global options:
+    -d|--debug                              Debug: Flag
+    -h|--help                               Print command/options help: Flag
+COMMANDS:
+
+see './test COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
+  def test_global_named_help_no_banner
+    expected =<<EOF
+Usage: ./test_commander.rb [commands] [options]
+Global options:
+    -d|--debug                              Debug: Flag
+    -h|--help                               Print command/options help: Flag
+COMMANDS:
+
+see './test_commander.rb COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new
+    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
+  def test_global_positional_not_allowed
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add_global(Option.new(nil, ''))
+    }}
+    assert_equal("Error: only named global options are allowed!\n", capture.stdout.strip_color)
+  end
+
   def test_required_named_option_missing
     expected =<<EOF
-Error: required option -c|--comp not given
+Error: required option -c|--comp not given!
 Build components
 
 Usage: ./test_commander.rb build [options]
@@ -61,7 +114,7 @@ EOF
 
   def test_chained_named_inconsistent_types
 expected =<<EOF
-Error: chained command options are not type consistent
+Error: chained command options are not type consistent!
 Build components
 
 Usage: ./test_commander.rb build [options]
@@ -83,7 +136,7 @@ EOF
 
   def test_chained_positional_inconsistent_numbers
 expected =<<EOF
-Error: chained commands must have equal numbers of required optiosn
+Error: chained commands must have equal numbers of required options!
 Build components
 
 Usage: ./test_commander.rb build [options]
@@ -411,6 +464,7 @@ EOF
   def test_help_with_neither_app_nor_version
     expected =<<EOF
 Usage: ./test_commander.rb [commands] [options]
+Global options:
     -h|--help                               Print command/options help: Flag
 COMMANDS:
     list                                    List command
@@ -431,6 +485,7 @@ EOF
   def test_help_with_only_app_version
     expected =<<EOF
 Usage: ./test_commander.rb [commands] [options]
+Global options:
     -h|--help                               Print command/options help: Flag
 COMMANDS:
     list                                    List command
@@ -451,6 +506,7 @@ EOF
   def test_help_with_only_app_name
     expected =<<EOF
 Usage: ./test [commands] [options]
+Global options:
     -h|--help                               Print command/options help: Flag
 COMMANDS:
     list                                    List command
@@ -472,6 +528,7 @@ EOF
   def test_help_without_examples
     expected =<<EOF
 Usage: ./test [commands] [options]
+Global options:
     -h|--help                               Print command/options help: Flag
 COMMANDS:
     list                                    List command
@@ -496,6 +553,7 @@ Examples:
 List: ./test list
 
 Usage: ./test [commands] [options]
+Global options:
     -h|--help                               Print command/options help: Flag
 COMMANDS:
     list                                    List command
@@ -514,11 +572,29 @@ EOF
     assert_equal(expected, capture.stdout)
   end
 
+  def test_help_is_reserved_option
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add('test', 'help is reserved', options:[
+        Option.new('-h|--help', 'help is reserved')
+      ])
+    }}
+    assert_equal("Error: 'help' is a reserved option name!\n", capture.stdout.strip_color)
+  end
+
+  def test_global_is_reserved_command
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add('global', 'global is reserved')
+    }}
+    assert_equal("Error: 'global' is a reserved command name!\n", capture.stdout.strip_color)
+  end
+
   def test_mixed_types_in_allow_should_fail
     capture = Sys.capture{ assert_raises(SystemExit){
       Option.new(nil, nil, allowed:[1, 'foo'])
     }}
-    assert(capture.stdout.include?("Error: mixed allowed types"))
+    assert_equal("Error: mixed allowed types!\n", capture.stdout.strip_color)
   end
 
   def test_option_allowed
@@ -537,7 +613,7 @@ EOF
 
   def test_type_not_set_for_named_consuming_option
     capture = Sys.capture{ assert_raises(SystemExit){ Option.new("-f|--file=HINT", "desc")}}
-    assert(capture.stdout.include?("Error: option type must be set"))
+    assert_equal("Error: option type must be set!\n", capture.stdout.strip_color)
   end
  
   def test_option_type

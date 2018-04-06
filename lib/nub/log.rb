@@ -202,6 +202,7 @@ module Log
   # Log the given message in red and exit
   # @param msg [String] message to log
   def die(msg)
+    msg += "!" if msg[-1] != "!"
     self.puts("Error: #{msg}".colorize(:red), stamp: false) and exit
   end
 

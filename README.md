@@ -49,6 +49,9 @@ allows one to have a cleaner multi-command line expression with reusable options
 to apply in a chained command syntax when they are of the same type in the positional case or same
 type and name in the named case.
 
+***Global*** options are options that are added with the command ***add_global*** and will show up
+set in the commands results using the ***:global*** symbol.
+
 ***Commander.new*** must be run from the app's executable file for it to pick up the app's filename
 properly.
 
@@ -60,6 +63,11 @@ if __FILE__ == $0
   # Creates a new instance of commander
   cmdr = Commander.new(examples:examples)
 
+  # Add global options
+  cmdr.add_global([
+    Option.new('-d|--debug', 'Debug output')
+  ])
+
   # Create two commands with a chainable positional option
   cmdr.add('clean', 'Clean build', options:[
     Option.new(nil, 'Clean given components', allowed:['all', 'iso'])
@@ -68,6 +76,10 @@ if __FILE__ == $0
     Option.new(nil, 'Build given components')
   ])
   cmdr.parse!
+
+  debug = cmdr[:global][:debug]
+  clean(cmdr[:clean][:clean0], debug:debug) if cmdr[:clean]
+  build(cmdr[:build][:build0], debug:debug) if cmdr[:build]
 end
 ```
 
