@@ -23,12 +23,19 @@
 require 'minitest/autorun'
 require_relative '../lib/nub/log'
 require_relative '../lib/nub/sys'
+require_relative '../lib/nub/string'
 require_relative '../lib/nub/config'
 
 class TestConfig < Minitest::Test
 
   def setup
     Log.init(path:nil, queue: false, stdout: true)
+  end
+
+  def test_config_get_exit
+    Config.init('foo.conf')
+    capture = Sys.capture{assert_raises(SystemExit){ Config.get!('foo') }}
+    assert_equal("Error: couldn't find 'foo' in config!\n", capture.stdout.strip_color)
   end
 
   def test_config_sidecar_config

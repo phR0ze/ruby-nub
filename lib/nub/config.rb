@@ -72,6 +72,12 @@ module Config
     return @@_yml[key] = val
   end
 
+  # Get the given key and raise an error if it doesn't exist
+  def get!(key)
+    Log.die("couldn't find '#{key}' in config") if !@@_yml.key?(key)
+    return @@_yml[key]
+  end
+
   # Save the config file
   def save
     File.write(@path, @@_yml.to_yaml) if @@_yml

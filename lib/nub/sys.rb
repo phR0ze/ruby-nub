@@ -69,6 +69,15 @@ module Sys
 
     return OpenStruct.new(result: result, stdout: stdout.string, stderr: stderr.string)
   end
+
+  # Read a password from stdin without echoing
+  # @returns pass [String] the password read in
+  def getpass
+    print("Enter Password: ")
+    pass = STDIN.noecho(&:gets).strip
+    puts
+    return pass
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
