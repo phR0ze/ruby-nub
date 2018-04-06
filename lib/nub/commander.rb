@@ -183,9 +183,9 @@ class Commander
     #---------------------------------------------------------------------------
     cmd_names = @config.map{|x| x.name }
     globals = ARGV.take_while{|x| !cmd_names.include?(x)}
-    !puts(help) and exit if globals.any?#{|x| x.name }
-    #!puts(help) and exit if ARGV.take_while{|x| !cmd_names.include?(x)}
-    #  .any?{|x| x == '-h' || x == '--help' }
+    #!puts(help) and exit if globals.any?#{|x| x.name }
+    !puts(help) and exit if ARGV.take_while{|x| !cmd_names.include?(x)}
+      .any?{|x| x == '-h' || x == '--help' }
     #if ARGV.take_while{|x| !cmd_names.include?(x)}.any?
     #  #ARGV.unshift('global')
     #end
@@ -263,6 +263,9 @@ class Commander
             # Set symbol converting dashes to underscores for named options
             if (cmd_opt = cmd_named_opts.find{|x| x.short == short || x.long == long})
               sym = cmd_opt.long[2..-1].gsub("-", "_").to_sym
+
+              # Handle help for the command
+              !puts(cmd.help) and exit if sym == :help
 
               # Collect value
               if cmd_opt.type == FalseClass
