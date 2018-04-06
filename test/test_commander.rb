@@ -449,7 +449,30 @@ EOF
     assert(capture.stdout.include?("clean0"))
   end
 
-  def test_command_help
+  def test_command_help_long
+    expected =<<EOF
+Clean components
+
+Usage: ./test_commander.rb clean [options]
+    clean0                                  Clean given components (all,iso,image,boot): Array, Required
+    -d|--debug                              Debug mode: Flag
+    -h|--help                               Print command/options help: Flag
+    -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
+    -s|--skip=COMPONENTS                    Skip the given components (iso,image): Array
+EOF
+    ARGV.clear and ARGV << 'clean' << '--help'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
+  def test_command_help_short
     expected =<<EOF
 Clean components
 
