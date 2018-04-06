@@ -32,6 +32,41 @@ class TestCommander < Minitest::Test
     ARGV.clear
   end
 
+  def test_shared_named_added_to_all
+    ARGV.clear and ARGV << 'build' << 'publish' << '--foo'
+    cmdr = Commander.new
+    cmdr.add_shared(Option.new('-f|--foo', 'Component flag', required:true))
+    cmdr.add('build', 'Build components')
+    cmdr.add('publish', 'Publish components')
+    cmdr.parse!
+    assert(cmdr[:build][:foo])
+    assert(cmdr[:publish][:foo])
+    assert(cmdr[:shared][:foo])
+  end
+
+  def test_shared_positional_added_to_all
+    ARGV.clear and ARGV << 'build' << 'publish' << 'foo'
+    cmdr = Commander.new
+    cmdr.add_shared(Option.new(nil, 'Component name'))
+    cmdr.add('build', 'Build components')
+    cmdr.add('publish', 'Publish components')
+    cmdr.parse!
+    assert(cmdr[:build][:build0])
+    assert(cmdr[:publish][:publish0])
+    assert(cmdr[:shared][:shared0])
+  end
+
+  def test_shared_option_duplicates_raise
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add_shared([
+        Option.new(nil, 'Component name'),
+        Option.new(nil, 'Component name')
+      ])
+    }}
+    assert_equal("Error: duplicate shared option 'Component name' given!\n", capture.stdout.strip_color)
+  end
+
   def test_global_always_exists
     ARGV.clear and ARGV << 'build' << 'foo'
     cmdr = Commander.new
