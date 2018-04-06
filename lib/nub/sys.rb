@@ -57,11 +57,11 @@ module Sys
 
   # Capture STDOUT to a string
   # @returns [String] the redirected output
-  def capture(&block)
+  def capture
     stdout, stderr = StringIO.new, StringIO.new
     $stdout, $stderr = stdout, stderr
 
-    result = block.call
+    result = Proc.new.call
 
     $stdout, $stderr = STDOUT, STDERR
     $stdout.flush

@@ -152,9 +152,8 @@ class Commander
   # @param option/s [Array/Option] array or single option/s
   def add_global(options)
     options = [options] if options.class == Option
-    Log.die("only named global options are allowed") if options.any?{|x| x.key.nil?}
 
-    # Process the global options, removed the old ones and add new ones
+    # Aggregate global options
     if (global = @config.find{|x| x.name == 'global'})
       global.opts.each{|x| options << x}
       @config.reject!{|x| x.name == 'global'}

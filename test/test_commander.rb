@@ -89,7 +89,15 @@ class TestCommander < Minitest::Test
     assert(cmdr[:global][:skip])
   end
 
-  def test_global_set
+  def test_global_positional_set
+    ARGV.clear and ARGV << 'foobar'
+    cmdr = Commander.new
+    cmdr.add_global(Option.new(nil, 'Super foo bar'))
+    cmdr.parse!
+    assert_equal("foobar", cmdr[:global][:global0])
+  end
+
+  def test_global_named_set
     ARGV.clear and ARGV << '-d'
     cmdr = Commander.new
     cmdr.add_global(Option.new('-d|--debug', 'Debug'))
@@ -140,12 +148,22 @@ EOF
     assert_equal(expected, capture.stdout)
   end
 
-  def test_global_positional_not_allowed
+  def test_global_positional_help_no_banner
+    expected =<<EOF
+Usage: ./test_commander.rb [commands] [options]
+Global options:
+    global0                                 Global positional: String, Required
+    -d|--debug                              Debug: Flag
+    -h|--help                               Print command/options help: Flag
+COMMANDS:
+
+see './test_commander.rb COMMAND --help' for specific command help
+EOF
     cmdr = Commander.new
-    capture = Sys.capture{ assert_raises(SystemExit){
-      cmdr.add_global(Option.new(nil, ''))
-    }}
-    assert_equal("Error: only named global options are allowed!\n", capture.stdout.strip_color)
+    cmdr.add_global(Option.new(nil, 'Global positional'))
+    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
   end
 
   def test_required_named_option_missing
