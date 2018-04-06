@@ -182,8 +182,9 @@ class Commander
     # Process global options
     #---------------------------------------------------------------------------
     cmd_names = @config.map{|x| x.name }
-    globals = ARGV.take_while{|x| !cmd_names.include?(x)}
-    !puts(help) and exit if globals.any?#{|x| x.name }
+    ARGV.unshift('global') if ARGV.take_while{|x| !cmd_names.include?(x)}.any?
+    #globals = ARGV.take_while{|x| !cmd_names.include?(x)}
+    #!puts(help) and exit if globals.any?#{|x| x.name }
     #!puts(help) and exit if ARGV.take_while{|x| !cmd_names.include?(x)}
     #  .any?{|x| x == '-h' || x == '--help' }
     #if ARGV.take_while{|x| !cmd_names.include?(x)}.any?
@@ -265,6 +266,7 @@ class Commander
               sym = cmd_opt.long[2..-1].gsub("-", "_").to_sym
 
               # Handle help for the command
+              !puts(help) and exit if cmd.name == 'global' && sym == :help
               !puts(cmd.help) and exit if sym == :help
 
               # Collect value
@@ -281,7 +283,7 @@ class Commander
             pos += 1
             cmd_opt = cmd_pos_opts.shift
             !puts("Error: invalid positional option '#{opt}'!".colorize(:red)) && !puts(cmd.help) and
-              exit if cmd_opt.nil?
+              !puts("START:#{ARGV}:END") and exit if cmd_opt.nil?
             value = opt
             sym = "#{cmd.name}#{pos}".to_sym
           end

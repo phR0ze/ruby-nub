@@ -64,6 +64,8 @@ module Sys
     result = block.call
 
     $stdout, $stderr = STDOUT, STDERR
+    $stdout.flush
+    $stderr.flush
 
     return OpenStruct.new(result: result, stdout: stdout.string, stderr: stderr.string)
   end

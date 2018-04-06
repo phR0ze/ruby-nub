@@ -29,13 +29,14 @@ class TestCommander < Minitest::Test
 
   def setup
     Log.init(path:nil, queue: false, stdout: true)
+    ARGV.clear
   end
 
   def test_global_set
-    #ARGV.clear and ARGV << '-d'
-    #cmdr = Commander.new
-    #cmdr.add_global(Option.new('-d|--debug', 'Debug'))
-    #cmdr.parse!
+    ARGV.clear and ARGV << '-d'
+    cmdr = Commander.new
+    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.parse!
   end
 
   def test_global_is_reserved_command

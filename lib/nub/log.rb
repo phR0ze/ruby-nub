@@ -60,6 +60,7 @@ module Log
     @@_level = level
     @@_queue = queue ? Queue.new : nil
     @@_stdout = stdout
+    $stdout.sync = true
 
     # Open log file creating as needed
     if @path
