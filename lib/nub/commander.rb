@@ -208,7 +208,7 @@ class Commander
     # Process global options
     #---------------------------------------------------------------------------
     cmd_names = @config.map{|x| x.name }
-    ARGV.unshift('global') if ARGV.take_while{|x| !cmd_names.include?(x)}.any?
+    ARGV.unshift('global') if @config.find{|x| x.name == 'global'}
     
     # Process command options
     #---------------------------------------------------------------------------
@@ -300,10 +300,10 @@ class Commander
           # --------------------------------------------------------------------
           else
             pos += 1
+            value = opt
             cmd_opt = cmd_pos_opts.shift
             !puts("Error: invalid positional option '#{opt}'!".colorize(:red)) && !puts(cmd.help) and
-              !puts("START:#{ARGV}:END") and exit if cmd_opt.nil?
-            value = opt
+              exit if cmd_opt.nil? || cmd_names.include?(value)
             sym = "#{cmd.name}#{pos}".to_sym
           end
 

@@ -89,6 +89,21 @@ class TestCommander < Minitest::Test
     assert(cmdr[:global][:skip])
   end
 
+  def test_global_positional_is_not_command
+    expected =<<EOF
+Error: positional option required!
+Global options:
+    global0                                 Super foo bar: String, Required
+    -h|--help                               Print command/options help: Flag
+EOF
+    ARGV.clear and ARGV << 'build'
+    cmdr = Commander.new
+    cmdr.add_global(Option.new(nil, 'Super foo bar'))
+    cmdr.add('build', 'Build components')
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! }}
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
   def test_global_positional_set
     ARGV.clear and ARGV << 'foobar'
     cmdr = Commander.new
