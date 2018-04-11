@@ -259,17 +259,17 @@ Error: chained command options are not type consistent!
 Build components
 
 Usage: ./test_commander.rb build [options]
-    -c|--comp                               Component to build: Flag, Required
+    -c|--comp=COMPONENT                     Component to build: Array, Required
     -h|--help                               Print command/options help: Flag
 EOF
 
     ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
     cmdr = Commander.new
     cmdr.add('build', 'Build components', options:[
-      Option.new('-c|--comp', 'Component to build', required:true)
+      Option.new('-c|--comp=COMPONENT', 'Component to build', required:true, type:Array)
     ])
     cmdr.add('publish', 'Publish components', options:[
-      Option.new('-c|--comp', 'Component to publish', required:true, type:String)
+      Option.new('-c|--comp=COMPONENT', 'Component to publish', required:true, type:String)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
     assert_equal(expected, capture.stdout.strip_color)

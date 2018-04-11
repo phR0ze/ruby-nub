@@ -74,6 +74,9 @@ class Option
     @type = FalseClass if key and !type
     @type = type if type
 
+    # Validate hint is given for non flags
+    Log.die("option hint must be set") if @key && !@hint && @type != FalseClass
+
     # Validate allowed
     if @allowed.any?
       allowed_type = @allowed.first.class
