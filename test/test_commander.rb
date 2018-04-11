@@ -67,6 +67,15 @@ class TestCommander < Minitest::Test
     assert_equal("Error: duplicate shared option 'Component name' given!\n", capture.stdout.strip_color)
   end
 
+  def test_global_named_with_value
+    ARGV.clear and ARGV << '-c' << 'foo'
+    cmdr = Commander.new
+    cmdr.add_global(Option.new('-c|--cluster=CLUSTER', 'Name of the cluster to use', type:String))
+    cmdr.parse!
+    assert(cmdr.key?(:global))
+    assert_equal("foo", cmdr[:global][:cluster])
+  end
+
   def test_global_always_exists
     ARGV.clear and ARGV << 'build' << 'foo'
     cmdr = Commander.new
