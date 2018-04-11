@@ -112,12 +112,43 @@ EOF
     assert_equal("foobar", cmdr[:global][:global0])
   end
 
-  def test_global_named_set
+  def test_global_named_set_in_middle
+    ARGV.clear and ARGV << 'build' << '-d' << 'clean'
+    cmdr = Commander.new
+    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add('clean', 'Clean components')
+    cmdr.add('build', 'Build components')
+    cmdr.parse!
+    assert(cmdr[:global][:debug])
+    assert(cmdr[:build])
+    assert(cmdr[:clean])
+  end
+
+  def test_global_named_at_end
+    ARGV.clear and ARGV << 'build' << '-d'
+    cmdr = Commander.new
+    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add('build', 'Build components')
+    cmdr.parse!
+    assert(cmdr[:global][:debug])
+    assert(cmdr[:build])
+  end
+
+  def test_global_named_at_begining
+    ARGV.clear and ARGV << '-d' << 'build'
+    cmdr = Commander.new
+    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add('build', 'Build components')
+    cmdr.parse!
+    assert(cmdr[:global][:debug])
+    assert(cmdr[:build])
+  end
+
+  def test_take_globals_at_begining_nothing_else
     ARGV.clear and ARGV << '-d'
     cmdr = Commander.new
     cmdr.add_global(Option.new('-d|--debug', 'Debug'))
-    cmdr.parse!
-    assert(cmdr[:global][:debug])
+    cmdr.send(:order_globals!)
   end
 
   def test_global_is_reserved_command
@@ -434,7 +465,7 @@ EOF
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
       Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
     ])
-    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert(Sys.capture{ cmdr.parse! }.stdout)
     assert_equal(true, cmdr[:clean][:debug])
     assert_nil(cmdr[:clean][:min])
     assert_nil(cmdr[:clean][:skip])
@@ -827,7 +858,6 @@ EOF
     assert_equal("-s", opt.short)
     assert_equal("--skip", opt.long)
   end
-
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

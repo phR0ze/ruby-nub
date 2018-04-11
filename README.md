@@ -51,7 +51,7 @@ type and name in the named case.
 
 ***Global*** options are options that are added with the ***add_global*** function and will show up
 set in the commands results using the ***:global*** symbol. Global options are given on the command
-line before anything else.
+line before anything else in the case of positional, but anywhere in the case of named.
 
 ***Shared*** options are options that are added with the command ***add_shared*** function before
 any commands and are added to all commands.

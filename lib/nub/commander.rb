@@ -174,7 +174,7 @@ class Commander
   end
 
   # Returns banner string
-  # @returns [String] the app's banner
+  # @return [String] the app's banner
   def banner
     version = @version.nil? ? "" : "_v#{@version}"
     banner = "#{@app}#{version}\n#{'-' * 80}".colorize(:light_yellow)
@@ -182,7 +182,7 @@ class Commander
   end
 
   # Return the app's help string
-  # @returns [String] the app's help string
+  # @return [String] the app's help string
   def help
     help = @app.nil? ? "" : "#{banner}\n"
     if !@examples.nil? && !@examples.empty?
@@ -201,17 +201,14 @@ class Commander
 
   # Construct the command line parser and parse
   def parse!
+    cmd_names = @config.map{|x| x.name }
 
     # Set help if nothing was given
     ARGV.clear and ARGV << '-h' if ARGV.empty?
-
-    # Process global options
-    #---------------------------------------------------------------------------
-    cmd_names = @config.map{|x| x.name }
-    ARGV.unshift('global') if @config.find{|x| x.name == 'global'}
     
     # Process command options
     #---------------------------------------------------------------------------
+    order_globals!
     loop {
       break if ARGV.first.nil?
 
@@ -275,26 +272,15 @@ class Commander
           # Validate/set named options
           # --------------------------------------------------------------------
           # e.g. -s, --skip, --skip=VALUE
-          if opt.start_with?('-')
-            short = opt[@short_regex, 1]
-            long = opt[@long_regex, 1]
-            value = opt[@value_regex, 1]
+          if (match = match_named(opt, cmd)).hit?
+            sym = match.sym
+            cmd_opt = match.opt
+            value = match.value
+            value = match.flag? || opts.shift if !value
 
-            # Set symbol converting dashes to underscores for named options
-            if (cmd_opt = cmd_named_opts.find{|x| x.short == short || x.long == long})
-              sym = cmd_opt.long[2..-1].gsub("-", "_").to_sym
-
-              # Handle help for the command
-              !puts(help) and exit if cmd.name == 'global' && sym == :help
-              !puts(cmd.help) and exit if sym == :help
-
-              # Collect value
-              if cmd_opt.type == FalseClass
-                value = true if !value
-              elsif !value
-                value = opts.shift
-              end
-            end
+            # Handle help for the command
+            !puts(help) and exit if cmd.name == 'global' && match.sym == :help
+            !puts(cmd.help) and exit if match.sym == :help
 
           # Validate/set positional options
           # --------------------------------------------------------------------
@@ -309,28 +295,7 @@ class Commander
 
           # Convert value to appropriate type and validate against allowed
           # --------------------------------------------------------------------
-          if value
-            if cmd_opt.type == String
-              if cmd_opt.allowed.any?
-                !puts("Error: invalid string value '#{value}'!".colorize(:red)) && !puts(cmd.help) and
-                  exit if !cmd_opt.allowed.include?(value)
-              end
-            elsif cmd_opt.type == Integer
-              value = value.to_i
-              if cmd_opt.allowed.any?
-                !puts("Error: invalid integer value '#{value}'!".colorize(:red)) && !puts(cmd.help) and
-                  exit if !cmd_opt.allowed.include?(value)
-              end
-            elsif cmd_opt.type == Array
-              value = value.split(',')
-              if cmd_opt.allowed.any?
-                value.each{|x|
-                  !puts("Error: invalid array value '#{x}'!".colorize(:red)) && !puts(cmd.help) and
-                    exit if !cmd_opt.allowed.include?(x)
-                }
-              end
-            end
-          end
+          value = convert_value(value, cmd, cmd_opt)
 
           # Set option with value
           # --------------------------------------------------------------------
@@ -360,12 +325,110 @@ class Commander
   # Private methods
   #-----------------------------------------------------------------------------
   private
+  OptionMatch = Struct.new(:arg, :sym, :value, :opt) do
+    def hit?
+      return !!sym
+    end
+    def flag?
+      return opt.type == FalseClass
+    end
+  end
+
+  # Parses the command line, moving all global options to the begining
+  # and inserting the global command
+  def order_globals!
+    if !(global_cmd = @config.find{|x| x.name == 'global'}).nil?
+      ARGV.delete('global')
+
+      # Collect positional and named options from begining
+      globals = ARGV.take_while{|x| !@config.any?{|y| y.name == x}}
+      ARGV.shift(globals.size)
+
+      # Collect named options throughout
+      i = -1
+      cmd = nil
+      while (i += 1) < ARGV.size do
+
+        # Set command and skip command and matching options
+        if !(_cmd = @config.find{|x| x.name == ARGV[i]}).nil?
+          cmd = _cmd; next
+        end
+        next if cmd && match_named(ARGV[i], cmd).hit?
+
+        # Collect global matches
+        if (match = match_named(ARGV[i], global_cmd)).hit?
+          globals << ARGV.delete_at(i)
+          globals << ARGV.delete_at(i) if !match.flag?
+          i -= 1
+        end
+      end
+
+      # Re-insert options in correct order at end with command
+      globals.reverse.each{|x| ARGV.unshift(x)}
+      ARGV.unshift('global')
+    end
+  end
+
+  # Match the given command line arg with a configured named option
+  # @param opt [String] the command line argument given
+  # @param cmd [Command] configured command to match against
+  # @return [OptionMatch]] struct with some helper functions
+  def match_named(opt, cmd)
+    match = OptionMatch.new(opt)
+    cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
+
+    if opt.start_with?('-')
+      short = opt[@short_regex, 1]
+      long = opt[@long_regex, 1]
+      match.value = opt[@value_regex, 1]
+
+      # Set symbol converting dashes to underscores for named options
+      if (cmd_opt = cmd_named_opts.find{|x| x.short == short || x.long == long})
+        match.opt = cmd_opt
+        match.sym = cmd_opt.long[2..-1].gsub("-", "_").to_sym
+      end
+    end
+
+    return match
+  end
+
+  # Convert the given option value to appropriate type and validate against allowed
+  # @param value [String] type to convert and and check
+  # @param cmd [Command] configured command to reference
+  # @param opt [Option] matching option to validate against
+  # @return [String|Integer|Array] depending on option type
+  def convert_value(value, cmd, opt)
+    if value
+      if opt.type == String
+        if opt.allowed.any?
+          !puts("Error: invalid string value '#{value}'!".colorize(:red)) && !puts(cmd.help) and
+            exit if !opt.allowed.include?(value)
+        end
+      elsif opt.type == Integer
+        value = value.to_i
+        if opt.allowed.any?
+          !puts("Error: invalid integer value '#{value}'!".colorize(:red)) && !puts(cmd.help) and
+            exit if !opt.allowed.include?(value)
+        end
+      elsif opt.type == Array
+        value = value.split(',')
+        if opt.allowed.any?
+          value.each{|x|
+            !puts("Error: invalid array value '#{x}'!".colorize(:red)) && !puts(cmd.help) and
+              exit if !opt.allowed.include?(x)
+          }
+        end
+      end
+    end
+
+    return value
+  end
 
   # Add a command to the command list
   # @param cmd [String] name of the command
   # @param desc [String] description of the command
   # @param opts [List] list of command options
-  # @returns cmd [Command] new command
+  # @return [Command] new command
   def add_cmd(cmd, desc, options)
     Log.die("command names must be pure lowercase letters") if cmd =~ /[^a-z]/
 
