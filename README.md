@@ -46,15 +46,16 @@ more in a single command line expression. Each command in a chained command expr
 own specific options (those coming after the command but before the next command) or if options are
 omitted the required options from the next command will be used. The chained command options syntax
 allows one to have a cleaner multi-command line expression with reusable options. Options are said
-to apply in a chained command syntax when they are of the same type in the positional case or same
-type and name in the named case.
+to apply in a chained command syntax when they are of the same type and position in the positional
+case or same type and name in the named case.
 
 ***Global*** options are options that are added with the ***add_global*** function and will show up
-set in the commands results using the ***:global*** symbol. Global options are given on the command
-line before anything else in the case of positional, but anywhere in the case of named.
+set in the command results using the ***:global*** symbol. Global positional options must be given
+before any other commands but global named options may appear anywhere in the command line
+expression.
 
-***Shared*** options are options that are added with the command ***add_shared*** function before
-any commands and are added to all commands.
+***Shared*** options are options that are added with the command ***add_shared*** function. They
+should be added before any commands are added. They are added to each command as an explicit option.
 
 ***Commander.new*** must be run from the app's executable file for it to pick up the app's filename
 properly.
@@ -100,14 +101,15 @@ Example command line expressions:
 ### Options <a name="options"></a>
 There are two kinds of options available for use, ***positional*** and ***named***. Positional
 options are identified by the absence of preceding dash/dashes and interpreted according to the
-order in which they were found. Positional options are a value being passed into the application.
-Named options have a name that is prefixed with a dash (short hand) or two dashes (long hand) e.g.
-***-h*** or ***--help*** and may simply be a flag or pass in a value. Option values require a
-***type*** so that Commander can interpret how to use them. The supported value types are
-***Flag, Integer, String, Array***. Values may be checked or not checked via the ***allowed***
-config param. Positional options default to type String while named options default to type Flag.
-Positional options are named internally with the command concatted with a an int for order ***e.g.
-clean0*** zero based. Positional params are always required.
+order and number in which they were found. Positional options are a value being passed into the
+application.  Named options have a name that is prefixed with a dash (short hand) or two dashes
+(long hand) e.g.  ***-h*** or ***--help*** and may simply be a flag or pass in a value. Option
+values require a ***type*** so that Commander can interpret how to use them. The supported value
+types are ***Flag, Integer, String, Array***. Values may be checked or not checked via the
+***allowed*** config param. Positional options default to type String while named options default to
+type Flag.  Positional options are named internally with the command concatted with a an int for
+order ***e.g.  clean0*** zero based. Positional options are given sequentially so you can't
+skip one and specify the second, it must be one then two etc...
 
 **Long Hand** form is always required for named options, short hand may or may not be given.
 

@@ -32,8 +32,8 @@ class Option
   attr_reader(:hint)
   attr_reader(:desc)
   attr_reader(:type)
-  attr_reader(:allowed)
-  attr_reader(:required)
+  attr_accessor(:allowed)
+  attr_accessor(:required)
   attr_accessor(:shared)
 
   # Create a new option instance
@@ -62,9 +62,6 @@ class Option
       @hint = key[/.*=(.*)$/, 1]
       @short = key[/^(-\w).*$/, 1]
       @long = key[/(--[\w\-]+)(=.+)*$/, 1]
-    else
-      # Always require positional options
-      @required = true
     end
 
     # Validate and set type
@@ -172,6 +169,7 @@ class Commander
       Log.die("duplicate shared option '#{x.desc}' given") if @shared
         .any?{|y| y.key == x.key && y.desc == x.desc && y.type == x.type}
       x.shared = true
+      x.required = true
       @shared << x
     }
   end
@@ -212,51 +210,25 @@ class Commander
     # Process command options
     #---------------------------------------------------------------------------
     order_globals!
+    expand_chained_options!
     loop {
       break if ARGV.first.nil?
 
       if !(cmd = @config.find{|x| x.name == ARGV.first}).nil?
-        @cmds[ARGV.shift.to_sym] = {}
-        cmd_names.reject!{|x| x == cmd.name}
-
-        # Command options as defined in configuration
-        cmd_pos_opts = cmd.opts.select{|x| x.key.nil? }
-        cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
+        @cmds[ARGV.shift.to_sym] = {}             # Create command results entry
+        cmd_names.reject!{|x| x == cmd.name}      # Remove command from possible commands
 
         # Collect command options from args to compare against
         opts = ARGV.take_while{|x| !cmd_names.include?(x) }
         ARGV.shift(opts.size)
+ 
+        # Check that all required options were given
+        cmd_pos_opts = cmd.opts.select{|x| x.key.nil? }
+        cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
 
-        # All positional options are required. If they are not given then check for the 'chained
-        # command expression' case for positional options in the next command that satisfy the
-        # previous command's requirements and so on and so forth.
-        if opts.size == 0 && (cmd_pos_opts.any? || cmd_named_opts.any?{|x| x.required})
-          i = 0
-          while (i += 1) < ARGV.size do
-            opts = ARGV[i..-1].take_while{|x| !cmd_names.include?(x) }
-            break if opts.any? 
-          end
-
-          # Check that the chained command options at least match types and size
-          if opts.any?
-            cmd_required = cmd.opts.select{|x| x.key.nil? || x.required}
-            other = @config.find{|x| x.name == ARGV[i-1]}
-            other_required = other.opts.select{|x| x.key.nil? || x.required}
-
-            !puts("Error: chained commands must have equal numbers of required options!".colorize(:red)) && !puts(cmd.help) and
-              exit if cmd_required.size != other_required.size
-            cmd_required.each_with_index{|x,i|
-              !puts("Error: chained command options are not type consistent!".colorize(:red)) && !puts(cmd.help) and
-                exit if x.type != other_required[i].type || x.key != other_required[i].key
-            }
-          end
-        end
-
-        # Check that all positional options were given
         !puts("Error: positional option required!".colorize(:red)) && !puts(cmd.help) and
-          exit if opts.size < cmd_pos_opts.size
+          exit if opts.select{|x| !x.start_with?('-')}.size < cmd_pos_opts.select{|x| x.required}.size
 
-        # Check that all required named options where given
         named_opts = opts.select{|x| x.start_with?('-')}
         cmd_named_opts.select{|x| x.required}.each{|x|
           !puts("Error: required option #{x.key} not given!".colorize(:red)) && !puts(cmd.help) and
@@ -370,6 +342,52 @@ class Commander
       globals.reverse.each{|x| ARGV.unshift(x)}
       ARGV.unshift('global')
     end
+  end
+
+  # Find chained options, copy and insert as needed.
+  # Globals should have already been ordered before calling this function
+  # Fail if validation doesn't pass
+  def expand_chained_options!
+    args = ARGV[0..-1]
+    results = {}
+    cmd_names = @config.map{|x| x.name }
+    
+    chained = []
+    while args.any? do
+      if !(cmd = @config.find{|x| x.name == args.first}).nil?
+        results[args.shift] = []                            # Add the command to the results
+        cmd_names.reject!{|x| x == cmd.name}                # Remove command from possible commands
+        cmd_required = cmd.opts.select{|x| x.required}
+
+        # Collect command options from args to compare against
+        opts = args.take_while{|x| !cmd_names.include?(x)}
+        args.shift(opts.size)
+
+        # Globals are not to be considered for chaining
+        results[cmd.name].concat(opts) and next if cmd.name == 'global'
+
+        # Chained case is when no options are given but some are required
+        if opts.size == 0 && cmd.opts.any?{|x| x.required}
+          chained << cmd
+        else
+          results[cmd.name].concat(opts)
+
+          chained.each{|x|
+            other_required = x.opts.select{|x| x.required}
+            !puts("Error: chained commands must have equal numbers of required options!".colorize(:red)) && !puts(x.help) and
+              exit if cmd_required.size != other_required.size
+            cmd_required.each_with_index{|y,i|
+              !puts("Error: chained command options are not type consistent!".colorize(:red)) && !puts(x.help) and
+                exit if y.type != other_required[i].type || y.key != other_required[i].key
+            }
+            results[x.name].concat(opts)
+          }
+        end
+      end
+    end
+
+    # Set results as new ARGV command line expression
+    ARGV.clear and results.each{|k, v| ARGV << k; ARGV.concat(v)}
   end
 
   # Match the given command line arg with a configured named option

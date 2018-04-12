@@ -32,6 +32,37 @@ class TestCommander < Minitest::Test
     ARGV.clear
   end
 
+  def test_chained_with_diff_positional_counts
+  end
+
+  def test_optional_positionals
+    ARGV.clear and ARGV << 'build'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', options:[
+      Option.new(nil, 'Component to build')
+    ])
+    cmdr.parse!
+    assert(cmdr[:build])
+    assert(!cmdr[:build][:build0])
+  end
+
+  def test_expand_chained_options
+    ARGV.clear and ARGV << 'clean' << 'build' << 'foo'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Component to clean', required: true)
+    ])
+    cmdr.add('build', 'Build components', options:[
+      Option.new(nil, 'Component to build', required: true)
+    ])
+    cmdr.send(:expand_chained_options!)
+    assert_equal(["clean", "foo", "build", "foo"], ARGV)
+
+    ARGV.clear and ARGV << 'clean' << 'foo' << 'build' << 'foo'
+    cmdr.send(:expand_chained_options!)
+    assert_equal(["clean", "foo", "build", "foo"], ARGV)
+  end
+
   def test_shared_named_added_to_all
     ARGV.clear and ARGV << 'build' << 'publish' << '--foo'
     cmdr = Commander.new
@@ -107,7 +138,7 @@ Global options:
 EOF
     ARGV.clear and ARGV << 'build'
     cmdr = Commander.new
-    cmdr.add_global(Option.new(nil, 'Super foo bar'))
+    cmdr.add_global(Option.new(nil, 'Super foo bar', required:true))
     cmdr.add('build', 'Build components')
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! }}
     assert_equal(expected, capture.stdout.strip_color)
@@ -207,7 +238,7 @@ EOF
     expected =<<EOF
 Usage: ./test_commander.rb [commands] [options]
 Global options:
-    global0                                 Global positional: String, Required
+    global0                                 Global positional: String
     -d|--debug                              Debug: Flag
     -h|--help                               Print command/options help: Flag
 COMMANDS:
@@ -288,11 +319,11 @@ EOF
     ARGV.clear and ARGV << 'build' << 'publish' << 'debug'
     cmdr = Commander.new
     cmdr.add('build', 'Build components', options:[
-      Option.new(nil, 'Component to build')
+      Option.new(nil, 'Component to build', required:true)
     ])
     cmdr.add('publish', 'Publish components', options:[
-      Option.new(nil, 'Component to publish'),
-      Option.new(nil, 'Extra positional')
+      Option.new(nil, 'Component to publish', required:true),
+      Option.new(nil, 'Extra positional', required:true)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
     assert_equal(expected, capture.stdout.strip_color)
@@ -301,9 +332,9 @@ EOF
   def test_chained_positional
     ARGV.clear and ARGV << 'build' << 'publish' << 'deploy' << 'debug'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[Option.new(nil, 'Component to build')])
-    cmdr.add('publish', 'Publish components', options:[Option.new(nil, 'Component to publish')])
-    cmdr.add('deploy', 'Deploy components', options:[Option.new(nil, 'Component to deply')])
+    cmdr.add('build', 'Build components', options:[Option.new(nil, 'Component to build', required:true)])
+    cmdr.add('publish', 'Publish components', options:[Option.new(nil, 'Component to publish', required:true)])
+    cmdr.add('deploy', 'Deploy components', options:[Option.new(nil, 'Component to deply', required:true)])
     cmdr.parse!
     assert_equal("debug", cmdr[:build][:build0])
     assert_equal("debug", cmdr[:publish][:publish0])
@@ -574,7 +605,7 @@ EOF
     ARGV.clear and ARGV << 'clean'
     cmdr = Commander.new
     cmdr.add('clean', 'Clean components', options:[
-      Option.new(nil, 'Clean given components')
+      Option.new(nil, 'Clean given components', required:true)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
     assert(capture.stdout.include?("Error: positional option required"))
@@ -586,7 +617,7 @@ EOF
 Clean components
 
 Usage: ./test_commander.rb clean [options]
-    clean0                                  Clean given components (all,iso,image,boot): Array, Required
+    clean0                                  Clean given components (all,iso,image,boot): Array
     -d|--debug                              Debug mode: Flag
     -h|--help                               Print command/options help: Flag
     -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
@@ -609,7 +640,7 @@ EOF
 Clean components
 
 Usage: ./test_commander.rb clean [options]
-    clean0                                  Clean given components (all,iso,image,boot): Array, Required
+    clean0                                  Clean given components (all,iso,image,boot): Array
     -d|--debug                              Debug mode: Flag
     -h|--help                               Print command/options help: Flag
     -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
@@ -632,7 +663,7 @@ EOF
 Clean components
 
 Usage: ./test_commander.rb clean [options]
-    clean0                                  Clean given components (all,iso,image,boot): Array, Required
+    clean0                                  Clean given components (all,iso,image,boot): Array
     -d|--debug                              Debug mode: Flag
     -h|--help                               Print command/options help: Flag
     -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
@@ -782,11 +813,12 @@ EOF
   end
 
   def test_option_required
-    # Always require positional options
-    assert(Option.new(nil, nil).required)
-
-    # Named options may be optional
+    # All options are optional by default
+    assert(!Option.new(nil, nil).required)
     assert(!Option.new("-h|--help", nil).required)
+
+    # All options may be required
+    assert(Option.new(nil, nil, required:true).required)
     assert(Option.new("-h|--help", nil, required:true).required)
   end
 
