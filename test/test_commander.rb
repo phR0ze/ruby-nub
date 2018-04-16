@@ -612,6 +612,24 @@ EOF
     assert(capture.stdout.include?("clean0"))
   end
 
+  def test_help_with_required_positional
+    expected =<<EOF
+Build components
+
+Usage: ./test_commander.rb build [options]
+    build0                                  Component to build: String, Required
+    -h|--help                               Print command/options help: Flag
+EOF
+
+    ARGV.clear and ARGV << 'build' << '-h'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', options:[
+      Option.new(nil, 'Component to build', required:true)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
   def test_command_help_long
     expected =<<EOF
 Clean components

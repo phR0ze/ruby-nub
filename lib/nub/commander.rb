@@ -222,6 +222,12 @@ class Commander
         opts = ARGV.take_while{|x| !cmd_names.include?(x) }
         ARGV.shift(opts.size)
  
+        # Handle help upfront before anything else
+        if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
+          !puts(help) and exit if cmd.name == 'global'
+          !puts(cmd.help) and exit
+        end
+
         # Check that all required options were given
         cmd_pos_opts = cmd.opts.select{|x| x.key.nil? }
         cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
@@ -252,10 +258,6 @@ class Commander
             cmd_opt = match.opt
             value = match.value
             value = match.flag? || opts.shift if !value
-
-            # Handle help for the command
-            !puts(help) and exit if cmd.name == 'global' && match.sym == :help
-            !puts(cmd.help) and exit if match.sym == :help
 
           # Validate/set positional options
           # --------------------------------------------------------------------
