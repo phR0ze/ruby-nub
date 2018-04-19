@@ -414,6 +414,7 @@ class Commander
       end
     end
 
+    puts(match) if cmd.name == 'global'
     return match
   end
 

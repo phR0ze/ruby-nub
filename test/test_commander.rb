@@ -32,7 +32,20 @@ class TestCommander < Minitest::Test
     ARGV.clear
   end
 
-  def test_chained_with_diff_positional_counts
+  def test_optional_global_chained_commands_positional
+    ARGV.clear and ARGV << '-c foo' << 'clean' << 'build' << 'bar'
+    cmdr = Commander.new
+    cmdr.add_global(Option.new('-c|--comp=COMP', 'Component to work with', type:Array))
+    cmdr.add('clean', 'Clean components', options:[
+      Option.new(nil, 'Component to clean', required: true)
+    ])
+    cmdr.add('build', 'Build components', options:[
+      Option.new(nil, 'Component to build', required: true)
+    ])
+    cmdr.parse!
+    assert_equal(["foo"], cmdr[:global][:comp])
+    assert(cmdr[:build][:build0])
+    assert(cmdr[:publish][:publish0])
   end
 
   def test_optional_positionals
