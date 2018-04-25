@@ -54,9 +54,6 @@ set in the command results using the ***:global*** symbol. Global positional opt
 before any other commands but global named options may appear anywhere in the command line
 expression.
 
-***Shared*** options are options that are added with the command ***add_shared*** function. They
-should be added before any commands are added. They are added to each command as an explicit option.
-
 ***Commander.new*** must be run from the app's executable file for it to pick up the app's filename
 properly.
 

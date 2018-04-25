@@ -34,7 +34,6 @@ class Option
   attr_reader(:type)
   attr_accessor(:allowed)
   attr_accessor(:required)
-  attr_accessor(:shared)
 
   # Create a new option instance
   # @param key [String] option short hand, long hand and hint e.g. -s|--skip=COMPONENTS
@@ -47,7 +46,6 @@ class Option
     @long = nil
     @short = nil
     @desc = desc
-    @shared = false
     @allowed = allowed || []
     @required = required || false
 
@@ -114,9 +112,6 @@ class Commander
     # Configuration - ordered list of commands
     @config = []
 
-    # List of options that will be added to all commands
-    @shared = []
-
     # Configure default global options
     add_global(Option.new('-h|--help', 'Print command/options help'))
   end
@@ -137,12 +132,8 @@ class Commander
   # @param nodes [List] list of command nodes (i.e. options or commands)
   def add(cmd, desc, nodes:[])
     Log.die("'global' is a reserved command name") if cmd == 'global'
-    Log.die("'shared' is a reserved command name") if cmd == 'shared'
     Log.die("'#{cmd}' already exists") if @config.any?{|x| x.name == cmd}
     Log.die("'help' is a reserved option name") if nodes.any?{|x| !x.key.nil? && x.key.include?('help')}
-
-    # Add shared options
-    @shared.each{|x| nodes.unshift(x)}
 
     cmd = add_cmd(cmd, desc, nodes)
     @config << cmd
@@ -160,19 +151,6 @@ class Commander
       @config.reject!{|x| x.name == 'global'}
     end
     @config << add_cmd('global', 'Global options:', options)
-  end
-
-  # Add shared option (options that are added to all commands)
-  # @param option/s [Array/Option] array or single option/s
-  def add_shared(options)
-    options = [options] if options.class == Option
-    options.each{|x|
-      Log.die("duplicate shared option '#{x.desc}' given") if @shared
-        .any?{|y| y.key == x.key && y.desc == x.desc && y.type == x.type}
-      x.shared = true
-      x.required = true
-      @shared << x
-    }
   end
 
   # Returns banner string
@@ -279,18 +257,12 @@ class Commander
           # --------------------------------------------------------------------
           !puts("Error: unknown named option '#{opt}' given!".colorize(:red)) && !puts(cmd.help) and exit if !sym
           @cmds[cmd.name.to_sym][sym] = value
-          if cmd_opt.shared
-            sym = "shared#{pos}".to_sym if cmd_opt.key.nil?
-            @cmds[:shared] = {} if !@cmds.key?(:shared)
-            @cmds[:shared][sym] = value
-          end
         }
       end
     }
 
-    # Ensure specials (global, shared) are always set
+    # Ensure specials (global) are always set
     @cmds[:global] = {} if !@cmds[:global]
-    @cmds[:shared] = {} if !@cmds[:shared]
 
     # Ensure all options were consumed
     Log.die("invalid options #{ARGV}") if ARGV.any?
