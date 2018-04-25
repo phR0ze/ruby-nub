@@ -53,7 +53,7 @@ class Option
 
     # Parse the key into its components (short hand, long hand, and hint)
     #https://bneijt.nl/pr/ruby-regular-expressions/
-    # Valid forms to look for with chars [a-zA-Z0-9-_=|] 
+    # Valid forms to look for with chars [a-zA-Z0-9-_=|]
     # --help, --help=HINT, -h|--help, -h|--help=HINT
     Log.die("invalid option key #{key}") if key && (key.count('=') > 1 or key.count('|') > 1 or !key[/[^\w\-=|]/].nil? or
       key[/(^--[a-zA-Z0-9\-_]+$)|(^--[a-zA-Z\-_]+=\w+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+$)|(^-[a-zA-Z]\|--[a-zA-Z0-9\-_]+=\w+$)/].nil?)
@@ -134,24 +134,25 @@ class Commander
   # Add a command to the command list
   # @param cmd [String] name of the command
   # @param desc [String] description of the command
-  # @param opts [List] list of command options
-  def add(cmd, desc, options:[])
+  # @param nodes [List] list of command nodes (i.e. options or commands)
+  def add(cmd, desc, nodes:[])
     Log.die("'global' is a reserved command name") if cmd == 'global'
     Log.die("'shared' is a reserved command name") if cmd == 'shared'
     Log.die("'#{cmd}' already exists") if @config.any?{|x| x.name == cmd}
-    Log.die("'help' is a reserved option name") if options.any?{|x| !x.key.nil? && x.key.include?('help')}
+    Log.die("'help' is a reserved option name") if nodes.any?{|x| !x.key.nil? && x.key.include?('help')}
 
     # Add shared options
-    @shared.each{|x| options.unshift(x)}
+    @shared.each{|x| nodes.unshift(x)}
 
-    cmd = add_cmd(cmd, desc, options)
+    cmd = add_cmd(cmd, desc, nodes)
     @config << cmd
   end
 
   # Add global options (any option coming before all commands)
   # @param option/s [Array/Option] array or single option/s
   def add_global(options)
-    options = [options] if options.class == Option
+    options = [options] if options.class != Array
+    Log.die("only options are allowed as globals") if options.any?{|x| x.class != Option}
 
     # Aggregate global options
     if (global = @config.find{|x| x.name == 'global'})
@@ -206,7 +207,7 @@ class Commander
 
     # Set help if nothing was given
     ARGV.clear and ARGV << '-h' if ARGV.empty?
-    
+
     # Process command options
     #---------------------------------------------------------------------------
     order_globals!
@@ -221,7 +222,7 @@ class Commander
         # Collect command options from args to compare against
         opts = ARGV.take_while{|x| !cmd_names.include?(x) }
         ARGV.shift(opts.size)
- 
+
         # Handle help upfront before anything else
         if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
           !puts(help) and exit if cmd.name == 'global'
@@ -353,7 +354,7 @@ class Commander
     args = ARGV[0..-1]
     results = {}
     cmd_names = @config.map{|x| x.name }
-    
+
     chained = []
     while args.any? do
       if !(cmd = @config.find{|x| x.name == args.first}).nil?
@@ -470,7 +471,7 @@ class Commander
     sorted_options = options.select{|x| x.key.nil?}
     sorted_options += options.select{|x| !x.key.nil?}.sort{|x,y| x.key <=> y.key}
     positional_index = -1
-    sorted_options.each{|x| 
+    sorted_options.each{|x|
       required = x.required ? ", Required" : ""
       allowed = x.allowed.empty? ? "" : " (#{x.allowed * ','})"
       positional_index += 1 if x.key.nil?
