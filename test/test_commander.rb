@@ -785,6 +785,20 @@ EOF
     assert_equal(expected, capture.stdout)
   end
 
+  def test_help_is_reserved_option_sub_cmd
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add('test1', '', nodes:[
+        Commander::Command.new('test2', '', [
+          Commander::Command.new('test3', '', [
+            Option.new('-h|--help', 'help is reserved')
+          ])
+        ])
+      ])
+    }}
+    assert_equal("Error: 'help' is a reserved option name!\n", capture.stdout.strip_color)
+  end
+
   def test_help_is_reserved_option
     cmdr = Commander.new
     capture = Sys.capture{ assert_raises(SystemExit){

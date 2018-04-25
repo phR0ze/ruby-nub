@@ -133,11 +133,15 @@ class Commander
   def add(cmd, desc, nodes:[])
     Log.die("'global' is a reserved command name") if cmd == 'global'
     Log.die("'#{cmd}' already exists") if @config.any?{|x| x.name == cmd}
-    #validate_sub_cmd = ->(sub_cmd){
-    #  Log.die("'global' is a reserved command name") if name == 'global'
-      Log.die("'help' is a reserved option name") if nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
-    #}
-    #nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
+    Log.die("'help' is a reserved option name") if nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
+
+    # Validte sub commands
+    validate_sub_cmd = ->(sub_cmd){
+      Log.die("'global' is a reserved command name") if sub_cmd.name == 'global'
+      Log.die("'help' is a reserved option name") if sub_cmd.nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
+      sub_cmd.nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
+    }
+    nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
 
     @config << add_cmd(cmd, desc, nodes)
   end
