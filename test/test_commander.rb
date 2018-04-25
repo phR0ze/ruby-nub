@@ -32,13 +32,19 @@ class TestCommander < Minitest::Test
     ARGV.clear
   end
 
-  def test_nested_command
-#    ARGV.clear and ARGV << 'enable'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new(nil, 'Component to build')
-#    ])
-#    cmdr.parse!
+  def test_single_nested_command
+    #cmdr = Commander.new
+    #cmdr.add('enable', 'Enable features', nodes:[
+    #  Commander::Command.new('foo1', 'Feature foo1')
+    #])
+  end
+
+  def test_global_nested_should_fail
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add_global(Commander::Command.new('foo1', 'Feature foo1'))
+    }}
+    assert_equal("Error: only options are allowed as globals!\n", capture.stdout.strip_color)
   end
 
   def test_optional_positionals
@@ -67,41 +73,6 @@ class TestCommander < Minitest::Test
     ARGV.clear and ARGV << 'clean' << 'foo' << 'build' << 'foo'
     cmdr.send(:expand_chained_options!)
     assert_equal(["clean", "foo", "build", "foo"], ARGV)
-  end
-
-  def test_shared_named_added_to_all
-    ARGV.clear and ARGV << 'build' << 'publish' << '--foo'
-    cmdr = Commander.new
-    cmdr.add_shared(Option.new('-f|--foo', 'Component flag', required:true))
-    cmdr.add('build', 'Build components')
-    cmdr.add('publish', 'Publish components')
-    cmdr.parse!
-    assert(cmdr[:build][:foo])
-    assert(cmdr[:publish][:foo])
-    assert(cmdr[:shared][:foo])
-  end
-
-  def test_shared_positional_added_to_all
-    ARGV.clear and ARGV << 'build' << 'publish' << 'foo'
-    cmdr = Commander.new
-    cmdr.add_shared(Option.new(nil, 'Component name'))
-    cmdr.add('build', 'Build components')
-    cmdr.add('publish', 'Publish components')
-    cmdr.parse!
-    assert(cmdr[:build][:build0])
-    assert(cmdr[:publish][:publish0])
-    assert(cmdr[:shared][:shared0])
-  end
-
-  def test_shared_option_duplicates_raise
-    cmdr = Commander.new
-    capture = Sys.capture{ assert_raises(SystemExit){
-      cmdr.add_shared([
-        Option.new(nil, 'Component name'),
-        Option.new(nil, 'Component name')
-      ])
-    }}
-    assert_equal("Error: duplicate shared option 'Component name' given!\n", capture.stdout.strip_color)
   end
 
   def test_global_named_with_value
