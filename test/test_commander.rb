@@ -32,14 +32,14 @@ class TestCommander < Minitest::Test
     ARGV.clear
   end
 
-  def test_single_nested_command
-    #cmdr = Commander.new
-    #cmdr.add('enable', 'Enable features', nodes:[
-    #  Commander::Command.new('foo1', 'Feature foo1')
-    #])
+  def test_single_subcommand
+#    cmdr = Commander.new
+#    cmdr.add('enable', 'Enable features', nodes:[
+#      Commander::Command.new('foo1', 'Feature foo1')
+#    ])
   end
 
-  def test_global_nested_should_fail
+  def test_global_subcommand_should_fail
     cmdr = Commander.new
     capture = Sys.capture{ assert_raises(SystemExit){
       cmdr.add_global(Commander::Command.new('foo1', 'Feature foo1'))

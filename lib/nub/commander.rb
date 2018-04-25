@@ -87,7 +87,7 @@ class Commander
   attr_reader(:banner)
   attr_accessor(:cmds)
 
-  Command = Struct.new(:name, :desc, :opts, :help)
+  Command = Struct.new(:name, :desc, :nodes, :help)
 
   # Initialize the commands for your application
   # @param app [String] application name e.g. reduce
@@ -133,10 +133,13 @@ class Commander
   def add(cmd, desc, nodes:[])
     Log.die("'global' is a reserved command name") if cmd == 'global'
     Log.die("'#{cmd}' already exists") if @config.any?{|x| x.name == cmd}
-    Log.die("'help' is a reserved option name") if nodes.any?{|x| !x.key.nil? && x.key.include?('help')}
+    #validate_sub_cmd = ->(sub_cmd){
+    #  Log.die("'global' is a reserved command name") if name == 'global'
+      Log.die("'help' is a reserved option name") if nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
+    #}
+    #nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
 
-    cmd = add_cmd(cmd, desc, nodes)
-    @config << cmd
+    @config << add_cmd(cmd, desc, nodes)
   end
 
   # Add global options (any option coming before all commands)
@@ -147,7 +150,7 @@ class Commander
 
     # Aggregate global options
     if (global = @config.find{|x| x.name == 'global'})
-      global.opts.each{|x| options << x}
+      global.nodes.each{|x| options << x}
       @config.reject!{|x| x.name == 'global'}
     end
     @config << add_cmd('global', 'Global options:', options)
@@ -208,8 +211,8 @@ class Commander
         end
 
         # Check that all required options were given
-        cmd_pos_opts = cmd.opts.select{|x| x.key.nil? }
-        cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
+        cmd_pos_opts = cmd.nodes.select{|x| x.key.nil? }
+        cmd_named_opts = cmd.nodes.select{|x| !x.key.nil? }
 
         !puts("Error: positional option required!".colorize(:red)) && !puts(cmd.help) and
           exit if opts.select{|x| !x.start_with?('-')}.size < cmd_pos_opts.select{|x| x.required}.size
@@ -332,7 +335,7 @@ class Commander
       if !(cmd = @config.find{|x| x.name == args.first}).nil?
         results[args.shift] = []                            # Add the command to the results
         cmd_names.reject!{|x| x == cmd.name}                # Remove command from possible commands
-        cmd_required = cmd.opts.select{|x| x.required}
+        cmd_required = cmd.nodes.select{|x| x.required}
 
         # Collect command options from args to compare against
         opts = args.take_while{|x| !cmd_names.include?(x)}
@@ -342,13 +345,13 @@ class Commander
         results[cmd.name].concat(opts) and next if cmd.name == 'global'
 
         # Chained case is when no options are given but some are required
-        if opts.size == 0 && cmd.opts.any?{|x| x.required}
+        if opts.size == 0 && cmd.nodes.any?{|x| x.required}
           chained << cmd
         else
           results[cmd.name].concat(opts)
 
           chained.each{|x|
-            other_required = x.opts.select{|x| x.required}
+            other_required = x.nodes.select{|x| x.required}
             !puts("Error: chained commands must have equal numbers of required options!".colorize(:red)) && !puts(x.help) and
               exit if cmd_required.size != other_required.size
             cmd_required.each_with_index{|y,i|
@@ -371,7 +374,7 @@ class Commander
   # @return [OptionMatch]] struct with some helper functions
   def match_named(opt, cmd)
     match = OptionMatch.new(opt)
-    cmd_named_opts = cmd.opts.select{|x| !x.key.nil? }
+    cmd_named_opts = cmd.nodes.select{|x| !x.key.nil? }
 
     if opt.start_with?('-')
       short = opt[@short_regex, 1]
@@ -423,9 +426,9 @@ class Commander
   # Add a command to the command list
   # @param cmd [String] name of the command
   # @param desc [String] description of the command
-  # @param opts [List] list of command options
+  # @param nodes [List] list of command nodes (i.e. options or commands)
   # @return [Command] new command
-  def add_cmd(cmd, desc, options)
+  def add_cmd(cmd, desc, nodes)
     Log.die("command names must be pure lowercase letters") if cmd =~ /[^a-z]/
 
     # Build help for command
@@ -435,11 +438,11 @@ class Commander
     help = "#{banner}\n#{help}" if @app && cmd != 'global'
 
     # Add help option if not global command
-    options << @config.find{|x| x.name == 'global'}.opts.find{|x| x.long == '--help'} if cmd != 'global'
+    nodes << @config.find{|x| x.name == 'global'}.nodes.find{|x| x.long == '--help'} if cmd != 'global'
 
     # Add positional options first
-    sorted_options = options.select{|x| x.key.nil?}
-    sorted_options += options.select{|x| !x.key.nil?}.sort{|x,y| x.key <=> y.key}
+    sorted_options = nodes.select{|x| x.key.nil?}
+    sorted_options += nodes.select{|x| !x.key.nil?}.sort{|x,y| x.key <=> y.key}
     positional_index = -1
     sorted_options.each{|x|
       required = x.required ? ", Required" : ""
