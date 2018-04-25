@@ -32,13 +32,19 @@ class TestCommander < Minitest::Test
     ARGV.clear
   end
 
-  def test_chained_with_diff_positional_counts
+  def test_nested_command
+#    ARGV.clear and ARGV << 'enable'
+#    cmdr = Commander.new
+#    cmdr.add('build', 'Build components', nodes:[
+#      Option.new(nil, 'Component to build')
+#    ])
+#    cmdr.parse!
   end
 
   def test_optional_positionals
     ARGV.clear and ARGV << 'build'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[
+    cmdr.add('build', 'Build components', nodes:[
       Option.new(nil, 'Component to build')
     ])
     cmdr.parse!
@@ -49,10 +55,10 @@ class TestCommander < Minitest::Test
   def test_expand_chained_options
     ARGV.clear and ARGV << 'clean' << 'build' << 'foo'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Component to clean', required: true)
     ])
-    cmdr.add('build', 'Build components', options:[
+    cmdr.add('build', 'Build components', nodes:[
       Option.new(nil, 'Component to build', required: true)
     ])
     cmdr.send(:expand_chained_options!)
@@ -110,7 +116,7 @@ class TestCommander < Minitest::Test
   def test_global_always_exists
     ARGV.clear and ARGV << 'build' << 'foo'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[
+    cmdr.add('build', 'Build components', nodes:[
       Option.new(nil, 'Component to build', required:true)
     ])
     cmdr.parse!
@@ -263,7 +269,7 @@ Usage: ./test_commander.rb build [options]
 EOF
     ARGV.clear and ARGV << 'build'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[
+    cmdr.add('build', 'Build components', nodes:[
       Option.new('-c|--comp', 'Component to build', required:true)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -273,10 +279,10 @@ EOF
   def test_chained_named
     ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[
+    cmdr.add('build', 'Build components', nodes:[
       Option.new('-c|--comp', 'Component to build', required:true)
     ])
-    cmdr.add('publish', 'Publish components', options:[
+    cmdr.add('publish', 'Publish components', nodes:[
       Option.new('-c|--comp', 'Component to publish', required:true)
     ])
     cmdr.parse!
@@ -296,10 +302,10 @@ EOF
 
     ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[
+    cmdr.add('build', 'Build components', nodes:[
       Option.new('-c|--comp=COMPONENT', 'Component to build', required:true, type:Array)
     ])
-    cmdr.add('publish', 'Publish components', options:[
+    cmdr.add('publish', 'Publish components', nodes:[
       Option.new('-c|--comp=COMPONENT', 'Component to publish', required:true, type:String)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -318,10 +324,10 @@ EOF
 
     ARGV.clear and ARGV << 'build' << 'publish' << 'debug'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[
+    cmdr.add('build', 'Build components', nodes:[
       Option.new(nil, 'Component to build', required:true)
     ])
-    cmdr.add('publish', 'Publish components', options:[
+    cmdr.add('publish', 'Publish components', nodes:[
       Option.new(nil, 'Component to publish', required:true),
       Option.new(nil, 'Extra positional', required:true)
     ])
@@ -332,9 +338,9 @@ EOF
   def test_chained_positional
     ARGV.clear and ARGV << 'build' << 'publish' << 'deploy' << 'debug'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[Option.new(nil, 'Component to build', required:true)])
-    cmdr.add('publish', 'Publish components', options:[Option.new(nil, 'Component to publish', required:true)])
-    cmdr.add('deploy', 'Deploy components', options:[Option.new(nil, 'Component to deply', required:true)])
+    cmdr.add('build', 'Build components', nodes:[Option.new(nil, 'Component to build', required:true)])
+    cmdr.add('publish', 'Publish components', nodes:[Option.new(nil, 'Component to publish', required:true)])
+    cmdr.add('deploy', 'Deploy components', nodes:[Option.new(nil, 'Component to deply', required:true)])
     cmdr.parse!
     assert_equal("debug", cmdr[:build][:build0])
     assert_equal("debug", cmdr[:publish][:publish0])
@@ -344,7 +350,7 @@ EOF
   def test_multi_positional_and_named_options
     ARGV.clear and ARGV << 'delete' << 'deployment' << 'tron' << '-n' << 'trondom'
     cmdr = Commander.new(app:'test', version:'0.0.1')
-    cmdr.add('delete', 'Delete the given component', options:[
+    cmdr.add('delete', 'Delete the given component', nodes:[
       Option.new(nil, 'Component type'),
       Option.new(nil, 'Component name'),
       Option.new('-n|--namespace=NAMESPACE', 'Namespace to use', type:String),
@@ -359,7 +365,7 @@ EOF
   def test_named_option_long_quotes_equal
     ARGV.clear and ARGV << 'bar' << '--foobar=foo foo'
     cmdr = Commander.new(app:'test', version:'0.0.1')
-    cmdr.add('bar', 'bar it up', options:[
+    cmdr.add('bar', 'bar it up', nodes:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', type:String),
     ])
     out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
@@ -370,7 +376,7 @@ EOF
   def test_named_option_long_array_equal
     ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo1,foo2,foo3'
     cmdr = Commander.new
-    cmdr.add('bar', 'bar it up', options:[
+    cmdr.add('bar', 'bar it up', nodes:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
     ])
     assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
@@ -380,7 +386,7 @@ EOF
   def test_named_option_long_array_equal
     ARGV.clear and ARGV << 'bar' << '--foobar=foo1,foo2,foo3'
     cmdr = Commander.new
-    cmdr.add('bar', 'bar it up', options:[
+    cmdr.add('bar', 'bar it up', nodes:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
     ])
     assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
@@ -390,7 +396,7 @@ EOF
   def test_named_option_short_array
     ARGV.clear and ARGV << 'bar' << '-f' << 'foo1,foo2,foo3'
     cmdr = Commander.new
-    cmdr.add('bar', 'bar it up', options:[
+    cmdr.add('bar', 'bar it up', nodes:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
     ])
     assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
@@ -400,7 +406,7 @@ EOF
   def test_named_option_long_string_equal
     ARGV.clear and ARGV << 'bar' << '--foobar=foo'
     cmdr = Commander.new
-    cmdr.add('bar', 'bar it up', options:[
+    cmdr.add('bar', 'bar it up', nodes:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
     ])
     assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
@@ -410,7 +416,7 @@ EOF
   def test_named_option_long_string
     ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo'
     cmdr = Commander.new
-    cmdr.add('bar', 'bar it up', options:[
+    cmdr.add('bar', 'bar it up', nodes:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
     ])
     assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
@@ -420,7 +426,7 @@ EOF
   def test_named_option_short_string
     ARGV.clear and ARGV << 'bar' << '-f' << 'foo'
     cmdr = Commander.new(app:'test', version:'0.0.1')
-    cmdr.add('bar', 'bar it up', options:[
+    cmdr.add('bar', 'bar it up', nodes:[
       Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
     ])
     out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
@@ -431,7 +437,7 @@ EOF
   def test_named_option_long_int_equal
     ARGV.clear and ARGV << 'clean' << '--min=3'
     cmdr = Commander.new(app:'test', version:'0.0.1')
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
       Option.new('-d|--debug', 'Debug mode'),
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
@@ -445,7 +451,7 @@ EOF
   def test_named_option_long_int
     ARGV.clear and ARGV << 'clean' << '--min' << '3'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
       Option.new('-d|--debug', 'Debug mode'),
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
@@ -461,7 +467,7 @@ EOF
   def test_named_option_short_invalid_int
     ARGV.clear and ARGV << 'clean' << '-m' << '4'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -472,7 +478,7 @@ EOF
   def test_named_option_short_int
     ARGV.clear and ARGV << 'clean' << '-m' << '1'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
       Option.new('-d|--debug', 'Debug mode'),
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
@@ -488,7 +494,7 @@ EOF
   def test_named_option_long_flag
     ARGV.clear and ARGV << 'clean' << '--debug'
     cmdr = Commander.new(app:'test', version:'0.0.1')
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new('-d|--debug', 'Debug mode'),
     ])
     out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
@@ -499,7 +505,7 @@ EOF
   def test_named_option_short_flag
     ARGV.clear and ARGV << 'clean' << '-d'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
       Option.new('-d|--debug', 'Debug mode'),
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
@@ -515,7 +521,7 @@ EOF
   def test_update_option
     ARGV.clear and ARGV << 'clean' << '3'
     cmdr = Commander.new(app:'test', version:'0.0.1')
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
     ])
     out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
@@ -528,7 +534,7 @@ EOF
   def test_positional_integer_good
     ARGV.clear and ARGV << 'clean' << '3'
     cmdr = Commander.new(app:'test', version:'0.0.1')
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
     ])
     out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
@@ -539,7 +545,7 @@ EOF
   def test_positional_invalid_integer_value
     ARGV.clear and ARGV << 'clean' << '2'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -550,7 +556,7 @@ EOF
   def test_positional_array_good
     ARGV.clear and ARGV << 'clean' << 'all'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array)
     ])
     out = Sys.capture{ cmdr.parse! }
@@ -561,7 +567,7 @@ EOF
   def test_positional_invalid_array_value
     ARGV.clear and ARGV << 'clean' << 'foo'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -572,7 +578,7 @@ EOF
   def test_positional_invalid_string_value
     ARGV.clear and ARGV << 'clean' << 'foo'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso'])
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -583,7 +589,7 @@ EOF
   def test_positional_option_too_many
     ARGV.clear and ARGV << 'clean' << 'foo' << 'bar'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components')
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -604,7 +610,7 @@ EOF
   def test_positional_option_not_given
     ARGV.clear and ARGV << 'clean'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', required:true)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -623,7 +629,7 @@ EOF
 
     ARGV.clear and ARGV << 'build' << '-h'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[
+    cmdr.add('build', 'Build components', nodes:[
       Option.new(nil, 'Component to build', required:true)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
@@ -643,7 +649,7 @@ Usage: ./test_commander.rb clean [options]
 EOF
     ARGV.clear and ARGV << 'clean' << '--help'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
       Option.new('-d|--debug', 'Debug mode'),
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
@@ -666,7 +672,7 @@ Usage: ./test_commander.rb clean [options]
 EOF
     ARGV.clear and ARGV << 'clean' << '-h'
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
       Option.new('-d|--debug', 'Debug mode'),
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
@@ -688,7 +694,7 @@ Usage: ./test_commander.rb clean [options]
     -s|--skip=COMPONENTS                    Skip the given components (iso,image): Array
 EOF
     cmdr = Commander.new
-    cmdr.add('clean', 'Clean components', options:[
+    cmdr.add('clean', 'Clean components', nodes:[
       Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
       Option.new('-d|--debug', 'Debug mode'),
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
@@ -811,7 +817,7 @@ EOF
   def test_help_is_reserved_option
     cmdr = Commander.new
     capture = Sys.capture{ assert_raises(SystemExit){
-      cmdr.add('test', 'help is reserved', options:[
+      cmdr.add('test', 'help is reserved', nodes:[
         Option.new('-h|--help', 'help is reserved')
       ])
     }}
@@ -844,18 +850,18 @@ EOF
     capture = Sys.capture{ assert_raises(SystemExit){ Option.new("-f|--file=HINT", "desc")}}
     assert_equal("Error: option type must be set!\n", capture.stdout.strip_color)
   end
- 
+
   def test_option_type
     # No type, positional option
-    assert_equal(String, Option.new(nil, "").type) 
-    
+    assert_equal(String, Option.new(nil, "").type)
+
     # No type, named option
-    assert_equal(FalseClass, Option.new("-h|--help", "").type) 
+    assert_equal(FalseClass, Option.new("-h|--help", "").type)
 
     # Valid types
-    assert_equal(String, Option.new(nil, "", type:String).type) 
-    assert_equal(Integer, Option.new(nil, "", type:Integer).type) 
-    assert_equal(Array, Option.new(nil, "", type:Array).type) 
+    assert_equal(String, Option.new(nil, "", type:String).type)
+    assert_equal(Integer, Option.new(nil, "", type:Integer).type)
+    assert_equal(Array, Option.new(nil, "", type:Array).type)
 
     # Invalid type
     $stdout.stub(:write, nil){
@@ -864,7 +870,7 @@ EOF
   end
 
   def test_option_desc
-    assert_equal("foobar", Option.new(nil, "foobar").desc) 
+    assert_equal("foobar", Option.new(nil, "foobar").desc)
   end
 
   def test_option_key
@@ -902,7 +908,7 @@ EOF
     assert_equal("HINT", opt.hint)
     assert_equal("--skip", opt.long)
     assert_nil(opt.short)
-    
+
     # short, long no hint
     opt = Option.new("-s|--skip", nil)
     assert_nil(opt.hint)
