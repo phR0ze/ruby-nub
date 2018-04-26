@@ -38,16 +38,17 @@ have their own help to display their usage and available options.
 
 ### Commands <a name="commands"></a>
 Commands are defined via configuration as key words that trigger different branches of functionality
-for the application. Each command may have zero or more options that modify how this behaveior is
-invoked. Whenever more than one command is used in the command line expression the expression is
-interpreted as being a ***chained command expression***. Chained command expressions are executed
-left to right, such that you can execute the ***clean*** command then the ***build*** command or
-more in a single command line expression. Each command in a chained command expression may have its
-own specific options (those coming after the command but before the next command) or if options are
-omitted the required options from the next command will be used. The chained command options syntax
-allows one to have a cleaner multi-command line expression with reusable options. Options are said
-to apply in a chained command syntax when they are of the same type and position in the positional
-case or same type and name in the named case.
+for the application. Each command may have zero or more sub commands, each of which follow the same 
+rules in a recursive fashion. Each command may have zero or more options that modify how this 
+behavior is invoked. Whenever more than one command is used in the command line expression the 
+expression is interpreted as being a ***chained command expression***. Chained command expressions 
+are executed left to right, such that you can execute the ***clean*** command then the ***build*** 
+command or more in a single command line expression. Each command in a chained command expression 
+may have its own specific options (those coming after the command but before the next command) or if 
+options are omitted the required options from the next command will be used. The chained command 
+options syntax allows one to have a cleaner multi-command line expression with reusable options. 
+Options are said to apply in a chained command syntax when they are of the same type and position in 
+the positional case or same type and name in the named case.
 
 ***Global*** options are options that are added with the ***add_global*** function and will show up
 set in the command results using the ***:global*** symbol. Global positional options must be given
