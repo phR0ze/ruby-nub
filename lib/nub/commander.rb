@@ -134,11 +134,13 @@ class Commander
     Log.die("'global' is a reserved command name") if cmd == 'global'
     Log.die("'#{cmd}' already exists") if @config.any?{|x| x.name == cmd}
     Log.die("'help' is a reserved option name") if nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
+    Log.die("command names must be pure lowercase letters") if cmd =~ /[^a-z]/
 
-    # Validte sub commands
+    # Validate sub command key words
     validate_sub_cmd = ->(sub_cmd){
       Log.die("'global' is a reserved command name") if sub_cmd.name == 'global'
       Log.die("'help' is a reserved option name") if sub_cmd.nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
+      Log.die("command names must be pure lowercase letters") if sub_cmd.name =~ /[^a-z]/
       sub_cmd.nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
     }
     nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
@@ -433,9 +435,10 @@ class Commander
   # @param nodes [List] list of command nodes (i.e. options or commands)
   # @return [Command] new command
   def add_cmd(cmd, desc, nodes)
-    Log.die("command names must be pure lowercase letters") if cmd =~ /[^a-z]/
+    #nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
 
     # Build help for command
+    #---------------------------------------------------------------------------
     app = @app || @app_default
     help = "#{desc}\n"
     help += "\nUsage: ./#{app} #{cmd} [options]\n" if cmd != 'global'

@@ -788,9 +788,9 @@ EOF
   def test_help_is_reserved_option_sub_cmd
     cmdr = Commander.new
     capture = Sys.capture{ assert_raises(SystemExit){
-      cmdr.add('test1', '', nodes:[
-        Commander::Command.new('test2', '', [
-          Commander::Command.new('test3', '', [
+      cmdr.add('test', '', nodes:[
+        Commander::Command.new('foo', '', [
+          Commander::Command.new('bar', '', [
             Option.new('-h|--help', 'help is reserved')
           ])
         ])
