@@ -165,7 +165,7 @@ EOF
     ARGV.clear and ARGV << '-d'
     cmdr = Commander.new
     cmdr.add_global(Option.new('-d|--debug', 'Debug'))
-    cmdr.send(:order_globals!)
+    cmdr.send(:move_globals_to_front!)
   end
 
   def test_global_is_reserved_command

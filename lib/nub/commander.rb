@@ -190,25 +190,53 @@ class Commander
 
   # Construct the command line parser and parse
   def parse!
-    cmd_names = @config.map{|x| x.name }
 
     # Set help if nothing was given
     ARGV.clear and ARGV << '-h' if ARGV.empty?
 
-    # Process command options
-    #---------------------------------------------------------------------------
-    order_globals!
+    # Parse commands recursively
+    move_globals_to_front!
     expand_chained_options!
-    loop {
-      break if ARGV.first.nil?
+    parse_commands(ARGV)
 
-      if !(cmd = @config.find{|x| x.name == ARGV.first}).nil?
-        @cmds[ARGV.shift.to_sym] = {}             # Create command results entry
+    # Ensure specials (global) are always set
+    @cmds[:global] = {} if !@cmds[:global]
+
+    # Ensure all options were consumed
+    Log.die("invalid options #{ARGV}") if ARGV.any?
+
+    # Print banner on success
+    puts(banner) if @app
+  end
+
+  #-----------------------------------------------------------------------------
+  # Private methods
+  #-----------------------------------------------------------------------------
+  private
+  OptionMatch = Struct.new(:arg, :sym, :value, :opt) do
+    def hit?
+      return !!sym
+    end
+    def flag?
+      return opt.type == FalseClass
+    end
+  end
+
+  # Parse the given args recursively
+  # @param args [Array] array of arguments
+  def parse_commands(args)
+    cmd_names = @config.map{|x| x.name }
+
+    loop {
+      break if args.first.nil?
+
+      if !(cmd = @config.find{|x| x.name == args.first}).nil?
+        @cmds[args.shift.to_sym] = {}             # Create command results entry
         cmd_names.reject!{|x| x == cmd.name}      # Remove command from possible commands
 
         # Collect command options from args to compare against
-        opts = ARGV.take_while{|x| !cmd_names.include?(x) }
-        ARGV.shift(opts.size)
+        opts = args.take_while{|x| !cmd_names.include?(x) }
+        args.shift(opts.size)
 
         # Handle help upfront before anything else
         if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
@@ -269,33 +297,11 @@ class Commander
         }
       end
     }
-
-    # Ensure specials (global) are always set
-    @cmds[:global] = {} if !@cmds[:global]
-
-    # Ensure all options were consumed
-    Log.die("invalid options #{ARGV}") if ARGV.any?
-
-    # Print banner on success
-    puts(banner) if @app
-  end
-
-  #-----------------------------------------------------------------------------
-  # Private methods
-  #-----------------------------------------------------------------------------
-  private
-  OptionMatch = Struct.new(:arg, :sym, :value, :opt) do
-    def hit?
-      return !!sym
-    end
-    def flag?
-      return opt.type == FalseClass
-    end
   end
 
   # Parses the command line, moving all global options to the begining
   # and inserting the global command
-  def order_globals!
+  def move_globals_to_front!
     if !(global_cmd = @config.find{|x| x.name == 'global'}).nil?
       ARGV.delete('global')
 
