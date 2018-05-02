@@ -296,11 +296,11 @@ EOF
 
     ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
     cmdr = Commander.new
-    cmdr.add('build', 'Build components', options:[
+    cmdr.add('build', 'Build components', nodes:[
       Option.new(nil, 'Component to build', required:true),
       Option.new(nil, 'Extra positional', required:true)
     ])
-    cmdr.add('publish', 'Publish components', options:[
+    cmdr.add('publish', 'Publish components', nodes:[
       Option.new(nil, 'Component to publish', required:true)
     ])
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
