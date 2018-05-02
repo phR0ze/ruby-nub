@@ -32,11 +32,14 @@ class TestCommander < Minitest::Test
     ARGV.clear
   end
 
-  def test_single_subcommand
-#    cmdr = Commander.new
-#    cmdr.add('enable', 'Enable features', nodes:[
-#      Commander::Command.new('foo1', 'Feature foo1')
-#    ])
+  def test_single_subcommand_help
+    ARGV.clear
+    cmdr = Commander.new
+    cmdr.add('enable', 'Enable features', nodes:[
+      Commander::Command.new('foo', 'Feature foo')
+    ])
+    puts(cmdr.help(name:'enable'))
+    # Add COMMAND section for sub commands
   end
 
   def test_global_subcommand_should_fail

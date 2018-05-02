@@ -137,13 +137,14 @@ class Commander
     Log.die("command names must be pure lowercase letters") if cmd =~ /[^a-z]/
 
     # Validate sub command key words
-    validate_sub_cmd = ->(sub_cmd){
-      Log.die("'global' is a reserved command name") if sub_cmd.name == 'global'
-      Log.die("'help' is a reserved option name") if sub_cmd.nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
-      Log.die("command names must be pure lowercase letters") if sub_cmd.name =~ /[^a-z]/
-      sub_cmd.nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
+    validate_subcmd = ->(subcmd){
+      subcmd.nodes = [] if !subcmd.nodes
+      Log.die("'global' is a reserved command name") if subcmd.name == 'global'
+      Log.die("'help' is a reserved option name") if subcmd.nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
+      Log.die("command names must be pure lowercase letters") if subcmd.name =~ /[^a-z]/
+      subcmd.nodes.select{|x| x.class != Option}.each{|x| validate_subcmd.(x)}
     }
-    nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
+    nodes.select{|x| x.class != Option}.each{|x| validate_subcmd.(x)}
 
     @config << add_cmd(cmd, desc, nodes)
   end
@@ -171,19 +172,29 @@ class Commander
   end
 
   # Return the app's help string
+  # @param name [String] get help for given command
   # @return [String] the app's help string
-  def help
-    help = @app.nil? ? "" : "#{banner}\n"
-    if !@examples.nil? && !@examples.empty?
-      newline = @examples.strip_color[-1] != "\n" ? "\n" : ""
-      help += "Examples:\n#{@examples}\n#{newline}"
+  def help(name:nil)
+    help = nil
+    name = nil if name.class != String
+
+    # Global help
+    if !name
+      help = @app.nil? ? "" : "#{banner}\n"
+      if !@examples.nil? && !@examples.empty?
+        newline = @examples.strip_color[-1] != "\n" ? "\n" : ""
+        help += "Examples:\n#{@examples}\n#{newline}"
+      end
+      app = @app || @app_default
+      help += "Usage: ./#{app} [commands] [options]\n"
+      help += @config.find{|x| x.name == 'global'}.help
+      help += "COMMANDS:\n"
+      @config.select{|x| x.name != 'global'}.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
+      help += "\nsee './#{app} COMMAND --help' for specific command help\n"
+    else
+      cmd = @config.find{|x| name == x.name }
+      help = cmd.help
     end
-    app = @app || @app_default
-    help += "Usage: ./#{app} [commands] [options]\n"
-    help += @config.find{|x| x.name == 'global'}.help
-    help += "COMMANDS:\n"
-    @config.select{|x| x.name != 'global'}.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
-    help += "\nsee './#{app} COMMAND --help' for specific command help\n"
 
     return help
   end
@@ -197,7 +208,9 @@ class Commander
     # Parse commands recursively
     move_globals_to_front!
     expand_chained_options!
-    parse_commands(ARGV)
+    if !(cmd = @config.find{|x| x.name == args.first})
+      parse_commands(cmd, @config.select{|x| x.name != cmd.name}, ARGV, @cmds)
+    end
 
     # Ensure specials (global) are always set
     @cmds[:global] = {} if !@cmds[:global]
@@ -223,79 +236,79 @@ class Commander
   end
 
   # Parse the given args recursively
+  # @param cmd [Command] command to work with
+  # @param others [Array] sibling cmds to cmd
   # @param args [Array] array of arguments
-  def parse_commands(args)
-    cmd_names = @config.map{|x| x.name }
+  # @param results [Hash] of cmd results
+  def parse_commands(cmd, others, args, results)
+    results[cmd.name.to_sym] = {}             # Create command results entry
+    cmd_names = others.map{|x| x.name}        # Get other command names as markers
 
+    # Collect command options from args to compare against
+    opts = args.take_while{|x| !cmd_names.include?(x) }
+    args.shift(opts.size)
+
+    # Recurse on sub commands
+    subcmds = cmd.nodes.select{|x| x.class == Commander::Command}
+    puts(subcmds)
+    exit
+
+    # Handle help upfront before anything else
+    if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
+      !puts(help) and exit if cmd.name == 'global'
+      !puts(cmd.help) and exit
+    end
+
+    # Check that all required options were given
+    cmd_pos_opts = cmd.nodes.select{|x| x.key.nil? }
+    cmd_named_opts = cmd.nodes.select{|x| !x.key.nil? }
+
+    !puts("Error: positional option required!".colorize(:red)) && !puts(cmd.help) and
+      exit if opts.select{|x| !x.start_with?('-')}.size < cmd_pos_opts.select{|x| x.required}.size
+
+    named_opts = opts.select{|x| x.start_with?('-')}
+    cmd_named_opts.select{|x| x.required}.each{|x|
+      !puts("Error: required option #{x.key} not given!".colorize(:red)) && !puts(cmd.help) and
+        exit if !named_opts.find{|y| y.start_with?(x.short) || y.start_with?(x.long)}
+    }
+
+    # Process command options
+    pos = -1
     loop {
-      break if args.first.nil?
+      break if opts.first.nil?
+      opt = opts.shift
+      cmd_opt = nil
+      value = nil
+      sym = nil
 
-      if !(cmd = @config.find{|x| x.name == args.first}).nil?
-        @cmds[args.shift.to_sym] = {}             # Create command results entry
-        cmd_names.reject!{|x| x == cmd.name}      # Remove command from possible commands
+      # Validate/set named options
+      # --------------------------------------------------------------------
+      # e.g. -s, --skip, --skip=VALUE
+      if (match = match_named(opt, cmd)).hit?
+        sym = match.sym
+        cmd_opt = match.opt
+        value = match.value
+        value = match.flag? || opts.shift if !value
 
-        # Collect command options from args to compare against
-        opts = args.take_while{|x| !cmd_names.include?(x) }
-        args.shift(opts.size)
-
-        # Handle help upfront before anything else
-        if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
-          !puts(help) and exit if cmd.name == 'global'
-          !puts(cmd.help) and exit
-        end
-
-        # Check that all required options were given
-        cmd_pos_opts = cmd.nodes.select{|x| x.key.nil? }
-        cmd_named_opts = cmd.nodes.select{|x| !x.key.nil? }
-
-        !puts("Error: positional option required!".colorize(:red)) && !puts(cmd.help) and
-          exit if opts.select{|x| !x.start_with?('-')}.size < cmd_pos_opts.select{|x| x.required}.size
-
-        named_opts = opts.select{|x| x.start_with?('-')}
-        cmd_named_opts.select{|x| x.required}.each{|x|
-          !puts("Error: required option #{x.key} not given!".colorize(:red)) && !puts(cmd.help) and
-            exit if !named_opts.find{|y| y.start_with?(x.short) || y.start_with?(x.long)}
-        }
-
-        # Process command options
-        pos = -1
-        loop {
-          break if opts.first.nil?
-          opt = opts.shift
-          cmd_opt = nil
-          value = nil
-          sym = nil
-
-          # Validate/set named options
-          # --------------------------------------------------------------------
-          # e.g. -s, --skip, --skip=VALUE
-          if (match = match_named(opt, cmd)).hit?
-            sym = match.sym
-            cmd_opt = match.opt
-            value = match.value
-            value = match.flag? || opts.shift if !value
-
-          # Validate/set positional options
-          # --------------------------------------------------------------------
-          else
-            pos += 1
-            value = opt
-            cmd_opt = cmd_pos_opts.shift
-            !puts("Error: invalid positional option '#{opt}'!".colorize(:red)) && !puts(cmd.help) and
-              exit if cmd_opt.nil? || cmd_names.include?(value)
-            sym = "#{cmd.name}#{pos}".to_sym
-          end
-
-          # Convert value to appropriate type and validate against allowed
-          # --------------------------------------------------------------------
-          value = convert_value(value, cmd, cmd_opt)
-
-          # Set option with value
-          # --------------------------------------------------------------------
-          !puts("Error: unknown named option '#{opt}' given!".colorize(:red)) && !puts(cmd.help) and exit if !sym
-          @cmds[cmd.name.to_sym][sym] = value
-        }
+      # Validate/set positional options
+      # --------------------------------------------------------------------
+      else
+        pos += 1
+        value = opt
+        cmd_opt = cmd_pos_opts.shift
+        !puts("Error: invalid positional option '#{opt}'!".colorize(:red)) && !puts(cmd.help) and
+          exit if cmd_opt.nil? || cmd_names.include?(value)
+        sym = "#{cmd.name}#{pos}".to_sym
       end
+
+      # Convert value to appropriate type and validate against allowed
+      # --------------------------------------------------------------------
+      value = convert_value(value, cmd, cmd_opt)
+
+      # Set option with value
+      # --------------------------------------------------------------------
+      !puts("Error: unknown named option '#{opt}' given!".colorize(:red)) && !puts(cmd.help) and exit if !sym
+      @cmds[cmd.name.to_sym][sym] = value
     }
   end
 
@@ -443,7 +456,6 @@ class Commander
   # @param nodes [List] list of command nodes (i.e. options or commands)
   # @return [Command] new command
   def add_cmd(cmd, desc, nodes)
-    #nodes.select{|x| x.class != Option}.each{|x| validate_sub_cmd.(x)}
 
     # Build help for command
     #---------------------------------------------------------------------------
@@ -452,12 +464,16 @@ class Commander
     help += "\nUsage: ./#{app} #{cmd} [options]\n" if cmd != 'global'
     help = "#{banner}\n#{help}" if @app && cmd != 'global'
 
-    # Add help option if not global command
+    # Add global help above command help if not global command
     nodes << @config.find{|x| x.name == 'global'}.nodes.find{|x| x.long == '--help'} if cmd != 'global'
 
+    # Add help for each sub-command before options
+    subcmds = nodes.select{|x| x.class != Option}.sort{|x,y| x.name <=> y.name}
+    subcmds.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
+
     # Add positional options first
-    sorted_options = nodes.select{|x| x.key.nil?}
-    sorted_options += nodes.select{|x| !x.key.nil?}.sort{|x,y| x.key <=> y.key}
+    sorted_options = nodes.select{|x| x.class == Option && x.key.nil?}
+    sorted_options += nodes.select{|x| x.class == Option && !x.key.nil?}.sort{|x,y| x.key <=> y.key}
     positional_index = -1
     sorted_options.each{|x|
       required = x.required ? ", Required" : ""
@@ -467,9 +483,10 @@ class Commander
       type = x.type == FalseClass ? "Flag" : x.type
       help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
     }
+    nodes = subcmds + sorted_options
 
     # Create the command in the command config
-    return Command.new(cmd, desc, sorted_options, help)
+    return Command.new(cmd, desc, nodes, help)
   end
 end
 
