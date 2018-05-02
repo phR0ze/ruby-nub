@@ -306,17 +306,32 @@ EOF
     assert_equal(expected, capture.stdout.strip_color)
   end
 
-  def test_chained_positional_inconsistent_numbers
+  def test_chained_positional_inconsistent_numbers_bad
 expected =<<EOF
-Error: chained commands must have equal numbers of required options!
+Error: chained commands must satisfy required options!
 Build components
 
 Usage: ./test_commander.rb build [options]
     build0                                  Component to build: String, Required
+    build1                                  Extra positional: String, Required
     -h|--help                               Print command/options help: Flag
 EOF
 
-    ARGV.clear and ARGV << 'build' << 'publish' << 'debug'
+    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new(nil, 'Component to build', required:true),
+      Option.new(nil, 'Extra positional', required:true)
+    ])
+    cmdr.add('publish', 'Publish components', nodes:[
+      Option.new(nil, 'Component to publish', required:true)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
+  def test_chained_positional_inconsistent_numbers_good
+    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
     cmdr = Commander.new
     cmdr.add('build', 'Build components', options:[
       Option.new(nil, 'Component to build', required:true)
@@ -325,8 +340,11 @@ EOF
       Option.new(nil, 'Component to publish', required:true),
       Option.new(nil, 'Extra positional', required:true)
     ])
-    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-    assert_equal(expected, capture.stdout.strip_color)
+    cmdr.parse!
+    assert_equal("debug", cmdr[:build][:build0])
+    assert_nil(cmdr[:build][:build1])
+    assert_equal("debug", cmdr[:publish][:publish0])
+    assert_equal("extra", cmdr[:publish][:publish1])
   end
 
   def test_chained_positional

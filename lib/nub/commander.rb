@@ -372,17 +372,19 @@ class Commander
         if opts.size == 0 && cmd.opts.any?{|x| x.required}
           chained << cmd
         else
+          # Add cmd with options
           results[cmd.name].concat(opts)
 
+          # Check chained cmds against current cmd
           chained.each{|x|
             other_required = x.opts.select{|x| x.required}
-            !puts("Error: chained commands must have equal numbers of required options!".colorize(:red)) && !puts(x.help) and
-              exit if cmd_required.size != other_required.size
-            cmd_required.each_with_index{|y,i|
+            !puts("Error: chained commands must satisfy required options!".colorize(:red)) && !puts(x.help) and
+              exit if cmd_required.size < other_required.size
+            other_required.each_with_index{|y,i|
               !puts("Error: chained command options are not type consistent!".colorize(:red)) && !puts(x.help) and
-                exit if y.type != other_required[i].type || y.key != other_required[i].key
+                exit if y.type != cmd_required[i].type || y.key != cmd_required[i].key
             }
-            results[x.name].concat(opts)
+            results[x.name].concat(opts.take(other_required.size))
           }
         end
       end
