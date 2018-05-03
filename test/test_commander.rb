@@ -610,6 +610,9 @@ class TestCommander < Minitest::Test
 #    assert(capture.stdout.include?("clean0"))
 #  end
 #
+  #-----------------------------------------------------------------------------
+  # Test Help
+  #-----------------------------------------------------------------------------
 #  def test_help_with_required_positional
 #    expected =<<EOF
 #Build components
@@ -694,141 +697,158 @@ class TestCommander < Minitest::Test
 #    ])
 #    assert_equal(expected, cmdr.config.find{|x| x.name == "clean"}.help)
 #  end
-#
-#  def test_help_with_neither_app_nor_version
-#    expected =<<EOF
-#Usage: ./test_commander.rb [commands] [options]
-#Global options:
-#    -h|--help                               Print command/options help: Flag
-#COMMANDS:
-#    list                                    List command
-#
-#see './test_commander.rb COMMAND --help' for specific command help
-#EOF
-#    cmdr = Commander.new
-#    cmdr.add('list', 'List command')
-#
-#    # Test raw
-#    assert_equal(expected, cmdr.help)
-#
-#    # Test invoked help
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
-#  def test_help_with_only_app_version
-#    expected =<<EOF
-#Usage: ./test_commander.rb [commands] [options]
-#Global options:
-#    -h|--help                               Print command/options help: Flag
-#COMMANDS:
-#    list                                    List command
-#
-#see './test_commander.rb COMMAND --help' for specific command help
-#EOF
-#    cmdr = Commander.new(version:'0.0.1')
-#    cmdr.add('list', 'List command')
-#
-#    # Test raw
-#    assert_equal(expected, cmdr.help)
-#
-#    # Test invoked help
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
-#  def test_help_with_only_app_name
-#    expected =<<EOF
-#Usage: ./test [commands] [options]
-#Global options:
-#    -h|--help                               Print command/options help: Flag
-#COMMANDS:
-#    list                                    List command
-#
-#see './test COMMAND --help' for specific command help
-#EOF
-#    cmdr = Commander.new(app:'test')
-#    cmdr.add('list', 'List command')
-#
-#    # Test raw
-#    expected = "#{cmdr.banner}\n#{expected}"
-#    assert_equal(expected, cmdr.help)
-#
-#    # Test invoked help
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
-#  def test_help_without_examples
-#    expected =<<EOF
-#Usage: ./test [commands] [options]
-#Global options:
-#    -h|--help                               Print command/options help: Flag
-#COMMANDS:
-#    list                                    List command
-#
-#see './test COMMAND --help' for specific command help
-#EOF
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('list', 'List command')
-#
-#    # Test raw
-#    expected = "#{cmdr.banner}\n#{expected}"
-#    assert_equal(expected, cmdr.help)
-#
-#    # Test invoked help
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
-#  def test_help_with_examples
-#    expected =<<EOF
-#Examples:
-#List: ./test list
-#
-#Usage: ./test [commands] [options]
-#Global options:
-#    -h|--help                               Print command/options help: Flag
-#COMMANDS:
-#    list                                    List command
-#
-#see './test COMMAND --help' for specific command help
-#EOF
-#    cmdr = Commander.new(app:'test', version:'0.0.1', examples:"List: ./test list")
-#    cmdr.add('list', 'List command')
-#
-#    # Test raw help
-#    expected = "#{cmdr.banner}\n#{expected}"
-#    assert_equal(expected, cmdr.help)
-#
-#    # Test invoked help
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
-#  def test_help_is_reserved_option_sub_cmd
-#    cmdr = Commander.new
-#    capture = Sys.capture{ assert_raises(SystemExit){
-#      cmdr.add('test', '', nodes:[
-#        Commander::Command.new('foo', '', [
-#          Commander::Command.new('bar', '', [
-#            Option.new('-h|--help', 'help is reserved')
-#          ])
-#        ])
-#      ])
-#    }}
-#    assert_equal("Error: 'help' is a reserved option name!\n", capture.stdout.strip_color)
-#  end
-#
-#  def test_help_is_reserved_option
-#    cmdr = Commander.new
-#    capture = Sys.capture{ assert_raises(SystemExit){
-#      cmdr.add('test', 'help is reserved', nodes:[
-#        Option.new('-h|--help', 'help is reserved')
-#      ])
-#    }}
-#    assert_equal("Error: 'help' is a reserved option name!\n", capture.stdout.strip_color)
-#  end
+  def test_help_with_default_true
+    expected =<<EOF
+List command
+
+Usage: ./test_commander.rb list [options]
+    --foo-false                             Foo false test: Flag(false)
+    --foo-true                              Foo true test: Flag(true)
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    cmdr = Commander.new
+    cmdr.add('list', 'List command', nodes:[
+      Option.new('--foo-false', 'Foo false test', type:false),
+      Option.new('--foo-true', 'Foo true test', type:true)
+    ])
+
+    assert_equal(expected, cmdr.help(cmd:'list'))
+  end
+
+  def test_help_with_neither_app_nor_version
+    expected =<<EOF
+Usage: ./test_commander.rb [commands] [options]
+Global options:
+    -h|--help                               Print command/options help: Flag(false)
+COMMANDS:
+    list                                    List command
+
+see './test_commander.rb COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new
+    cmdr.add('list', 'List command')
+
+    # Test raw
+    assert_equal(expected, cmdr.help)
+
+    # Test invoked help
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
+  def test_help_with_only_app_version
+    expected =<<EOF
+Usage: ./test_commander.rb [commands] [options]
+Global options:
+    -h|--help                               Print command/options help: Flag(false)
+COMMANDS:
+    list                                    List command
+
+see './test_commander.rb COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new(version:'0.0.1')
+    cmdr.add('list', 'List command')
+
+    # Test raw
+    assert_equal(expected, cmdr.help)
+
+    # Test invoked help
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
+  def test_help_with_only_app_name
+    expected =<<EOF
+Usage: ./test [commands] [options]
+Global options:
+    -h|--help                               Print command/options help: Flag(false)
+COMMANDS:
+    list                                    List command
+
+see './test COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new(app:'test')
+    cmdr.add('list', 'List command')
+
+    # Test raw
+    expected = "#{cmdr.banner}\n#{expected}"
+    assert_equal(expected, cmdr.help)
+
+    # Test invoked help
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
+  def test_help_without_examples
+    expected =<<EOF
+Usage: ./test [commands] [options]
+Global options:
+    -h|--help                               Print command/options help: Flag(false)
+COMMANDS:
+    list                                    List command
+
+see './test COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('list', 'List command')
+
+    # Test raw
+    expected = "#{cmdr.banner}\n#{expected}"
+    assert_equal(expected, cmdr.help)
+
+    # Test invoked help
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
+  def test_help_with_examples
+    expected =<<EOF
+Examples:
+List: ./test list
+
+Usage: ./test [commands] [options]
+Global options:
+    -h|--help                               Print command/options help: Flag(false)
+COMMANDS:
+    list                                    List command
+
+see './test COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new(app:'test', version:'0.0.1', examples:"List: ./test list")
+    cmdr.add('list', 'List command')
+
+    # Test raw help
+    expected = "#{cmdr.banner}\n#{expected}"
+    assert_equal(expected, cmdr.help)
+
+    # Test invoked help
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
+  def test_help_is_reserved_option_even_in_sub_commands
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add('test', '', nodes:[
+        Command.new('foo', '', nodes:[
+          Command.new('bar', '', nodes:[
+            Option.new('-h|--help', 'help is reserved')
+          ])
+        ])
+      ])
+    }}
+    assert_equal("Error: 'help' is a reserved option name!\n", capture.stdout.strip_color)
+  end
+
+  def test_help_is_reserved_option
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add('test', 'help is reserved', nodes:[
+        Option.new('-h|--help', 'help is reserved')
+      ])
+    }}
+    assert_equal("Error: 'help' is a reserved option name!\n", capture.stdout.strip_color)
+  end
 
   #-----------------------------------------------------------------------------
   # Test the Option Class

@@ -20,6 +20,8 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
     * [Global Options](#global-options)
   * [Configuration](#configuration)
   * [Help](#help)
+    * [Examples](#examples)
+    * [Indicators](#indicators)
 * [Config](#config)
 * [Ruby Gem Creation](#ruby-gem-creation)
   * [Package Layout](#package-layout)
@@ -177,10 +179,15 @@ Example command line expressions:
 ### Help <a name="help"></a>
 Help for your appliation and commands is automatically supported with the ***-h*** and ***--help***
 flags and is generated from the app ***name***, ***version***, ***examples***, ***commands***,
-***descriptions*** and ***options*** given in Commander's configuration. Examples is just a free
-form string that is displayed before usage so user's have an idea of how to put together the
-commands and options. Allowed checks are added to the end of option descriptions in parenthesis.
-Type and required indicators are added after allowed check descriptions.
+***descriptions*** and ***options*** given in Commander's configuration.
+
+#### Examples <a name="examples"></a>
+Examples is just a free form string that is displayed before usage so user's have an idea of how to
+put together the commands and options.
+
+#### Indicators <a name="indicators"></a>
+Allowed checks, types, and required flags specified in the configuration are known as indicators in
+the help context and are added to the end of the option descriptions.
 
 Example ruby configuration:
 ```ruby
@@ -256,9 +263,6 @@ Usage: ./builder build [options]
     build0                              Build given components (all,iso,image,boot): String, Required
     -h|--help                           Print command/options help
 ```
-
-**Required**
-Options can be required using the ***required:true*** options param
 
 ## Config <a name="config"></a>
 Config is a simple YAML wrapper with some extra features. Since it implements the ***Singleton***

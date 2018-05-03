@@ -84,14 +84,35 @@ class Option
   end
 end
 
+class Command
+  attr_reader(:name)
+  attr_reader(:desc)
+  attr_accessor(:nodes)
+  attr_accessor(:help)
+
+  # Create a new command
+  # @param name [String] command name used on command line
+  # @param desc [String] the command's description
+  # @param nodes [String] the command's description
+  def initialize(name, desc, nodes:[])
+    @name = name
+    @desc = desc
+    @nodes = nodes
+    @help = ""
+  end
+
+  # Print out the command is something human understandable
+  def to_s
+    return "Command => name:#{@name}, desc:'#{@desc}'"
+  end
+end
+
 # An implementation of git like command syntax for ruby applications:
 # see https://github.com/phR0ze/ruby-nub
 class Commander
   attr_reader(:config)
   attr_reader(:banner)
   attr_accessor(:cmds)
-
-  Command = Struct.new(:name, :desc, :nodes, :help)
 
   # Initialize the commands for your application
   # @param app [String] application name e.g. reduce
@@ -176,14 +197,14 @@ class Commander
   end
 
   # Return the app's help string
-  # @param name [String] get help for given command
+  # @param cmd [String] get help for given command
   # @return [String] the app's help string
-  def help(name:nil)
+  def help(cmd:nil)
     help = nil
-    name = nil if name.class != String
+    cmd = nil if cmd.class != String
 
     # Global help
-    if !name
+    if !cmd
       help = @app.nil? ? "" : "#{banner}\n"
       if !@examples.nil? && !@examples.empty?
         newline = @examples.strip_color[-1] != "\n" ? "\n" : ""
@@ -198,8 +219,7 @@ class Commander
 
     # Command help
     else
-      cmd = @config.find{|x| name == x.name }
-      help = cmd.help
+      help = @config.find{|x| cmd == x.name }.help
     end
 
     return help
@@ -214,7 +234,7 @@ class Commander
     # Parse commands recursively
     move_globals_to_front!
     expand_chained_options!
-    if !(cmd = @config.find{|x| x.name == args.first})
+    if (cmd = @config.find{|x| x.name == ARGV.first})
       parse_commands(cmd, @config.select{|x| x.name != cmd.name}, ARGV, @cmds)
     end
 
@@ -255,9 +275,7 @@ class Commander
     args.shift(opts.size)
 
     # Recurse on sub commands
-    subcmds = cmd.nodes.select{|x| x.class == Commander::Command}
-    puts(subcmds)
-    exit
+    subcmds = cmd.nodes.select{|x| x.class == Command}
 
     # Handle help upfront before anything else
     if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
@@ -457,48 +475,48 @@ class Commander
   end
 
   # Add a command to the command list
-  # @param cmd [String] name of the command
+  # @param name [String] name of the command
   # @param desc [String] description of the command
   # @param nodes [List] list of command nodes (i.e. options or commands)
   # @return [Command] new command
-  def add_cmd(cmd, desc, nodes)
-    subcmds = nodes.select{|x| x.class != Option}.sort{|x,y| x.name <=> y.name}
+  def add_cmd(name, desc, nodes)
+    cmd = Command.new(name, desc)
+    subcmds = nodes.select{|x| x.class == Command}.sort{|x,y| x.name <=> y.name}
 
     # Build help for command
     #---------------------------------------------------------------------------
-    help = "#{desc}\n"
+    cmd.help = "#{desc}\n"
     app = @app || @app_default
-    subcmd_prompt = subcmds.any? ? "[commands] " : ""
-    help += "\nUsage: ./#{app} #{cmd} #{subcmd_prompt}[options]\n" if cmd != 'global'
-    help = "#{banner}\n#{help}" if @app && cmd != 'global'
+    cmd_prompt = subcmds.any? ? "[commands] " : ""
+    cmd.help += "\nUsage: ./#{app} #{name} #{cmd_prompt}[options]\n" if name != 'global'
+    cmd.help = "#{banner}\n#{cmd.help}" if @app && name != 'global'
 
     # Add help for each sub-command before options
-    help += "COMMANDS:\n" if subcmds.any?
-    subcmds.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
+    cmd.help += "COMMANDS:\n" if subcmds.any?
+    subcmds.each{|x| cmd.help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
 
     # Insert standard help option for command (re-using one from global, all identical)
-    nodes << @config.find{|x| x.name == 'global'}.nodes.find{|x| x.long == '--help'} if cmd != 'global'
+    nodes << @config.find{|x| x.name == 'global'}.nodes.find{|x| x.long == '--help'} if name != 'global'
 
     # Add positional options first
     sorted_options = nodes.select{|x| x.class == Option && x.key.nil?}
     sorted_options += nodes.select{|x| x.class == Option && !x.key.nil?}.sort{|x,y| x.key <=> y.key}
-    help += "OPTIONS:\n" if subcmds.any? && sorted_options.any?
+    cmd.help += "OPTIONS:\n" if subcmds.any? && sorted_options.any?
     positional_index = -1
     sorted_options.each{|x|
       required = x.required ? ", Required" : ""
       allowed = x.allowed.empty? ? "" : " (#{x.allowed * ','})"
       positional_index += 1 if x.key.nil?
-      key = x.key.nil? ? "#{cmd}#{positional_index}" : x.key
-      type = (x.type == FalseClass || x.type == TrueClass) ? x.type.to_s[/(.*)Class/, 1] : x.type
-      help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
+      key = x.key.nil? ? "#{name}#{positional_index}" : x.key
+      type = (x.type == FalseClass || x.type == TrueClass) ? "Flag(#{x.type.to_s[/(.*)Class/, 1].downcase})" : x.type
+      cmd.help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
     }
-    nodes = subcmds + sorted_options
+    cmd.nodes = subcmds + sorted_options
 
     # Add hint as to how to get specific sub command help
-    help += "\nsee './#{app} #{cmd} COMMAND --help' for specific command help\n" if subcmds.any?
+    cmd.help += "\nsee './#{app} #{name} COMMAND --help' for specific command help\n" if subcmds.any?
 
-    # Create the command in the command config
-    return Command.new(cmd, desc, nodes, help)
+    return cmd
   end
 end
 
