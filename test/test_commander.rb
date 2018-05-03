@@ -613,6 +613,55 @@ class TestCommander < Minitest::Test
   #-----------------------------------------------------------------------------
   # Test Help
   #-----------------------------------------------------------------------------
+  def test_sub_command_help
+    expected =<<EOF
+Enable foo component
+
+Usage: ./test_commander.rb foo [options]
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    cmdr = Commander.new
+    cmdr.add('enable', "Enable components", nodes:[
+      Command.new('foo', 'Enable foo component')
+    ])
+
+    # Test manually
+    cmd = cmdr.config.find{|x| x.name == "enable"}
+    assert_equal(expected, cmd.nodes.find{|x| x.class == Command && x.name == 'foo'}.help)
+
+    # Test using short hand form
+    ARGV.clear and ARGV << 'enable' << 'foo' << '-h'
+    cmdr.parse!
+    #capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    #assert_equal(expected, capture.stdout)
+  end
+
+  def test_command_help_with_sub_commands
+    expected =<<EOF
+Enable components
+
+Usage: ./test_commander.rb enable [commands] [options]
+COMMANDS:
+    foo                                     Enable foo component
+OPTIONS:
+    -h|--help                               Print command/options help: Flag(false)
+
+see './test_commander.rb enable COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new
+    cmdr.add('enable', "Enable components", nodes:[
+      Command.new('foo', 'Enable foo component')
+    ])
+
+    # Test manually
+    assert_equal(expected, cmdr.config.find{|x| x.name == "enable"}.help)
+
+    # Test using short hand form
+    ARGV.clear and ARGV << 'enable' << '-h'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
   def test_help_with_required_positional
     expected =<<EOF
 Build components

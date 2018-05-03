@@ -20,6 +20,7 @@
 #SOFTWARE.
 
 require 'colorize'
+require 'ostruct'
 require_relative 'log'
 require_relative 'sys'
 require_relative 'string'
@@ -82,6 +83,11 @@ class Option
       Log.die("mixed allowed types") if @allowed.any?{|x| x.class != allowed_type}
     end
   end
+
+  # Return a human readable string of this object
+  def to_s
+    return "Option => key:#{@key}, desc:'#{@desc}', type:#{@type}, allowed:#{@allowed}, required:#{@required}"
+  end
 end
 
 class Command
@@ -101,9 +107,13 @@ class Command
     @help = ""
   end
 
-  # Print out the command is something human understandable
+  # Return a human readable string of this object
   def to_s
-    return "Command => name:#{@name}, desc:'#{@desc}'"
+    str = "Command => name:#{@name}, desc:'#{@desc}'\n"
+    @nodes.each{|x|
+      str += "  #{x.to_s}"
+    }
+    return str
   end
 end
 
@@ -119,6 +129,10 @@ class Commander
   # @param version [String] version of the application e.g. 1.0.0
   # @param examples [String] optional examples to list after the title before usage
   def initialize(app:nil, version:nil, examples:nil)
+    @k = OpenStruct.new({
+      global: 'global'
+    })
+
     @app = app
     @app_default = Sys.caller_filename
     @version = version
@@ -156,7 +170,7 @@ class Commander
   # @param desc [String] description of the command
   # @param nodes [List] list of command nodes (i.e. options or commands)
   def add(cmd, desc, nodes:[])
-    Log.die("'global' is a reserved command name") if cmd == 'global'
+    Log.die("'#{@k.global}' is a reserved command name") if cmd == @k.global
     Log.die("'#{cmd}' already exists") if @config.any?{|x| x.name == cmd}
     Log.die("'help' is a reserved option name") if nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
     Log.die("command names must be pure lowercase letters") if cmd =~ /[^a-z]/
@@ -164,7 +178,7 @@ class Commander
     # Validate sub command key words
     validate_subcmd = ->(subcmd){
       subcmd.nodes = [] if !subcmd.nodes
-      Log.die("'global' is a reserved command name") if subcmd.name == 'global'
+      Log.die("'#{@k.global}' is a reserved command name") if subcmd.name == @k.global
       Log.die("'help' is a reserved option name") if subcmd.nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
       Log.die("command names must be pure lowercase letters") if subcmd.name =~ /[^a-z]/
       subcmd.nodes.select{|x| x.class != Option}.each{|x| validate_subcmd.(x)}
@@ -181,11 +195,11 @@ class Commander
     Log.die("only options are allowed as globals") if options.any?{|x| x.class != Option}
 
     # Aggregate global options
-    if (global = @config.find{|x| x.name == 'global'})
+    if (global = @config.find{|x| x.name == @k.global})
       global.nodes.each{|x| options << x}
-      @config.reject!{|x| x.name == 'global'}
+      @config.reject!{|x| x.name == @k.global}
     end
-    @config << add_cmd('global', 'Global options:', options)
+    @config << add_cmd(@k.global, 'Global options:', options)
   end
 
   # Returns banner string
@@ -208,9 +222,9 @@ class Commander
     end
     app = @app || @app_default
     help += "Usage: ./#{app} [commands] [options]\n"
-    help += @config.find{|x| x.name == 'global'}.help
+    help += @config.find{|x| x.name == @k.global}.help
     help += "COMMANDS:\n"
-    @config.select{|x| x.name != 'global'}.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
+    @config.select{|x| x.name != @k.global}.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
     help += "\nsee './#{app} COMMAND --help' for specific command help\n"
 
     return help
@@ -261,16 +275,20 @@ class Commander
     results[cmd.name.to_sym] = {}             # Create command results entry
     cmd_names = others.map{|x| x.name}        # Get other command names as markers
 
-    # Collect command options from args to compare against
-    opts = args.take_while{|x| !cmd_names.include?(x)}
-    args.shift(opts.size)
+    # Collect all parameters until the next sibling command
+    params = args.take_while{|x| !cmd_names.include?(x)}
+    args.shift(params.size)
+
+    # Separate this command's options from sub-commands and sub-command options
+    opts, subparams = split_cmd_params(cmd, params)
 
     # Recurse on sub commands
-    subcmds = cmd.nodes.select{|x| x.class == Command}
+    #cmd.nodes.select{|x| x.class == Command}.each{|x|
+    #}
 
     # Handle help upfront before anything else
     if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
-      !puts(help) and exit if cmd.name == 'global'
+      !puts(help) and exit if cmd.name == @k.global
       !puts(cmd.help) and exit
     end
 
@@ -330,8 +348,8 @@ class Commander
   # Parses the command line, moving all global options to the begining
   # and inserting the global command
   def move_globals_to_front!
-    if !(global_cmd = @config.find{|x| x.name == 'global'}).nil?
-      ARGV.delete('global')
+    if !(global_cmd = @config.find{|x| x.name == @k.global}).nil?
+      ARGV.delete(@k.global)
 
       # Collect positional and named options from begining
       globals = ARGV.take_while{|x| !@config.any?{|y| y.name == x}}
@@ -358,7 +376,7 @@ class Commander
 
       # Re-insert options in correct order at end with command
       globals.reverse.each{|x| ARGV.unshift(x)}
-      ARGV.unshift('global')
+      ARGV.unshift(@k.global)
     end
   end
 
@@ -368,24 +386,24 @@ class Commander
   def expand_chained_options!
     args = ARGV[0..-1]
     results = {}
-    cmd_names = @config.map{|x| x.name }
+    cmd_names = @config.map{|x| x.name}
 
     chained = []
     while args.any?
       if !(cmd = @config.find{|x| x.name == args.first}).nil?
         results[args.shift] = []                            # Add the command to the results
         cmd_names.reject!{|x| x == cmd.name}                # Remove command from possible commands
-        cmd_required = cmd.nodes.select{|x| x.required}
+        cmd_required = cmd.nodes.select{|x| x.class == Option && x.required}
 
         # Collect command options from args to compare against
         opts = args.take_while{|x| !cmd_names.include?(x)}
         args.shift(opts.size)
 
         # Globals are not to be considered for chaining
-        results[cmd.name].concat(opts) and next if cmd.name == 'global'
+        results[cmd.name].concat(opts) and next if cmd.name == @k.global
 
         # Chained case is when no options are given but some are required
-        if opts.size == 0 && cmd.nodes.any?{|x| x.required}
+        if opts.size == 0 && cmd.nodes.any?{|x| x.class == Option && x.required}
           chained << cmd
         else
           # Add cmd with options
@@ -393,7 +411,7 @@ class Commander
 
           # Check chained cmds against current cmd
           chained.each{|x|
-            other_required = x.nodes.select{|x| x.required}
+            other_required = x.nodes.select{|x| x.class == Option && x.required}
             !puts("Error: chained commands must satisfy required options!".colorize(:red)) && !puts(x.help) and
               exit if cmd_required.size < other_required.size
             other_required.each_with_index{|y,i|
@@ -410,13 +428,31 @@ class Commander
     ARGV.clear and results.each{|k, v| ARGV << k; ARGV.concat(v)}
   end
 
+  # Split the given params into the command's options and everything else
+  # i.e. sub-commands and sub-command options
+  # @param cmd [Command] command were working with
+  # @param params [Array] list of params
+  def split_cmd_params(cmd, params)
+    opts = []
+    subparams = []
+
+    #if cmd.name != @k.global
+    opts = params
+    puts(cmd)
+    puts("OPTS: #{opts}")
+    puts("SUBPARMS: #{subparams}")
+    #exit
+
+    return opts, subparams
+  end
+
   # Match the given command line arg with a configured named option
   # @param opt [String] the command line argument given
   # @param cmd [Command] configured command to match against
   # @return [OptionMatch]] struct with some helper functions
   def match_named(opt, cmd)
     match = OptionMatch.new(opt)
-    cmd_named_opts = cmd.nodes.select{|x| !x.key.nil? }
+    cmd_named_opts = cmd.nodes.select{|x| x.class == Option && !x.key.nil? }
 
     if opt.start_with?('-')
       short = opt[@short_regex, 1]
@@ -479,15 +515,15 @@ class Commander
     cmd.help = "#{desc}\n"
     app = @app || @app_default
     cmd_prompt = subcmds.any? ? "[commands] " : ""
-    cmd.help += "\nUsage: ./#{app} #{name} #{cmd_prompt}[options]\n" if name != 'global'
-    cmd.help = "#{banner}\n#{cmd.help}" if @app && name != 'global'
+    cmd.help += "\nUsage: ./#{app} #{name} #{cmd_prompt}[options]\n" if name != @k.global
+    cmd.help = "#{banner}\n#{cmd.help}" if @app && name != @k.global
 
     # Add help for each sub-command before options
     cmd.help += "COMMANDS:\n" if subcmds.any?
     subcmds.each{|x| cmd.help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
 
     # Insert standard help option for command (re-using one from global, all identical)
-    nodes << @config.find{|x| x.name == 'global'}.nodes.find{|x| x.long == '--help'} if name != 'global'
+    nodes << @config.find{|x| x.name == @k.global}.nodes.find{|x| x.long == '--help'} if name != @k.global
 
     # Add positional options first
     sorted_options = nodes.select{|x| x.class == Option && x.key.nil?}
@@ -502,10 +538,15 @@ class Commander
       type = (x.type == FalseClass || x.type == TrueClass) ? "Flag(#{x.type.to_s[/(.*)Class/, 1].downcase})" : x.type
       cmd.help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
     }
-    cmd.nodes = subcmds + sorted_options
 
     # Add hint as to how to get specific sub command help
     cmd.help += "\nsee './#{app} #{name} COMMAND --help' for specific command help\n" if subcmds.any?
+
+    # Configure help for each sub command
+    subcmds.each{|x| cmd.nodes << add_cmd(x.name, x.desc, x.nodes)}
+
+    # Add options after any sub-commands
+    cmd.nodes += sorted_options
 
     return cmd
   end

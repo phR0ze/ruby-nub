@@ -48,7 +48,7 @@ have their own help to display their usage and available options. Commands are u
 different branches of functionality in an application.
 
 #### Command Parameters <a name="command-parameters"></a>
-Each command may have zero or more command parameters. Each command parameter may be either a
+Each command may have zero or more command parameters. Command parameters may be either a
 sub-command, which follow the same rules in a recursive fashion as any command, or an option.
 Command options modify how the command behaves.
 
