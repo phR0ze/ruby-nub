@@ -191,6 +191,8 @@ class Commander
       help += "COMMANDS:\n"
       @config.select{|x| x.name != 'global'}.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
       help += "\nsee './#{app} COMMAND --help' for specific command help\n"
+
+    # Command help
     else
       cmd = @config.find{|x| name == x.name }
       help = cmd.help
@@ -456,24 +458,27 @@ class Commander
   # @param nodes [List] list of command nodes (i.e. options or commands)
   # @return [Command] new command
   def add_cmd(cmd, desc, nodes)
+    subcmds = nodes.select{|x| x.class != Option}.sort{|x,y| x.name <=> y.name}
 
     # Build help for command
     #---------------------------------------------------------------------------
-    app = @app || @app_default
     help = "#{desc}\n"
-    help += "\nUsage: ./#{app} #{cmd} [options]\n" if cmd != 'global'
+    app = @app || @app_default
+    subcmd_prompt = subcmds.any? ? "[commands] " : ""
+    help += "\nUsage: ./#{app} #{cmd} #{subcmd_prompt}[options]\n" if cmd != 'global'
     help = "#{banner}\n#{help}" if @app && cmd != 'global'
 
-    # Add global help above command help if not global command
-    nodes << @config.find{|x| x.name == 'global'}.nodes.find{|x| x.long == '--help'} if cmd != 'global'
-
     # Add help for each sub-command before options
-    subcmds = nodes.select{|x| x.class != Option}.sort{|x,y| x.name <=> y.name}
+    help += "COMMANDS:\n" if subcmds.any?
     subcmds.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
+
+    # Insert standard help option for command (re-using one from global, all identical)
+    nodes << @config.find{|x| x.name == 'global'}.nodes.find{|x| x.long == '--help'} if cmd != 'global'
 
     # Add positional options first
     sorted_options = nodes.select{|x| x.class == Option && x.key.nil?}
     sorted_options += nodes.select{|x| x.class == Option && !x.key.nil?}.sort{|x,y| x.key <=> y.key}
+    help += "OPTIONS:\n" if subcmds.any? && sorted_options.any?
     positional_index = -1
     sorted_options.each{|x|
       required = x.required ? ", Required" : ""
@@ -484,6 +489,9 @@ class Commander
       help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
     }
     nodes = subcmds + sorted_options
+
+    # Add hint as to how to get specific sub command help
+    help += "\nsee './#{app} #{cmd} COMMAND --help' for specific command help\n" if subcmds.any?
 
     # Create the command in the command config
     return Command.new(cmd, desc, nodes, help)
