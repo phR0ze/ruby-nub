@@ -31,7 +31,10 @@ class TestCommander < Minitest::Test
     Log.init(path:nil, queue: false, stdout: true)
     ARGV.clear
   end
-#
+
+  #-----------------------------------------------------------------------------
+  # Test sub-commands
+  #-----------------------------------------------------------------------------
 #  def test_single_subcommand_help
 #    ARGV.clear
 #    cmdr = Commander.new
@@ -49,17 +52,7 @@ class TestCommander < Minitest::Test
 #    }}
 #    assert_equal("Error: only options are allowed as globals!\n", capture.stdout.strip_color)
 #  end
-#
-#  def test_optional_positionals
-#    ARGV.clear and ARGV << 'build'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new(nil, 'Component to build')
-#    ])
-#    cmdr.parse!
-#    assert(cmdr[:build])
-#    assert(!cmdr[:build][:build0])
-#  end
+ 
   #-----------------------------------------------------------------------------
   # Test global options
   #-----------------------------------------------------------------------------
@@ -524,6 +517,17 @@ EOF
   #-----------------------------------------------------------------------------
   # Test commands with positional options
   #-----------------------------------------------------------------------------
+  def test_optional_positionals
+    ARGV.clear and ARGV << 'build'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new(nil, 'Component to build')
+    ])
+    cmdr.parse!
+    assert(cmdr[:build])
+    assert(!cmdr[:build][:build0])
+  end
+
   def test_positional_integer_good
     ARGV.clear and ARGV << 'clean' << '3'
     cmdr = Commander.new(app:'test', version:'0.0.1')
