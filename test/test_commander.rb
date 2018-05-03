@@ -646,9 +646,13 @@ EOF
     assert_equal(sub2_expected, sub2.help)
 
     # Test using short hand form
-    #ARGV.clear and ARGV << 'enable' << 'foo' << '-h'
-    #capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-    #assert_equal(expected, capture.stdout)
+    ARGV.clear and ARGV << 'enable' << 'foo' << '-h'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(sub1_expected, capture.stdout)
+
+    ARGV.clear and ARGV << 'enable' << 'foo' << 'bar' << '-h'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(sub2_expected, capture.stdout)
   end
 
   def test_sub_command_help
