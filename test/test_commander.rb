@@ -354,262 +354,272 @@ class TestCommander < Minitest::Test
 #    assert_equal('trondom', cmdr[:delete][:namespace])
 #  end
 #
-#  def test_named_option_long_quotes_equal
-#    ARGV.clear and ARGV << 'bar' << '--foobar=foo foo'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', type:String),
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal('foo foo', cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_array_equal
-#    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo1,foo2,foo3'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_array_equal
-#    ARGV.clear and ARGV << 'bar' << '--foobar=foo1,foo2,foo3'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_short_array
-#    ARGV.clear and ARGV << 'bar' << '-f' << 'foo1,foo2,foo3'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_string_equal
-#    ARGV.clear and ARGV << 'bar' << '--foobar=foo'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal("foo", cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_string
-#    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal("foo", cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_short_string
-#    ARGV.clear and ARGV << 'bar' << '-f' << 'foo'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal("foo", cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_int_equal
-#    ARGV.clear and ARGV << 'clean' << '--min=3'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal(3, cmdr[:clean][:min])
-#  end
-#
-#  def test_named_option_long_int
-#    ARGV.clear and ARGV << 'clean' << '--min' << '3'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal(3, cmdr[:clean][:min])
-#    assert_nil(cmdr[:clean][:debug])
-#    assert_nil(cmdr[:clean][:skip])
-#    assert_nil(cmdr[:clean][:clean0])
-#  end
-#
-#  def test_named_option_short_invalid_int
-#    ARGV.clear and ARGV << 'clean' << '-m' << '4'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert(capture.stdout.include?("Error: invalid integer value '4'"))
-#    assert(capture.stdout.include?("Set the minimum"))
-#  end
-#
-#  def test_named_option_short_int
-#    ARGV.clear and ARGV << 'clean' << '-m' << '1'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal(1, cmdr[:clean][:min])
-#    assert_nil(cmdr[:clean][:debug])
-#    assert_nil(cmdr[:clean][:skip])
-#    assert_nil(cmdr[:clean][:clean0])
-#  end
-#
-#  def test_named_option_long_flag
-#    ARGV.clear and ARGV << 'clean' << '--debug'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new('-d|--debug', 'Debug mode'),
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal(true, cmdr[:clean][:debug])
-#  end
-#
-#  def test_named_option_short_flag
-#    ARGV.clear and ARGV << 'clean' << '-d'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout)
-#    assert_equal(true, cmdr[:clean][:debug])
-#    assert_nil(cmdr[:clean][:min])
-#    assert_nil(cmdr[:clean][:skip])
-#    assert_nil(cmdr[:clean][:clean0])
-#  end
-#
-#  def test_update_option
-#    ARGV.clear and ARGV << 'clean' << '3'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal(3, cmdr[:clean][:clean0])
-#    cmdr[:clean][:clean0] = 2
-#    assert_equal(2, cmdr[:clean][:clean0])
-#  end
-#
-#  def test_positional_integer_good
-#    ARGV.clear and ARGV << 'clean' << '3'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal(3, cmdr[:clean][:clean0])
-#  end
-#
-#  def test_positional_invalid_integer_value
-#    ARGV.clear and ARGV << 'clean' << '2'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert(capture.stdout.include?("Error: invalid integer value '2'"))
-#    assert(capture.stdout.include?("clean0"))
-#  end
-#
-#  def test_positional_array_good
-#    ARGV.clear and ARGV << 'clean' << 'all'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array)
-#    ])
-#    out = Sys.capture{ cmdr.parse! }
-#    assert_equal("", out.stdout) # no output for succcess without app name
-#    assert_equal(["all"], cmdr[:clean][:clean0])
-#  end
-#
-#  def test_positional_invalid_array_value
-#    ARGV.clear and ARGV << 'clean' << 'foo'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert(capture.stdout.include?("Error: invalid array value 'foo'"))
-#    assert(capture.stdout.include?("clean0"))
-#  end
-#
-#  def test_positional_invalid_string_value
-#    ARGV.clear and ARGV << 'clean' << 'foo'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'])
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert(capture.stdout.include?("Error: invalid string value 'foo'"))
-#    assert(capture.stdout.include?("clean0"))
-#  end
-#
-#  def test_positional_option_too_many
-#    ARGV.clear and ARGV << 'clean' << 'foo' << 'bar'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components')
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert(capture.stdout.include?("Error: invalid positional option"))
-#    assert(capture.stdout.include?("clean0"))
-#  end
-#
-#  def test_command_name_with_non_lowercase_letters_should_fail
-#    cmdr = Commander.new
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('clean-er', nil)}}
-#    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('CLEAN', nil)}}
-#    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('clean1', nil)}}
-#    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
-#  end
-#
-#  def test_positional_option_not_given
-#    ARGV.clear and ARGV << 'clean'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', required:true)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert(capture.stdout.include?("Error: positional option required"))
-#    assert(capture.stdout.include?("clean0"))
-#  end
-#
+
+  #-----------------------------------------------------------------------------
+  # Test command misc
+  #-----------------------------------------------------------------------------
+  def test_update_option
+    ARGV.clear and ARGV << 'clean' << '3'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
+    ])
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal(3, cmdr[:clean][:clean0])
+    cmdr[:clean][:clean0] = 2
+    assert_equal(2, cmdr[:clean][:clean0])
+  end
+
+  def test_command_name_with_non_lowercase_letters_should_fail
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('clean-er', nil)}}
+    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('CLEAN', nil)}}
+    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('clean1', nil)}}
+    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
+  end
+
+  #-----------------------------------------------------------------------------
+  # Test commands with named options
+  #-----------------------------------------------------------------------------
+  def test_named_option_long_quotes_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar=foo foo'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', type:String),
+    ])
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal('foo foo', cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_array_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo1,foo2,foo3'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_array_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar=foo1,foo2,foo3'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_short_array
+    ARGV.clear and ARGV << 'bar' << '-f' << 'foo1,foo2,foo3'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_string_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar=foo'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal("foo", cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_string
+    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal("foo", cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_short_string
+    ARGV.clear and ARGV << 'bar' << '-f' << 'foo'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
+    ])
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal("foo", cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_int_equal
+    ARGV.clear and ARGV << 'clean' << '--min=3'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal(3, cmdr[:clean][:min])
+  end
+
+  def test_named_option_long_int
+    ARGV.clear and ARGV << 'clean' << '--min' << '3'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal(3, cmdr[:clean][:min])
+    assert_nil(cmdr[:clean][:debug])
+    assert_nil(cmdr[:clean][:skip])
+    assert_nil(cmdr[:clean][:clean0])
+  end
+
+  def test_named_option_short_invalid_int
+    ARGV.clear and ARGV << 'clean' << '-m' << '4'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid integer value '4'"))
+    assert(capture.stdout.include?("Set the minimum"))
+  end
+
+  def test_named_option_short_int
+    ARGV.clear and ARGV << 'clean' << '-m' << '1'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal(1, cmdr[:clean][:min])
+    assert_nil(cmdr[:clean][:debug])
+    assert_nil(cmdr[:clean][:skip])
+    assert_nil(cmdr[:clean][:clean0])
+  end
+
+  def test_named_option_long_flag
+    ARGV.clear and ARGV << 'clean' << '--debug'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new('-d|--debug', 'Debug mode'),
+    ])
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal(true, cmdr[:clean][:debug])
+  end
+
+  def test_named_option_short_flag
+    ARGV.clear and ARGV << 'clean' << '-d'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout)
+    assert_equal(true, cmdr[:clean][:debug])
+    assert_nil(cmdr[:clean][:min])
+    assert_nil(cmdr[:clean][:skip])
+    assert_nil(cmdr[:clean][:clean0])
+  end
+
+  #-----------------------------------------------------------------------------
+  # Test commands with positional options
+  #-----------------------------------------------------------------------------
+  def test_positional_integer_good
+    ARGV.clear and ARGV << 'clean' << '3'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
+    ])
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal(3, cmdr[:clean][:clean0])
+  end
+
+  def test_positional_invalid_integer_value
+    ARGV.clear and ARGV << 'clean' << '2'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:[1, 3], type:Integer)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid integer value '2'"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
+  def test_positional_array_good
+    ARGV.clear and ARGV << 'clean' << 'all'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array)
+    ])
+    out = Sys.capture{ cmdr.parse! }
+    assert_equal("", out.stdout) # no output for succcess without app name
+    assert_equal(["all"], cmdr[:clean][:clean0])
+  end
+
+  def test_positional_invalid_array_value
+    ARGV.clear and ARGV << 'clean' << 'foo'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid array value 'foo'"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
+  def test_positional_invalid_string_value
+    ARGV.clear and ARGV << 'clean' << 'foo'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'])
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid string value 'foo'"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
+  def test_positional_option_too_many
+    ARGV.clear and ARGV << 'clean' << 'foo' << 'bar'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components')
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid positional option"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
+  def test_positional_option_not_given
+    ARGV.clear and ARGV << 'clean'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', required:true)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: positional option required"))
+    assert(capture.stdout.include?("clean0"))
+  end
+
   #-----------------------------------------------------------------------------
   # Test Help
   #-----------------------------------------------------------------------------
