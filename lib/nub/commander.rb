@@ -85,8 +85,9 @@ class Option
   end
 
   # Return a human readable string of this object
-  def to_s
-    return "Option => key:#{@key}, desc:'#{@desc}', type:#{@type}, allowed:#{@allowed}, required:#{@required}"
+  # @param level [Integer] level to indent
+  def to_s(level:0)
+    return "#{" " * level * 2}Option => key:#{@key}, desc:'#{@desc}', type:#{@type}, allowed:#{@allowed}, required:#{@required}"
   end
 end
 
@@ -108,10 +109,11 @@ class Command
   end
 
   # Return a human readable string of this object
-  def to_s
-    str = "Command => name:#{@name}, desc:'#{@desc}'\n"
+  # @param level [Integer] level to indent
+  def to_s(level:0)
+    str = "#{" " * level * 2}Command => name:#{@name}, desc:'#{@desc}'"
     @nodes.each{|x|
-      str += "  #{x.to_s}"
+      str += "\n#{x.to_s(level: level + 1)}"
     }
     return str
   end
