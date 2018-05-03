@@ -613,90 +613,56 @@ class TestCommander < Minitest::Test
   #-----------------------------------------------------------------------------
   # Test Help
   #-----------------------------------------------------------------------------
-#  def test_help_with_required_positional
-#    expected =<<EOF
-#Build components
-#
-#Usage: ./test_commander.rb build [options]
-#    build0                                  Component to build: String, Required
-#    -h|--help                               Print command/options help: Flag
-#EOF
-#
-#    ARGV.clear and ARGV << 'build' << '-h'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new(nil, 'Component to build', required:true)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
-#  def test_command_help_long
-#    expected =<<EOF
-#Clean components
-#
-#Usage: ./test_commander.rb clean [options]
-#    clean0                                  Clean given components (all,iso,image,boot): Array
-#    -d|--debug                              Debug mode: Flag
-#    -h|--help                               Print command/options help: Flag
-#    -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
-#    -s|--skip=COMPONENTS                    Skip the given components (iso,image): Array
-#EOF
-#    ARGV.clear and ARGV << 'clean' << '--help'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
-#  def test_command_help_short
-#    expected =<<EOF
-#Clean components
-#
-#Usage: ./test_commander.rb clean [options]
-#    clean0                                  Clean given components (all,iso,image,boot): Array
-#    -d|--debug                              Debug mode: Flag
-#    -h|--help                               Print command/options help: Flag
-#    -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
-#    -s|--skip=COMPONENTS                    Skip the given components (iso,image): Array
-#EOF
-#    ARGV.clear and ARGV << 'clean' << '-h'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
-#  def test_command_help_manual
-#    expected =<<EOF
-#Clean components
-#
-#Usage: ./test_commander.rb clean [options]
-#    clean0                                  Clean given components (all,iso,image,boot): Array
-#    -d|--debug                              Debug mode: Flag
-#    -h|--help                               Print command/options help: Flag
-#    -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
-#    -s|--skip=COMPONENTS                    Skip the given components (iso,image): Array
-#EOF
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    assert_equal(expected, cmdr.config.find{|x| x.name == "clean"}.help)
-#  end
+  def test_help_with_required_positional
+    expected =<<EOF
+Build components
+
+Usage: ./test_commander.rb build [options]
+    build0                                  Component to build: String, Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+
+    ARGV.clear and ARGV << 'build' << '-h'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new(nil, 'Component to build', required:true)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
+  def test_command_help
+    expected =<<EOF
+Clean components
+
+Usage: ./test_commander.rb clean [options]
+    clean0                                  Clean given components (all,iso,image,boot): Array
+    -d|--debug                              Debug mode: Flag(false)
+    -h|--help                               Print command/options help: Flag(false)
+    -m|--min=MINIMUM                        Set the minimum clean (1,2,3): Integer
+    -s|--skip=COMPONENTS                    Skip the given components (iso,image): Array
+EOF
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image', 'boot'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+
+    # Test manually
+    assert_equal(expected, cmdr.config.find{|x| x.name == "clean"}.help)
+
+    # Test using short hand form
+    ARGV.clear and ARGV << 'clean' << '-h'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+
+    # Test using long hand form
+    ARGV.clear and ARGV << 'clean' << '--help'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
 
   def test_help_with_default_true
     expected =<<EOF

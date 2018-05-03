@@ -225,8 +225,8 @@ class Commander
     # Parse commands recursively
     move_globals_to_front!
     expand_chained_options!
-    if (cmd = @config.find{|x| x.name == ARGV.first})
-      parse_commands(cmd, @config.select{|x| x.name != cmd.name}, ARGV, @cmds)
+    while (cmd = @config.find{|x| x.name == ARGV.first})
+      ARGV.shift && parse_commands(cmd, @config.select{|x| x.name != cmd.name}, ARGV, @cmds)
     end
 
     # Ensure specials (global) are always set
@@ -262,7 +262,7 @@ class Commander
     cmd_names = others.map{|x| x.name}        # Get other command names as markers
 
     # Collect command options from args to compare against
-    opts = args.take_while{|x| !cmd_names.include?(x) }
+    opts = args.take_while{|x| !cmd_names.include?(x)}
     args.shift(opts.size)
 
     # Recurse on sub commands
@@ -340,7 +340,7 @@ class Commander
       # Collect named options throughout
       i = -1
       cmd = nil
-      while (i += 1) < ARGV.size do
+      while (i += 1) < ARGV.size
 
         # Set command and skip command and matching options
         if !(_cmd = @config.find{|x| x.name == ARGV[i]}).nil?
@@ -371,7 +371,7 @@ class Commander
     cmd_names = @config.map{|x| x.name }
 
     chained = []
-    while args.any? do
+    while args.any?
       if !(cmd = @config.find{|x| x.name == args.first}).nil?
         results[args.shift] = []                            # Add the command to the results
         cmd_names.reject!{|x| x == cmd.name}                # Remove command from possible commands
