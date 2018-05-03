@@ -285,8 +285,15 @@ class Commander
     opts, subparams = split_cmd_params(cmd, params)
 
     # Recurse on sub commands
-    #cmd.nodes.select{|x| x.class == Command}.each{|x|
-    #}
+    subcmds = cmd.nodes.select{|x| x.class == Command}
+    while (subcmd = subcmds.find{|x| x.name == subparams.first})
+      subparams.shift
+      subcmds.reject!{|x| x.name == subcmd.name}
+      parse_commands(subcmd, subcmds, subparams, results[cmd.name.to_sym])
+    end
+
+    # Add any unconsumed sub-params back on to ensure everything is accounted for
+    subparams.reverse.each{|x| args.unshift(x)}
 
     # Handle help upfront before anything else
     if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
@@ -295,8 +302,8 @@ class Commander
     end
 
     # Check that all required options were given
-    cmd_pos_opts = cmd.nodes.select{|x| x.key.nil? }
-    cmd_named_opts = cmd.nodes.select{|x| !x.key.nil? }
+    cmd_pos_opts = cmd.nodes.select{|x| x.class == Option && x.key.nil? }
+    cmd_named_opts = cmd.nodes.select{|x| x.class == Option && !x.key.nil? }
 
     !puts("Error: positional option required!".colorize(:red)) && !puts(cmd.help) and
       exit if opts.select{|x| !x.start_with?('-')}.size < cmd_pos_opts.select{|x| x.required}.size
@@ -435,15 +442,20 @@ class Commander
   # @param cmd [Command] command were working with
   # @param params [Array] list of params
   def split_cmd_params(cmd, params)
-    opts = []
-    subparams = []
+    return params, [] if cmd.name == @k.global
 
-    #if cmd.name != @k.global
-    opts = params
-    puts(cmd)
-    puts("OPTS: #{opts}")
-    puts("SUBPARMS: #{subparams}")
-    #exit
+    # Command options will be any before a sub-command or any after all
+    # sub-commands that don't apply to the sub-command
+    # TODO: get those after all sub-commands
+    subcmds = cmd.nodes.select{|x| x.class == Command}.map{|x| x.name}
+    opts = params.take_while{|x| !subcmds.include?(x)}
+
+    # Sub-command params is anything else
+    subparams = params[opts.size..-1]
+
+    #puts("PARMS: #{params}")
+    #puts("OPTS: #{opts}")
+    #puts("SUBPARMS: #{subparams}")
 
     return opts, subparams
   end
@@ -506,9 +518,11 @@ class Commander
   # Add a command to the command list
   # @param name [String] name of the command
   # @param desc [String] description of the command
-  # @param nodes [List] list of command nodes (i.e. options or commands)
+  # @param nodes [Array] list of command nodes (i.e. options or commands)
+  # @param hierarchy [Array] list of commands
   # @return [Command] new command
-  def add_cmd(name, desc, nodes)
+  def add_cmd(name, desc, nodes, hierarchy:[])
+    hierarchy << name
     cmd = Command.new(name, desc)
     subcmds = nodes.select{|x| x.class == Command}.sort{|x,y| x.name <=> y.name}
 
@@ -517,7 +531,7 @@ class Commander
     cmd.help = "#{desc}\n"
     app = @app || @app_default
     cmd_prompt = subcmds.any? ? "[commands] " : ""
-    cmd.help += "\nUsage: ./#{app} #{name} #{cmd_prompt}[options]\n" if name != @k.global
+    cmd.help += "\nUsage: ./#{app} #{hierarchy * ' '} #{cmd_prompt}[options]\n" if name != @k.global
     cmd.help = "#{banner}\n#{cmd.help}" if @app && name != @k.global
 
     # Add help for each sub-command before options
@@ -545,7 +559,7 @@ class Commander
     cmd.help += "\nsee './#{app} #{name} COMMAND --help' for specific command help\n" if subcmds.any?
 
     # Configure help for each sub command
-    subcmds.each{|x| cmd.nodes << add_cmd(x.name, x.desc, x.nodes)}
+    subcmds.each{|x| cmd.nodes << add_cmd(x.name, x.desc, x.nodes, hierarchy:hierarchy)}
 
     # Add options after any sub-commands
     cmd.nodes += sorted_options

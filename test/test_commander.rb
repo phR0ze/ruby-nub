@@ -613,11 +613,49 @@ class TestCommander < Minitest::Test
   #-----------------------------------------------------------------------------
   # Test Help
   #-----------------------------------------------------------------------------
+  def test_sub_command_help_with_more_sub_commands
+    sub1_expected =<<EOF
+Enable foo component
+
+Usage: ./test_commander.rb enable foo [commands] [options]
+COMMANDS:
+    bar                                     Enable foo sub component
+OPTIONS:
+    -h|--help                               Print command/options help: Flag(false)
+
+see './test_commander.rb foo COMMAND --help' for specific command help
+EOF
+    sub2_expected =<<EOF
+Enable foo sub component
+
+Usage: ./test_commander.rb enable foo bar [options]
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    cmdr = Commander.new
+    cmdr.add('enable', "Enable components", nodes:[
+      Command.new('foo', 'Enable foo component', nodes:[
+        Command.new('bar', 'Enable foo sub component')
+      ])
+    ])
+
+    # Test manually
+    cmd = cmdr.config.find{|x| x.name == "enable"}
+    sub1 = cmd.nodes.find{|x| x.class == Command && x.name == 'foo'}
+    assert_equal(sub1_expected, sub1.help)
+    sub2 = sub1.nodes.find{|x| x.class == Command && x.name == 'bar'}
+    assert_equal(sub2_expected, sub2.help)
+
+    # Test using short hand form
+    #ARGV.clear and ARGV << 'enable' << 'foo' << '-h'
+    #capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    #assert_equal(expected, capture.stdout)
+  end
+
   def test_sub_command_help
     expected =<<EOF
 Enable foo component
 
-Usage: ./test_commander.rb foo [options]
+Usage: ./test_commander.rb enable foo [options]
     -h|--help                               Print command/options help: Flag(false)
 EOF
     cmdr = Commander.new
@@ -631,9 +669,8 @@ EOF
 
     # Test using short hand form
     ARGV.clear and ARGV << 'enable' << 'foo' << '-h'
-    cmdr.parse!
-    #capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-    #assert_equal(expected, capture.stdout)
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
   end
 
   def test_command_help_with_sub_commands
