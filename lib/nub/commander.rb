@@ -197,30 +197,21 @@ class Commander
   end
 
   # Return the app's help string
-  # @param cmd [String] get help for given command
   # @return [String] the app's help string
-  def help(cmd:nil)
-    help = nil
-    cmd = nil if cmd.class != String
+  def help
 
     # Global help
-    if !cmd
-      help = @app.nil? ? "" : "#{banner}\n"
-      if !@examples.nil? && !@examples.empty?
-        newline = @examples.strip_color[-1] != "\n" ? "\n" : ""
-        help += "Examples:\n#{@examples}\n#{newline}"
-      end
-      app = @app || @app_default
-      help += "Usage: ./#{app} [commands] [options]\n"
-      help += @config.find{|x| x.name == 'global'}.help
-      help += "COMMANDS:\n"
-      @config.select{|x| x.name != 'global'}.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
-      help += "\nsee './#{app} COMMAND --help' for specific command help\n"
-
-    # Command help
-    else
-      help = @config.find{|x| cmd == x.name }.help
+    help = @app.nil? ? "" : "#{banner}\n"
+    if !@examples.nil? && !@examples.empty?
+      newline = @examples.strip_color[-1] != "\n" ? "\n" : ""
+      help += "Examples:\n#{@examples}\n#{newline}"
     end
+    app = @app || @app_default
+    help += "Usage: ./#{app} [commands] [options]\n"
+    help += @config.find{|x| x.name == 'global'}.help
+    help += "COMMANDS:\n"
+    @config.select{|x| x.name != 'global'}.each{|x| help += "    #{x.name.ljust(@just)}#{x.desc}\n" }
+    help += "\nsee './#{app} COMMAND --help' for specific command help\n"
 
     return help
   end

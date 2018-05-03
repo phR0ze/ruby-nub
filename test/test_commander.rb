@@ -697,6 +697,7 @@ class TestCommander < Minitest::Test
 #    ])
 #    assert_equal(expected, cmdr.config.find{|x| x.name == "clean"}.help)
 #  end
+
   def test_help_with_default_true
     expected =<<EOF
 List command
@@ -712,7 +713,7 @@ EOF
       Option.new('--foo-true', 'Foo true test', type:true)
     ])
 
-    assert_equal(expected, cmdr.help(cmd:'list'))
+    assert_equal(expected, cmdr.config.find{|x| x.name == "list"}.help)
   end
 
   def test_help_with_neither_app_nor_version
