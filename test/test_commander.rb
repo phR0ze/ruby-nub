@@ -833,32 +833,33 @@ class TestCommander < Minitest::Test
   #-----------------------------------------------------------------------------
   # Test the Option Class
   #-----------------------------------------------------------------------------
-#  def test_mixed_types_in_allow_should_fail
-#    capture = Sys.capture{ assert_raises(SystemExit){
-#      Option.new(nil, nil, allowed:[1, 'foo'])
-#    }}
-#    assert_equal("Error: mixed allowed types!\n", capture.stdout.strip_color)
-#  end
-#
-#  def test_option_allowed
-#    assert_empty(Option.new(nil, nil).allowed)
-#    assert_equal(['foo', 'bar'], Option.new(nil, nil, allowed:['foo', 'bar']).allowed)
-#  end
-#
-#  def test_option_required
-#    # All options are optional by default
-#    assert(!Option.new(nil, nil).required)
-#    assert(!Option.new("-h|--help", nil).required)
-#
-#    # All options may be required
-#    assert(Option.new(nil, nil, required:true).required)
-#    assert(Option.new("-h|--help", nil, required:true).required)
-#  end
-#
-#  def test_type_not_set_for_named_consuming_option
-#    capture = Sys.capture{ assert_raises(SystemExit){ Option.new("-f|--file=HINT", "desc")}}
-#    assert_equal("Error: option type must be set!\n", capture.stdout.strip_color)
-#  end
+  def test_option_required
+
+    # All options are optional by default
+    assert(!Option.new(nil, nil).required)
+    assert(!Option.new("-h|--help", nil).required)
+
+    # All options may be required
+    assert(Option.new(nil, nil, required:true).required)
+    assert(Option.new("-h|--help", nil, required:true).required)
+  end
+
+  def test_option_allowed
+
+    # Test allowed for positional options
+    assert_empty(Option.new(nil, nil).allowed)
+    assert_equal(['foo', 'bar'], Option.new(nil, nil, allowed:['foo', 'bar']).allowed)
+
+    # Test allowed for named options
+    assert_empty(Option.new('--build=COMPONENT', nil, type:String).allowed)
+    assert_equal(['foo', 'bar'], Option.new('--build=COMPONENT', nil, type:String, allowed:['foo', 'bar']).allowed)
+
+    # Test mixed types in allow should fail
+    capture = Sys.capture{ assert_raises(SystemExit){
+      Option.new(nil, nil, allowed:[1, 'foo'])
+    }}
+    assert_equal("Error: mixed allowed types!\n", capture.stdout.strip_color)
+  end
 
   # Allowed types are (Bool, Integer, String, Array)
   def test_option_type
@@ -884,6 +885,10 @@ class TestCommander < Minitest::Test
     $stdout.stub(:write, nil){
       assert_raises(SystemExit){Option.new(nil, nil, type:Hash)}
     }
+
+    # Type not set for named option that is expecting an incoming value
+    capture = Sys.capture{ assert_raises(SystemExit){ Option.new("-f|--file=HINT", "desc")}}
+    assert_equal("Error: option type must be set!\n", capture.stdout.strip_color)
   end
 
   # Option description is free form text and has no checks
