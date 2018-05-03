@@ -62,15 +62,19 @@ class Option
       @long = key[/(--[\w\-]+)(=.+)*$/, 1]
     end
 
-    # Validate and set type
-    Log.die("invalid option type #{type}") if ![String, Integer, Array, nil].any?{|x| type == x}
+    # Convert true/false to TrueClass/FalseClass
+    type = TrueClass if type.class == TrueClass
+    type = FalseClass if type.class == FalseClass
+
+    # Validate and set type, allow Flag defaults to be true or false
+    Log.die("invalid option type #{type}") if ![String, Integer, Array, TrueClass, FalseClass, nil].any?{|x| type == x}
     Log.die("option type must be set") if @hint && !type
     @type = String if !key && !type
     @type = FalseClass if key and !type
     @type = type if type
 
     # Validate hint is given for non flags
-    Log.die("option hint must be set") if @key && !@hint && @type != FalseClass
+    Log.die("option hint must be set") if @key && !@hint && @type != FalseClass && @type != TrueClass
 
     # Validate allowed
     if @allowed.any?
@@ -233,7 +237,7 @@ class Commander
       return !!sym
     end
     def flag?
-      return opt.type == FalseClass
+      return opt.type == FalseClass || opt.type == TrueClass
     end
   end
 
@@ -485,7 +489,7 @@ class Commander
       allowed = x.allowed.empty? ? "" : " (#{x.allowed * ','})"
       positional_index += 1 if x.key.nil?
       key = x.key.nil? ? "#{cmd}#{positional_index}" : x.key
-      type = x.type == FalseClass ? "Flag" : x.type
+      type = (x.type == FalseClass || x.type == TrueClass) ? x.type.to_s[/(.*)Class/, 1] : x.type
       help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
     }
     nodes = subcmds + sorted_options

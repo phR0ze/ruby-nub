@@ -10,51 +10,93 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 ### Table of Contents
 * [Deploy](#deploy)
 * [Commander](#commander)
-    * [Commands](#commands)
-    * [Options](#options)
-    * [Help](#help)
+  * [Commands](#commands)
+    * [Command Parameters ](#command-paramaters)
+    * [Chained Commands](#chained-commands)
+  * [Options](#options)
+    * [Positional Options](#positional-options)
+    * [Value Types](#value-types)
+    * [Allowed Values](#allowed-values)
+    * [Global Options](#global-options)
+  * [Configuration](#configuration)
+  * [Help](#help)
 * [Config](#config)
 * [Ruby Gem Creation](#ruby-gem-creation)
-    * [Package Layout](#package-layout)
-    * [Build Gem](#build-gem)
-    * [Install Gem](#install-gem)
-    * [Push Gem](#push-gem)
+  * [Package Layout](#package-layout)
+  * [Build Gem](#build-gem)
+  * [Install Gem](#install-gem)
+  * [Push Gem](#push-gem)
 * [Integrate with Travis-CI](#integrate-with-travis-ci)
-    * [Install Travis Client](#install-travis-client)
-    * [Deploy Ruby Gem on Tag](#deploy-ruby-gem-on-tag)
+  * [Install Travis Client](#install-travis-client)
+  * [Deploy Ruby Gem on Tag](#deploy-ruby-gem-on-tag)
  
 ## Deploy <a name="deploy"></a>
 Run: `bundle install --system`
 
 ## Commander <a name="commander"></a>
-Commander was created mainly because all available options parsers seemed complicated and overweight
-and partly because I enjoyed understanding every bit going into it. Commander offers ***git*** like
-command syntax that is becoming so popular. Personally I like the syntax as it feels cleaner and
-faster to type.
+Commander was created mainly because all available options parsers seemed overly complicated and
+overweight and partly because I enjoyed understanding every bit going into it. Commander offers
+***git*** like command syntax that is becoming so popular.
 
 There are two kinds of paramaters that commander deals with ***commands*** and ***options***.
-Commands are specific named parameters that may or may not have options specific to it. Commands
-have their own help to display their usage and available options.
 
 ### Commands <a name="commands"></a>
-Commands are defined via configuration as key words that trigger different branches of functionality
-for the application. Each command may have zero or more sub commands, each of which follow the same 
-rules in a recursive fashion. Each command may have zero or more options that modify how this 
-behavior is invoked. Whenever more than one command is used in the command line expression the 
-expression is interpreted as being a ***chained command expression***. Chained command expressions 
-are executed left to right, such that you can execute the ***clean*** command then the ***build*** 
-command or more in a single command line expression. Each command in a chained command expression 
-may have its own specific options (those coming after the command but before the next command) or if 
-options are omitted the required options from the next command will be used. The chained command 
-options syntax allows one to have a cleaner multi-command line expression with reusable options. 
-Options are said to apply in a chained command syntax when they are of the same type and position in 
-the positional case or same type and name in the named case.
+Commands are specific named parameters that may or may not have options specific to it. Commands
+have their own help to display their usage and available options. Commands are used to trigger
+different branches of functionality in an application.
 
+#### Command Parameters <a name="command-parameters"></a>
+Each command may have zero or more command parameters. Each command parameter may be either a
+sub-command, which follow the same rules in a recursive fashion as any command, or an option.
+Command options modify how the command behaves.
+
+#### Chained Commands <a name="chained-commands"></a>
+The chained command expressions allow a cleaner multi-command type expression with reusable options.
+
+Whenever more than one command is used in the command line expression the expression is interpreted
+as being a ***chained command expression*** a.k.a ***chained commands***. Chained commands are
+executed left to right, such that you can execute the first command then the second command or more
+in a single command line expression. Each command in a chained command expression may have its own
+specific options (those coming after the command but before the next command) or if options are
+omitted the options from the next command will be used in the order they are given to satisfy the
+options of the command before. Only options of the same type and position will be used.
+
+### Options <a name="options"></a>
+Options are additional parameters that are given that modify the behavior of a command. There are
+two kinds of options available for use, ***positional*** and ***named***.
+
+#### Positional Options <a name="positional-options"></a>
+Positional options are identified by the absence of preceding dash/dashes and are interpreted
+according to the order in which they were found. Positional options always pass a value into the
+application. Positional options are named internally with the command name concatted with a zero
+based int representing its order ***e.g. clean0*** where *clean* is the command name and *0* is the
+positional options order given during configuration. Positional options are given sequentially so
+you can't skip one and specify the second, it must be one then two etc...
+
+#### Named Options
+Named options have a name that is prefixed with a dash (short hand) or two dashes (long hand) e.g.
+***-h*** or ***--help*** and may be a value passed in or simply a boolean flag. **Long Hand** form
+is always required for named options, short hand may or may not be given. An incoming
+**value/values** are indicated by the hint configuration e.g. ***-s|--skip=COMPONENTS*** indicates
+there is an incoming value/values to be expected because of the hint ***COMPONENTS***.
+
+#### Value Types <a name="value-types"></a>
+Option values require a ***type*** so that Commander can interpret how to use them. The supported
+value types are ***true, false, Integer, String, Array***. Positional options default to
+type String while named options default to false. The named option flag default of false can be
+changed to default to true by setting the ***type:true*** configuration param.
+
+#### Allowed Values <a name="allowed-values"></a>
+Commander will check the values given against an allowed list if so desired. This is done via the 
+***allowed*** configuration parameter.
+
+#### Global Options <a name="global-options"></a>
 ***Global*** options are options that are added with the ***add_global*** function and will show up
 set in the command results using the ***:global*** symbol. Global positional options must be given
 before any other commands but global named options may appear anywhere in the command line
 expression.
 
+### Configuration <a name="configuration"></a>
 ***Commander.new*** must be run from the app's executable file for it to pick up the app's filename
 properly.
 
@@ -95,24 +137,6 @@ Example command line expressions:
 # exactly equivalent to the previous usage
 ./app clean all build all
 ```
-
-### Options <a name="options"></a>
-There are two kinds of options available for use, ***positional*** and ***named***. Positional
-options are identified by the absence of preceding dash/dashes and interpreted according to the
-order and number in which they were found. Positional options are a value being passed into the
-application.  Named options have a name that is prefixed with a dash (short hand) or two dashes
-(long hand) e.g.  ***-h*** or ***--help*** and may simply be a flag or pass in a value. Option
-values require a ***type*** so that Commander can interpret how to use them. The supported value
-types are ***Flag, Integer, String, Array***. Values may be checked or not checked via the
-***allowed*** config param. Positional options default to type String while named options default to
-type Flag.  Positional options are named internally with the command concatted with a an int for
-order ***e.g.  clean0*** zero based. Positional options are given sequentially so you can't
-skip one and specify the second, it must be one then two etc...
-
-**Long Hand** form is always required for named options, short hand may or may not be given.
-
-**Values** are indicated by the hint given e.g. ***-s|--skip=COMPONENTS*** indicates there is an
-incoming value/values to be expected because of the hint ***COMPONENTS***.
 
 Example ruby configuration:
 ```ruby
