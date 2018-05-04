@@ -293,6 +293,7 @@ class Commander
   # @param args [Array] array of arguments
   # @param results [Hash] of cmd results
   def parse_commands(cmd, parent, others, args, results)
+    #binding.pry
     results[cmd.to_sym] = {}                            # Create command results entry
     cmd_names = others.map{|x| x.name}                  # Get other command names as markers
     subcmds = cmd.nodes.select{|x| x.class == Command}  # Get sub-commands for this command
@@ -335,7 +336,7 @@ class Commander
     # Check that all required named options were given
     cmd.nodes.select{|x| x.class == Option && !x.key.nil? && x.required}.each{|x|
       !puts("Error: required option #{x.key} not given!".colorize(:red)) && !puts(cmd.help) and
-        exit if match_named(x, opts).hit?
+        exit if !match_named(x, opts).hit?
     }
 
     # Consume and set all named options
@@ -347,6 +348,7 @@ class Commander
         # Separate value
         separate = false
         if !value && i + 1 < opts.size
+          separate = true
           value = opts[i + 1]
         elsif !value
           !puts("Error: named option '#{opts[i]}' value not found!".colorize(:red)) and

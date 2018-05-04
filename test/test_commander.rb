@@ -408,42 +408,43 @@ class TestCommander < Minitest::Test
 #    assert_equal(expected, capture.stdout)
 #  end
 #
-#  #-----------------------------------------------------------------------------
-#  # Test required and mixed options
-#  #-----------------------------------------------------------------------------
-#  def test_required_named_option_missing
-#    expected =<<EOF
-#Error: required option -c|--comp not given!
-#Build components
-#
-#Usage: ./test_commander.rb build [options]
-#    -c|--comp                               Component to build: Flag(false), Required
-#    -h|--help                               Print command/options help: Flag(false)
-#EOF
-#    ARGV.clear and ARGV << 'build'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new('-c|--comp', 'Component to build', required:true)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout.strip_color)
-#  end
-#
-#  def test_multi_positional_and_named_options
-#    ARGV.clear and ARGV << 'delete' << 'deployment' << 'tron' << '-n' << 'trondom'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('delete', 'Delete the given component', nodes:[
-#      Option.new(nil, 'Component type'),
-#      Option.new(nil, 'Component name'),
-#      Option.new('-n|--namespace=NAMESPACE', 'Namespace to use', type:String),
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal('deployment', cmdr[:delete][:delete0])
-#    assert_equal('tron', cmdr[:delete][:delete1])
-#    assert_equal('trondom', cmdr[:delete][:namespace])
-#  end
-#
+  #-----------------------------------------------------------------------------
+  # Test required and mixed options
+  #-----------------------------------------------------------------------------
+  def test_required_named_option_missing
+    expected =<<EOF
+Error: required option -c|--comp not given!
+Build components
+
+Usage: ./test_commander.rb build [options]
+    -c|--comp                               Component to build: Flag(false), Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    ARGV.clear and ARGV << 'build'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new('-c|--comp', 'Component to build', required:true)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
+  def test_multi_positional_and_named_options
+    ARGV.clear and ARGV << 'delete' << 'deployment' << 'tron' << '-n' << 'trondom'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('delete', 'Delete the given component', nodes:[
+      Option.new(nil, 'Component type'),
+      Option.new(nil, 'Component name'),
+      Option.new('-n|--namespace=NAMESPACE', 'Namespace to use', type:String),
+    ])
+    cmdr.parse!
+    #out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal('deployment', cmdr[:delete][:delete0])
+    assert_equal('tron', cmdr[:delete][:delete1])
+    assert_equal('trondom', cmdr[:delete][:namespace])
+  end
+
 #  #-----------------------------------------------------------------------------
 #  # Test chained commands
 #  #-----------------------------------------------------------------------------
@@ -552,122 +553,122 @@ class TestCommander < Minitest::Test
 #    assert_equal("debug", cmdr[:publish][:publish0])
 #    assert_equal("debug", cmdr[:deploy][:deploy0])
 #  end
-#
-#  #-----------------------------------------------------------------------------
-#  # Test commands with named options
-#  #-----------------------------------------------------------------------------
-#  def test_named_option_long_quotes_equal
-#    ARGV.clear and ARGV << 'bar' << '--foobar=foo foo'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', type:String),
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal('foo foo', cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_array_equal
-#    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo1,foo2,foo3'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_array_equal
-#    ARGV.clear and ARGV << 'bar' << '--foobar=foo1,foo2,foo3'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_short_array
-#    ARGV.clear and ARGV << 'bar' << '-f' << 'foo1,foo2,foo3'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_string_equal
-#    ARGV.clear and ARGV << 'bar' << '--foobar=foo'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal("foo", cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_string
-#    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo'
-#    cmdr = Commander.new
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal("foo", cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_short_string
-#    ARGV.clear and ARGV << 'bar' << '-f' << 'foo'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('bar', 'bar it up', nodes:[
-#      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal("foo", cmdr[:bar][:foobar])
-#  end
-#
-#  def test_named_option_long_int_equal
-#    ARGV.clear and ARGV << 'clean' << '--min=3'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
-#    assert(out.size == 2 && out.include?("test_v0.0.1"))
-#    assert_equal(3, cmdr[:clean][:min])
-#  end
-#
-#  def test_named_option_long_int
-#    ARGV.clear and ARGV << 'clean' << '--min' << '3'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
-#      Option.new('-d|--debug', 'Debug mode'),
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
-#    ])
-#    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
-#    assert_equal(3, cmdr[:clean][:min])
-#    assert_nil(cmdr[:clean][:debug])
-#    assert_nil(cmdr[:clean][:skip])
-#    assert_nil(cmdr[:clean][:clean0])
-#  end
-#
-#  def test_named_option_short_invalid_int
-#    ARGV.clear and ARGV << 'clean' << '-m' << '4'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert(capture.stdout.include?("Error: invalid integer value '4'"))
-#    assert(capture.stdout.include?("Set the minimum"))
-#  end
+
+  #-----------------------------------------------------------------------------
+  # Test commands with named options
+  #-----------------------------------------------------------------------------
+  def test_named_option_long_quotes_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar=foo foo'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', type:String),
+    ])
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal('foo foo', cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_array_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo1,foo2,foo3'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_array_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar=foo1,foo2,foo3'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_short_array
+    ARGV.clear and ARGV << 'bar' << '-f' << 'foo1,foo2,foo3'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo1', 'foo2', 'foo3'], type:Array),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal(['foo1', 'foo2', 'foo3'], cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_string_equal
+    ARGV.clear and ARGV << 'bar' << '--foobar=foo'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal("foo", cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_string
+    ARGV.clear and ARGV << 'bar' << '--foobar' << 'foo'
+    cmdr = Commander.new
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal("foo", cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_short_string
+    ARGV.clear and ARGV << 'bar' << '-f' << 'foo'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('bar', 'bar it up', nodes:[
+      Option.new('-f|--foobar=FOOBAR', 'Set foo', allowed:['foo'], type:String),
+    ])
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal("foo", cmdr[:bar][:foobar])
+  end
+
+  def test_named_option_long_int_equal
+    ARGV.clear and ARGV << 'clean' << '--min=3'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    assert(out.size == 2 && out.include?("test_v0.0.1"))
+    assert_equal(3, cmdr[:clean][:min])
+  end
+
+  def test_named_option_long_int
+    ARGV.clear and ARGV << 'clean' << '--min' << '3'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Clean given components', allowed:['all', 'iso'], type:Array),
+      Option.new('-d|--debug', 'Debug mode'),
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+      Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
+    ])
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert_equal(3, cmdr[:clean][:min])
+    assert_nil(cmdr[:clean][:debug])
+    assert_nil(cmdr[:clean][:skip])
+    assert_nil(cmdr[:clean][:clean0])
+  end
+
+  def test_named_option_short_invalid_int
+    ARGV.clear and ARGV << 'clean' << '-m' << '4'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert(capture.stdout.include?("Error: invalid integer value '4'"))
+    assert(capture.stdout.include?("Set the minimum"))
+  end
 
   def test_named_option_short_int
     ARGV.clear and ARGV << 'clean' << '-m' << '1'
@@ -678,8 +679,7 @@ class TestCommander < Minitest::Test
       Option.new('-m|--min=MINIMUM', 'Set the minimum clean', allowed:[1, 2, 3], type:Integer),
       Option.new('-s|--skip=COMPONENTS', 'Skip the given components', allowed:['iso', 'image'], type:Array)
     ])
-    cmdr.parse!
-    #assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
+    assert(Sys.capture{ cmdr.parse! }.stdout.empty?)
     assert_equal(1, cmdr[:clean][:min])
     assert_nil(cmdr[:clean][:debug])
     assert_nil(cmdr[:clean][:skip])
