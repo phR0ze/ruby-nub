@@ -125,7 +125,7 @@ EOF
   #-----------------------------------------------------------------------------
   # Test sub-commands
   #-----------------------------------------------------------------------------
-  def test_subcommand_consumes_applicable_options
+  def test_subcommand_consumes_applicable_options_only
     cmdr = Commander.new
     cmdr.add('clean', 'Clean ISO components', nodes:[
       Option.new(nil, 'Components to clean', type:Array,
@@ -135,7 +135,6 @@ EOF
       ])
     ])
 
-    # Test that clean options can co-exist with clean sub-commands at end
     exp = "clean deployments x,y,z pacman,iso"
     ARGV.clear and ARGV.concat(exp.split(" "))
     cmdr.parse!

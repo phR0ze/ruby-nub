@@ -18,7 +18,6 @@
 #LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
-
 require 'colorize'
 require 'ostruct'
 require_relative 'log'
@@ -84,6 +83,12 @@ class Option
     end
   end
 
+  # Get a symbol representing the command
+  # @returns symbol
+  def to_sym
+    return @long[2..-1].gsub("-", "_").to_sym
+  end
+
   # Return a human readable string of this object
   # @param level [Integer] level to indent
   def to_s(level:0)
@@ -106,6 +111,12 @@ class Command
     @desc = desc
     @nodes = nodes
     @help = ""
+  end
+
+  # Get a symbol representing the command
+  # @returns symbol
+  def to_sym
+    return @name.gsub('-', '_').to_sym
   end
 
   # Return a human readable string of this object
@@ -280,86 +291,99 @@ class Commander
   # @param args [Array] array of arguments
   # @param results [Hash] of cmd results
   def parse_commands(cmd, others, args, results)
-    results[cmd.name.gsub('-', '_').to_sym] = {}    # Create command results entry
-    cmd_names = others.map{|x| x.name}              # Get other command names as markers
+    results[cmd.to_sym] = {}                            # Create command results entry
+    cmd_names = others.map{|x| x.name}                  # Get other command names as markers
+    subcmds = cmd.nodes.select{|x| x.class == Command}  # Get sub-commands for this command
 
-    # Collect all parameters until the next sibling command
+    # Collect all params until the next sibling command
+    #---------------------------------------------------------------------------
     params = args.take_while{|x| !cmd_names.include?(x)}
     args.shift(params.size)
 
-    # Separate this command's options from sub-commands and sub-command options
-    opts, otherparams = split_cmd_params(cmd, params)
+    # Strip off this command's preceeding options
+    opts = subcmds.any? ? params.take_while{|x| !subcmds.any?{|y| x == y.name}} : params
+    otherparams = params[opts.size..-1]
 
-    # Recurse on sub commands
-    subcmds = cmd.nodes.select{|x| x.class == Command}
-    while (subcmd = subcmds.find{|x| x.name == otherparams.first})
-      otherparams.shift
-      subcmds.reject!{|x| x.name == subcmd.name}
-      parse_commands(subcmd, subcmds, otherparams, results[cmd.name.gsub('-', '_').to_sym])
+    #---------------------------------------------------------------------------
+    # Handle sub-commands recursively first
+    #---------------------------------------------------------------------------
+    while subcmds.any? && (subcmd = subcmds.find{|x| x.name == otherparams.first})
+      otherparams.shift                             # Consume sub-cmd from opts
+      subcmds.reject!{|x| x.name == subcmd.name}    # Drop sub-command from further use
+      parse_commands(subcmd, subcmds, otherparams, results[cmd.to_sym])
+      otherparams.reverse.each{|x| opts.unshift(x)} # Account for all options
+      otherparams.clear                             # Now zero them out to avoid left overs
     end
 
-    # Add any unconsumed sub-params back on to ensure everything is accounted for
-    otherparams.reverse.each{|x| args.unshift(x)}
+    #---------------------------------------------------------------------------
+    # Base case: dealing with options for a given command.
+    # Only consume options for this command and bubble up unused to parent
+    #---------------------------------------------------------------------------
 
     # Handle help upfront before anything else
+    #---------------------------------------------------------------------------
     if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
       !puts(help) and exit if cmd.name == @k.global
       !puts(cmd.help) and exit
     end
 
-    # Check that all required options were given
-    cmd_pos_opts = cmd.nodes.select{|x| x.class == Option && x.key.nil? }
-    cmd_named_opts = cmd.nodes.select{|x| x.class == Option && !x.key.nil? }
+    # Parse/consume named options first
+    #---------------------------------------------------------------------------
 
+    # Check that all required named options were given
+    cmd.nodes.select{|x| x.class == Option && !x.key.nil? && x.required}.each{|x|
+      !puts("Error: required option #{x.key} not given!".colorize(:red)) && !puts(cmd.help) and
+        exit if match_named(x, opts).hit?
+    }
+
+    # Consume and set all named options
+    i = -1
+    while (i += 1) < opts.size
+      if (match = match_named(opts[i], cmd)).hit?
+        value = match.flag? || match.value  # Inline or Flag value
+
+        # Separate value
+        separate = false
+        if !value && i + 1 < opts.size
+          value = opts[i + 1]
+        elsif !value
+          !puts("Error: named option '#{opts[i]}' value not found!".colorize(:red)) and
+            !puts(cmd.help) and exit
+        end
+
+        # Set result and consume options
+        results[cmd.to_sym][match.sym] = convert_value(value, cmd, match.opt)
+        opts.delete_at(i)                   # Consume option
+        opts.delete_at(i) if separate       # Consume separate value
+      end
+    end
+
+    # Parse/consume positional options next
+    #---------------------------------------------------------------------------
+    cmd_pos_opts = cmd.nodes.select{|x| x.class == Option && x.key.nil?}
+
+    # Check that all required positionals were given
     !puts("Error: positional option required!".colorize(:red)) && !puts(cmd.help) and
       exit if opts.select{|x| !x.start_with?('-')}.size < cmd_pos_opts.select{|x| x.required}.size
 
-    named_opts = opts.select{|x| x.start_with?('-')}
-    cmd_named_opts.select{|x| x.required}.each{|x|
-      !puts("Error: required option #{x.key} not given!".colorize(:red)) && !puts(cmd.help) and
-        exit if !named_opts.find{|y| y.start_with?(x.short) || y.start_with?(x.long)}
-    }
-
-    # Process command options
+    # Consume and set all positional options
+    i = -1
     pos = -1
-    loop {
-      break if opts.first.nil?
-      opt = opts.shift
-      cmd_opt = nil
-      value = nil
-      sym = nil
-
-      # Validate/set named options
-      # --------------------------------------------------------------------
-      # e.g. -s, --skip, --skip=VALUE
-      if (match = match_named(opt, cmd)).hit?
-        sym = match.sym
-        cmd_opt = match.opt
-        value = match.value
-        value = match.flag? || opts.shift if !value
-      elsif opt.start_with?('-')
-        !puts("Error: invalid named option '#{opt}'!".colorize(:red)) && !puts(cmd.help) and exit
-
-      # Validate/set positional options
-      # --------------------------------------------------------------------
-      else
+    while (i += 1) < opts.size
+      if !opts[i].start_with?('-')
         pos += 1
-        value = opt
         cmd_opt = cmd_pos_opts.shift
-        !puts("Error: invalid positional option '#{opt}'!".colorize(:red)) && !puts(cmd.help) and
-          exit if cmd_opt.nil? || cmd_names.include?(value)
-        sym = "#{cmd.name.gsub('-', '_')}#{pos}".to_sym
+        !puts("Error: invalid positional option '#{opts[i]}'!".colorize(:red)) and 
+          !puts(cmd.help) and exit if cmd_opt.nil?
+
+        # Set result and consume options
+        results[cmd.to_sym]["#{cmd.to_sym}#{pos}".to_sym] = convert_value(opts[i], cmd, cmd_opt)
+        opts.delete_at(i)                   # Consume option
       end
+    end
 
-      # Convert value to appropriate type and validate against allowed
-      # --------------------------------------------------------------------
-      value = convert_value(value, cmd, cmd_opt)
-
-      # Set option with value
-      # --------------------------------------------------------------------
-      !puts("Error: unknown named option '#{opt}' given!".colorize(:red)) && !puts(cmd.help) and exit if !sym
-      results[cmd.name.gsub('-', '_').to_sym][sym] = value
-    }
+    # Add any unconsumed options back to parent to ensure everything is accounted for
+    opts.reverse.each{|x| args.unshift(x)}
   end
 
   # Parses the command line, moving all global options to the begining
@@ -445,53 +469,44 @@ class Commander
     ARGV.clear and results.each{|k, v| ARGV << k; ARGV.concat(v)}
   end
 
-  # Split the given params into the command's options and everything else
-  # i.e. sub-commands and sub-command options
-  # @param cmd [Command] command were working with
-  # @param params [Array] list of params
-  def split_cmd_params(cmd, params)
-    return params, [] if cmd.name == @k.global
-    subcmds = cmd.nodes.select{|x| x.class == Command}.map{|x| x.name}
-
-    opts = []
-
-    # Command options will be any before any sub-command
-    if subcmds.any?
-      opts = params.take_while{|x| !subcmds.include?(x)}
-
-    # Base case: no more sub-commands so now only take what's needed
-    else
-      opts = params.take_while{|x| cmd.nodes}
-    end
-
-    # Sub-command params is anything else
-    otherparams = params[opts.size..-1]
-
-    #puts("PARMS: #{params}")
-    #puts("OPTS: #{opts}")
-    #puts("SUBPARMS: #{otherparams}")
-
-    return opts, otherparams
-  end
-
   # Match the given command line arg with a configured named option
-  # @param opt [String] the command line argument given
-  # @param cmd [Command] configured command to match against
+  # or match configured named option against a list of command line args
+  # @param arg [String/Option] the command line argument or configured Option
+  # @param other [Command/Array] configured command or command line args
   # @return [OptionMatch]] struct with some helper functions
-  def match_named(opt, cmd)
-    match = OptionMatch.new(opt)
-    cmd_named_opts = cmd.nodes.select{|x| x.class == Option && !x.key.nil? }
+  def match_named(arg, other)
+    match = OptionMatch.new
 
-    if opt.start_with?('-')
-      short = opt[@short_regex, 1]
-      long = opt[@long_regex, 1]
-      match.value = opt[@value_regex, 1]
+    # Match command line arg against command options
+    if arg.class == String && other.class == Command
+      match.arg = arg
+      options = other.nodes.select{|x| x.class == Option && !x.key.nil? }
 
-      # Set symbol converting dashes to underscores for named options
-      if (cmd_opt = cmd_named_opts.find{|x| x.short == short || x.long == long})
-        match.opt = cmd_opt
-        match.sym = cmd_opt.long[2..-1].gsub("-", "_").to_sym
+      if arg.start_with?('-')
+        short = arg[@short_regex, 1]
+        long = arg[@long_regex, 1]
+        match.value = arg[@value_regex, 1]
+
+        # Set symbol converting dashes to underscores for named options
+        if (match.opt = options.find{|x| x.short == short || x.long == long})
+          match.sym = match.opt.to_sym
+        end
       end
+
+    # Match command option against command line args
+    elsif arg.class == Option && other.class == Array
+      match.arg = arg.key
+
+      other.select{|x| x.start_with?('-')}.any?{|x|
+        short = x[@short_regex, 1]
+        long = x[@long_regex, 1]
+        value = arg[@value_regex, 1]
+        if short == arg.short || long == arg.long
+          match.opt = arg
+          match.value = value
+          match.sym = match.opt.to_sym
+        end
+      }
     end
 
     return match
