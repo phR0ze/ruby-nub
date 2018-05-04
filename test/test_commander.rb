@@ -122,292 +122,295 @@ class TestCommander < Minitest::Test
 ##    ARGV.clear and ARGV.concat(exp.split(" "))
 #  end
 
-#  #-----------------------------------------------------------------------------
-#  # Test sub-commands
-#  #-----------------------------------------------------------------------------
-#  def test_subcommand_consumes_applicable_options_only
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean ISO components', nodes:[
-#      Option.new(nil, 'Components to clean', type:Array,
-#        allowed:['all', 'pacman', 'pacman-all', 'initramfs', 'multiboot', 'iso', 'iso-full', 'vms']),
-#      Command.new('deployments', "Deployments to clean", nodes:[
-#        Option.new(nil, "Deployments to clean", type:Array, required:true)
-#      ])
-#    ])
-#
-#    exp = "clean deployments x,y,z pacman,iso"
-#    ARGV.clear and ARGV.concat(exp.split(" "))
-#    cmdr.parse!
-#    assert_equal(['pacman', 'iso'], cmdr[:clean][:clean0])
-#    assert_equal(['x', 'y', 'z'], cmdr[:clean][:deployments][:deployments0])
-#  end
-#
-#  def test_subcommands_chained
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Command.new('iso', 'Build ISO'),
-#      Command.new('iso-full', 'Build Full ISO'),
-#      Command.new('initramfs', 'Build InitRamFS'),
-#      Command.new('multiboot', 'Build Multiboot'),
-#    ])
-#
-#    # Test regular single command as named positional
-#    ARGV.clear and ARGV << 'build' << 'iso'
-#    cmdr.parse!
-#    assert_equal(1, cmdr[:build].size)
-#    assert(cmdr[:build][:iso])
-#    assert_equal(0, cmdr[:build][:iso].size)
-#
-#    # Test chained case for multiple sub-commands (acting like named positionals)
-#    ARGV.clear and ARGV << 'build' << 'iso' << 'iso-full' << 'initramfs' << 'multiboot'
-#    cmdr.parse!
-#    assert_equal(4, cmdr[:build].size)
-#    assert(cmdr[:build][:iso])
-#    assert(cmdr[:build][:iso_full])
-#    assert(cmdr[:build][:initramfs])
-#    assert(cmdr[:build][:multiboot])
-#  end
-#
-#  def test_subcommand_named_options
-#    expected =<<EOF
-#Error: invalid named option '-s'!
-#Feature foo
-#
-#Usage: ./test_commander.rb enable foo [options]
-#    -b|--build=COMP                         Build component: String
-#    -d|--debug                              Debug foo: Flag(false)
-#    -h|--help                               Print command/options help: Flag(false)
-#EOF
-#    cmdr = Commander.new
-#    cmdr.add('enable', 'Enable features', nodes:[
-#      Command.new('foo', 'Feature foo', nodes:[
-#        Option.new('-b|--build=COMP', 'Build component', type:String),
-#        Option.new('-d|--debug', 'Debug foo'),
-#      ])
-#    ])
-#
-#    # Check that sub-command isn't set with bad arg
-#    ARGV.clear and ARGV << 'enable' << 'foo' << '-s'
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout.strip_color)
-#
-#    # Check that sub-command positional works
-#    ARGV.clear and ARGV << 'enable' << 'foo' << '-d' << '-b' << 'bar'
-#    cmdr.parse!
-#    assert_equal(1, cmdr[:enable].size)
-#    assert_equal(2, cmdr[:enable][:foo].size)
-#    assert_equal('bar', cmdr[:enable][:foo][:build])
-#    assert_equal(TrueClass, cmdr[:enable][:foo][:debug].class)
-#  end
-#
-#  def test_subcommand_positional_options
-#    expected =<<EOF
-#Error: invalid positional option 'bar'!
-#Enable features
-#
-#Usage: ./test_commander.rb enable [commands] [options]
-#COMMANDS:
-#    foo                                     Feature foo
-#OPTIONS:
-#    -h|--help                               Print command/options help: Flag(false)
-#
-#see './test_commander.rb enable COMMAND --help' for specific command help
-#EOF
-#    cmdr = Commander.new
-#    cmdr.add('enable', 'Enable features', nodes:[
-#      Command.new('foo', 'Feature foo', nodes:[
-#        Option.new(nil, 'Foo positional option', allowed:['bar'])
-#      ])
-#    ])
-#
-#    # Check that sub-command isn't set with bad arg
-#    ARGV.clear and ARGV << 'enable' << 'bar'
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout.strip_color)
-#
-#    # Check that sub-command positional works
-#    ARGV.clear and ARGV << 'enable' << 'foo' << 'bar'
-#    cmdr.parse!
-#    assert_equal(1, cmdr[:enable].size)
-#    assert_equal(1, cmdr[:enable][:foo].size)
-#    assert_equal('bar', cmdr[:enable][:foo][:foo0])
-#  end
-#
-#  def test_subcommand_no_options
-#    cmdr = Commander.new
-#    cmdr.add('enable', 'Enable features', nodes:[
-#      Command.new('foo', 'Feature foo')
-#    ])
-#
-#    # Check that nothing is set yet
-#    assert_nil(cmdr[:enable])
-#
-#    # Check that the enable comamnd is set but nothing else
-#    ARGV.clear and ARGV << 'enable'
-#    cmdr.parse!
-#    assert(cmdr[:enable].class == Hash && !cmdr[:enable].any?)
-#
-#    # Check that the sub-command is set properly
-#    ARGV.clear and ARGV << 'enable' << 'foo'
-#    cmdr.parse!
-#    assert(cmdr[:enable][:foo].class == Hash)
-#  end
-#
-#  #-----------------------------------------------------------------------------
-#  # Test global options
-#  #-----------------------------------------------------------------------------
-#  def test_global_named_with_value
-#    ARGV.clear and ARGV << '-c' << 'foo'
-#    cmdr = Commander.new
-#    cmdr.add_global('-c|--cluster=CLUSTER', 'Name of the cluster to use', type:String)
-#    cmdr.parse!
-#    assert(cmdr.key?(:global))
-#    assert_equal("foo", cmdr[:global][:cluster])
-#  end
-#
-#  def test_global_always_exists
-#    ARGV.clear and ARGV << 'build' << 'foo'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new(nil, 'Component to build', required:true)
-#    ])
-#    cmdr.parse!
-#    assert(cmdr.key?(:global))
-#  end
-#
-#  def test_global_set_multiple
-#    ARGV.clear and ARGV << '-d' << '--skip'
-#    cmdr = Commander.new
-#    cmdr.add_global('-d|--debug', 'Debug')
-#    cmdr.add_global('-s|--skip', 'Skip')
-#    cmdr.parse!
-#    assert(cmdr[:global][:debug])
-#    assert(cmdr[:global][:skip])
-#  end
-#
-#  def test_global_positional_is_not_command
-#    expected =<<EOF
-#Error: positional option required!
-#Global options:
-#    global0                                 Super foo bar: String, Required
-#    -h|--help                               Print command/options help: Flag(false)
-#EOF
-#    ARGV.clear and ARGV << 'build'
-#    cmdr = Commander.new
-#    cmdr.add_global(nil, 'Super foo bar', required:true)
-#    cmdr.add('build', 'Build components')
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! }}
-#    assert_equal(expected, capture.stdout.strip_color)
-#  end
-#
-#  def test_global_positional_set
-#    ARGV.clear and ARGV << 'foobar'
-#    cmdr = Commander.new
-#    cmdr.add_global(nil, 'Super foo bar')
-#    cmdr.parse!
-#    assert_equal("foobar", cmdr[:global][:global0])
-#  end
-#
-#  def test_global_named_set_in_middle
-#    ARGV.clear and ARGV << 'build' << '-d' << 'clean'
-#    cmdr = Commander.new
-#    cmdr.add_global('-d|--debug', 'Debug')
-#    cmdr.add('clean', 'Clean components')
-#    cmdr.add('build', 'Build components')
-#    cmdr.parse!
-#    assert(cmdr[:global][:debug])
-#    assert(cmdr[:build])
-#    assert(cmdr[:clean])
-#  end
-#
-#  def test_global_named_at_end
-#    ARGV.clear and ARGV << 'build' << '-d'
-#    cmdr = Commander.new
-#    cmdr.add_global('-d|--debug', 'Debug')
-#    cmdr.add('build', 'Build components')
-#    cmdr.parse!
-#    assert(cmdr[:global][:debug])
-#    assert(cmdr[:build])
-#  end
-#
-#  def test_global_named_at_begining
-#    ARGV.clear and ARGV << '-d' << 'build'
-#    cmdr = Commander.new
-#    cmdr.add_global('-d|--debug', 'Debug')
-#    cmdr.add('build', 'Build components')
-#    cmdr.parse!
-#    assert(cmdr[:global][:debug])
-#    assert(cmdr[:build])
-#  end
-#
-#  def test_take_globals_at_begining_nothing_else
-#    ARGV.clear and ARGV << '-d'
-#    cmdr = Commander.new
-#    cmdr.add_global('-d|--debug', 'Debug')
-#    cmdr.send(:move_globals_to_front!)
-#  end
-#
-#  def test_global_is_reserved_command
-#    cmdr = Commander.new
-#    capture = Sys.capture{ assert_raises(SystemExit){
-#      cmdr.add('global', 'global is reserved')
-#    }}
-#    assert_equal("Error: 'global' is a reserved command name!\n", capture.stdout.strip_color)
-#  end
-#
-#  def test_global_named_help_with_banner
-#    expected =<<EOF
-#test_v0.0.1
-#--------------------------------------------------------------------------------
-#Usage: ./test [commands] [options]
-#Global options:
-#    -d|--debug                              Debug: Flag(false)
-#    -h|--help                               Print command/options help: Flag(false)
-#COMMANDS:
-#
-#see './test COMMAND --help' for specific command help
-#EOF
-#    ARGV.clear and ARGV << '-h'
-#    cmdr = Commander.new(app:'test', version:'0.0.1')
-#    cmdr.add_global('-d|--debug', 'Debug')
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout.strip_color)
-#  end
-#
-#  def test_global_named_help_no_banner
-#    expected =<<EOF
-#Usage: ./test_commander.rb [commands] [options]
-#Global options:
-#    -d|--debug                              Debug: Flag(false)
-#    -h|--help                               Print command/options help: Flag(false)
-#COMMANDS:
-#
-#see './test_commander.rb COMMAND --help' for specific command help
-#EOF
-#    cmdr = Commander.new
-#    cmdr.add_global('-d|--debug', 'Debug')
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
-#  def test_global_positional_help_no_banner
-#    expected =<<EOF
-#Usage: ./test_commander.rb [commands] [options]
-#Global options:
-#    global0                                 Global positional: String
-#    -d|--debug                              Debug: Flag(false)
-#    -h|--help                               Print command/options help: Flag(false)
-#COMMANDS:
-#
-#see './test_commander.rb COMMAND --help' for specific command help
-#EOF
-#    cmdr = Commander.new
-#    cmdr.add_global(nil, 'Global positional')
-#    cmdr.add_global('-d|--debug', 'Debug')
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout)
-#  end
-#
+  #-----------------------------------------------------------------------------
+  # Test sub-commands
+  #-----------------------------------------------------------------------------
+  def test_subcommand_consumes_applicable_options_only
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean ISO components', nodes:[
+      Option.new(nil, 'Components to clean', type:Array,
+        allowed:['all', 'pacman', 'pacman-all', 'initramfs', 'multiboot', 'iso', 'iso-full', 'vms']),
+      Command.new('deployments', "Deployments to clean", nodes:[
+        Option.new(nil, "Deployments to clean", type:Array, required:true)
+      ])
+    ])
+
+    exp = "clean deployments x,y,z pacman,iso"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    cmdr.parse!
+    assert_equal(['pacman', 'iso'], cmdr[:clean][:clean0])
+    assert_equal(['x', 'y', 'z'], cmdr[:clean][:deployments][:deployments0])
+  end
+
+  def test_subcommands_chained
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Command.new('iso', 'Build ISO'),
+      Command.new('iso-full', 'Build Full ISO'),
+      Command.new('initramfs', 'Build InitRamFS'),
+      Command.new('multiboot', 'Build Multiboot'),
+    ])
+
+    # Test regular single command as named positional
+    ARGV.clear and ARGV << 'build' << 'iso'
+    cmdr.parse!
+    assert_equal(1, cmdr[:build].size)
+    assert(cmdr[:build][:iso])
+    assert_equal(0, cmdr[:build][:iso].size)
+
+    # Test chained case for multiple sub-commands (acting like named positionals)
+    ARGV.clear and ARGV << 'build' << 'iso' << 'iso-full' << 'initramfs' << 'multiboot'
+    cmdr.parse!
+    assert_equal(4, cmdr[:build].size)
+    assert(cmdr[:build][:iso])
+    assert(cmdr[:build][:iso_full])
+    assert(cmdr[:build][:initramfs])
+    assert(cmdr[:build][:multiboot])
+  end
+
+  def test_subcommand_named_options
+    expected =<<EOF
+Error: invalid named option '-s'!
+Enable features
+
+Usage: ./test_commander.rb enable [commands] [options]
+COMMANDS:
+    foo                                     Feature foo
+OPTIONS:
+    -h|--help                               Print command/options help: Flag(false)
+
+see './test_commander.rb enable COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new
+    cmdr.add('enable', 'Enable features', nodes:[
+      Command.new('foo', 'Feature foo', nodes:[
+        Option.new('-b|--build=COMP', 'Build component', type:String),
+        Option.new('-d|--debug', 'Debug foo'),
+      ])
+    ])
+
+    # Check that sub-command isn't set with bad arg
+    ARGV.clear and ARGV << 'enable' << 'foo' << '-s'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+
+    # Check that sub-command positional works
+    ARGV.clear and ARGV << 'enable' << 'foo' << '-d' << '-b' << 'bar'
+    cmdr.parse!
+    assert_equal(1, cmdr[:enable].size)
+    assert_equal(2, cmdr[:enable][:foo].size)
+    assert_equal('bar', cmdr[:enable][:foo][:build])
+    assert_equal(TrueClass, cmdr[:enable][:foo][:debug].class)
+  end
+
+  def test_subcommand_positional_options
+    expected =<<EOF
+Error: invalid positional option 'bar'!
+Enable features
+
+Usage: ./test_commander.rb enable [commands] [options]
+COMMANDS:
+    foo                                     Feature foo
+OPTIONS:
+    -h|--help                               Print command/options help: Flag(false)
+
+see './test_commander.rb enable COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new
+    cmdr.add('enable', 'Enable features', nodes:[
+      Command.new('foo', 'Feature foo', nodes:[
+        Option.new(nil, 'Foo positional option', allowed:['bar'])
+      ])
+    ])
+
+    # Check that sub-command isn't set with bad arg
+    ARGV.clear and ARGV << 'enable' << 'bar'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+
+    # Check that sub-command positional works
+    ARGV.clear and ARGV << 'enable' << 'foo' << 'bar'
+    cmdr.parse!
+    assert_equal(1, cmdr[:enable].size)
+    assert_equal(1, cmdr[:enable][:foo].size)
+    assert_equal('bar', cmdr[:enable][:foo][:foo0])
+  end
+
+  def test_subcommand_no_options
+    cmdr = Commander.new
+    cmdr.add('enable', 'Enable features', nodes:[
+      Command.new('foo', 'Feature foo')
+    ])
+
+    # Check that nothing is set yet
+    assert_nil(cmdr[:enable])
+
+    # Check that the enable comamnd is set but nothing else
+    ARGV.clear and ARGV << 'enable'
+    cmdr.parse!
+    assert(cmdr[:enable].class == Hash && !cmdr[:enable].any?)
+
+    # Check that the sub-command is set properly
+    ARGV.clear and ARGV << 'enable' << 'foo'
+    cmdr.parse!
+    assert(cmdr[:enable][:foo].class == Hash)
+  end
+
+  #-----------------------------------------------------------------------------
+  # Test global options
+  #-----------------------------------------------------------------------------
+  def test_global_named_with_value
+    ARGV.clear and ARGV << '-c' << 'foo'
+    cmdr = Commander.new
+    cmdr.add_global('-c|--cluster=CLUSTER', 'Name of the cluster to use', type:String)
+    cmdr.parse!
+    assert(cmdr.key?(:global))
+    assert_equal("foo", cmdr[:global][:cluster])
+  end
+
+  def test_global_always_exists
+    ARGV.clear and ARGV << 'build' << 'foo'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new(nil, 'Component to build', required:true)
+    ])
+    cmdr.parse!
+    assert(cmdr.key?(:global))
+  end
+
+  def test_global_set_multiple
+    ARGV.clear and ARGV << '-d' << '--skip'
+    cmdr = Commander.new
+    cmdr.add_global('-d|--debug', 'Debug')
+    cmdr.add_global('-s|--skip', 'Skip')
+    cmdr.parse!
+    assert(cmdr[:global][:debug])
+    assert(cmdr[:global][:skip])
+  end
+
+  def test_global_positional_is_not_command
+    expected =<<EOF
+Error: positional option required!
+Global options:
+    global0                                 Super foo bar: String, Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    ARGV.clear and ARGV << 'build'
+    cmdr = Commander.new
+    cmdr.add_global(nil, 'Super foo bar', required:true)
+    cmdr.add('build', 'Build components')
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! }}
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
+  def test_global_positional_set
+    ARGV.clear and ARGV << 'foobar'
+    cmdr = Commander.new
+    cmdr.add_global(nil, 'Super foo bar')
+    cmdr.parse!
+    assert_equal("foobar", cmdr[:global][:global0])
+  end
+
+  def test_global_named_set_in_middle
+    ARGV.clear and ARGV << 'build' << '-d' << 'clean'
+    cmdr = Commander.new
+    cmdr.add_global('-d|--debug', 'Debug')
+    cmdr.add('clean', 'Clean components')
+    cmdr.add('build', 'Build components')
+    cmdr.parse!
+    assert(cmdr[:global][:debug])
+    assert(cmdr[:build])
+    assert(cmdr[:clean])
+  end
+
+  def test_global_named_at_end
+    ARGV.clear and ARGV << 'build' << '-d'
+    cmdr = Commander.new
+    cmdr.add_global('-d|--debug', 'Debug')
+    cmdr.add('build', 'Build components')
+    cmdr.parse!
+    assert(cmdr[:global][:debug])
+    assert(cmdr[:build])
+  end
+
+  def test_global_named_at_begining
+    ARGV.clear and ARGV << '-d' << 'build'
+    cmdr = Commander.new
+    cmdr.add_global('-d|--debug', 'Debug')
+    cmdr.add('build', 'Build components')
+    cmdr.parse!
+    assert(cmdr[:global][:debug])
+    assert(cmdr[:build])
+  end
+
+  def test_take_globals_at_begining_nothing_else
+    ARGV.clear and ARGV << '-d'
+    cmdr = Commander.new
+    cmdr.add_global('-d|--debug', 'Debug')
+    cmdr.send(:move_globals_to_front!)
+  end
+
+  def test_global_is_reserved_command
+    cmdr = Commander.new
+    capture = Sys.capture{ assert_raises(SystemExit){
+      cmdr.add('global', 'global is reserved')
+    }}
+    assert_equal("Error: 'global' is a reserved command name!\n", capture.stdout.strip_color)
+  end
+
+  def test_global_named_help_with_banner
+    expected =<<EOF
+test_v0.0.1
+--------------------------------------------------------------------------------
+Usage: ./test [commands] [options]
+Global options:
+    -d|--debug                              Debug: Flag(false)
+    -h|--help                               Print command/options help: Flag(false)
+COMMANDS:
+
+see './test COMMAND --help' for specific command help
+EOF
+    ARGV.clear and ARGV << '-h'
+    cmdr = Commander.new(app:'test', version:'0.0.1')
+    cmdr.add_global('-d|--debug', 'Debug')
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
+  def test_global_named_help_no_banner
+    expected =<<EOF
+Usage: ./test_commander.rb [commands] [options]
+Global options:
+    -d|--debug                              Debug: Flag(false)
+    -h|--help                               Print command/options help: Flag(false)
+COMMANDS:
+
+see './test_commander.rb COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new
+    cmdr.add_global('-d|--debug', 'Debug')
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
+  def test_global_positional_help_no_banner
+    expected =<<EOF
+Usage: ./test_commander.rb [commands] [options]
+Global options:
+    global0                                 Global positional: String
+    -d|--debug                              Debug: Flag(false)
+    -h|--help                               Print command/options help: Flag(false)
+COMMANDS:
+
+see './test_commander.rb COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new
+    cmdr.add_global(nil, 'Global positional')
+    cmdr.add_global('-d|--debug', 'Debug')
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout)
+  end
+
   #-----------------------------------------------------------------------------
   # Test required and mixed options
   #-----------------------------------------------------------------------------
@@ -478,80 +481,80 @@ EOF
     assert(cmdr[:publish][:comp])
   end
 
-#  def test_chained_named_inconsistent_types
-#expected =<<EOF
-#Error: chained command options are not type consistent!
-#Build components
-#
-#Usage: ./test_commander.rb build [options]
-#    -c|--comp=COMPONENT                     Component to build: Array, Required
-#    -h|--help                               Print command/options help: Flag(false)
-#EOF
-#
-#    ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new('-c|--comp=COMPONENT', 'Component to build', required:true, type:Array)
-#    ])
-#    cmdr.add('publish', 'Publish components', nodes:[
-#      Option.new('-c|--comp=COMPONENT', 'Component to publish', required:true, type:String)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout.strip_color)
-#  end
-#
-#  def test_chained_positional_inconsistent_numbers_bad
-#expected =<<EOF
-#Error: chained commands must satisfy required options!
-#Build components
-#
-#Usage: ./test_commander.rb build [options]
-#    build0                                  Component to build: String, Required
-#    build1                                  Extra positional: String, Required
-#    -h|--help                               Print command/options help: Flag(false)
-#EOF
-#
-#    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new(nil, 'Component to build', required:true),
-#      Option.new(nil, 'Extra positional', required:true)
-#    ])
-#    cmdr.add('publish', 'Publish components', nodes:[
-#      Option.new(nil, 'Component to publish', required:true)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout.strip_color)
-#  end
-#
-#  def test_chained_positional_inconsistent_numbers_good
-#    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new(nil, 'Component to build', required:true)
-#    ])
-#    cmdr.add('publish', 'Publish components', nodes:[
-#      Option.new(nil, 'Component to publish', required:true),
-#      Option.new(nil, 'Extra positional', required:true)
-#    ])
-#    cmdr.parse!
-#    assert_equal("debug", cmdr[:build][:build0])
-#    assert_nil(cmdr[:build][:build1])
-#    assert_equal("debug", cmdr[:publish][:publish0])
-#    assert_equal("extra", cmdr[:publish][:publish1])
-#  end
-#
-#  def test_chained_positional
-#    ARGV.clear and ARGV << 'build' << 'publish' << 'deploy' << 'debug'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[Option.new(nil, 'Component to build', required:true)])
-#    cmdr.add('publish', 'Publish components', nodes:[Option.new(nil, 'Component to publish', required:true)])
-#    cmdr.add('deploy', 'Deploy components', nodes:[Option.new(nil, 'Component to deply', required:true)])
-#    cmdr.parse!
-#    assert_equal("debug", cmdr[:build][:build0])
-#    assert_equal("debug", cmdr[:publish][:publish0])
-#    assert_equal("debug", cmdr[:deploy][:deploy0])
-#  end
+  def test_chained_named_inconsistent_types
+expected =<<EOF
+Error: chained command options are not type consistent!
+Build components
+
+Usage: ./test_commander.rb build [options]
+    -c|--comp=COMPONENT                     Component to build: Array, Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+
+    ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new('-c|--comp=COMPONENT', 'Component to build', required:true, type:Array)
+    ])
+    cmdr.add('publish', 'Publish components', nodes:[
+      Option.new('-c|--comp=COMPONENT', 'Component to publish', required:true, type:String)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
+  def test_chained_positional_inconsistent_numbers_bad
+expected =<<EOF
+Error: chained commands must satisfy required options!
+Build components
+
+Usage: ./test_commander.rb build [options]
+    build0                                  Component to build: String, Required
+    build1                                  Extra positional: String, Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+
+    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new(nil, 'Component to build', required:true),
+      Option.new(nil, 'Extra positional', required:true)
+    ])
+    cmdr.add('publish', 'Publish components', nodes:[
+      Option.new(nil, 'Component to publish', required:true)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
+  def test_chained_positional_inconsistent_numbers_good
+    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new(nil, 'Component to build', required:true)
+    ])
+    cmdr.add('publish', 'Publish components', nodes:[
+      Option.new(nil, 'Component to publish', required:true),
+      Option.new(nil, 'Extra positional', required:true)
+    ])
+    cmdr.parse!
+    assert_equal("debug", cmdr[:build][:build0])
+    assert_nil(cmdr[:build][:build1])
+    assert_equal("debug", cmdr[:publish][:publish0])
+    assert_equal("extra", cmdr[:publish][:publish1])
+  end
+
+  def test_chained_positional
+    ARGV.clear and ARGV << 'build' << 'publish' << 'deploy' << 'debug'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[Option.new(nil, 'Component to build', required:true)])
+    cmdr.add('publish', 'Publish components', nodes:[Option.new(nil, 'Component to publish', required:true)])
+    cmdr.add('deploy', 'Deploy components', nodes:[Option.new(nil, 'Component to deply', required:true)])
+    cmdr.parse!
+    assert_equal("debug", cmdr[:build][:build0])
+    assert_equal("debug", cmdr[:publish][:publish0])
+    assert_equal("debug", cmdr[:deploy][:deploy0])
+  end
 
   #-----------------------------------------------------------------------------
   # Test commands with named options

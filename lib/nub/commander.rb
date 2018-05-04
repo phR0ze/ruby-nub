@@ -314,9 +314,10 @@ class Commander
       otherparams.shift                             # Consume sub-cmd from opts
       subcmds.reject!{|x| x.name == subcmd.name}    # Drop sub-command from further use
       parse_commands(subcmd, cmd, subcmds, otherparams, results[cmd.to_sym])
-      otherparams.reverse.each{|x| opts.unshift(x)} # Account for all options
-      otherparams.clear                             # Now zero them out to avoid left overs
     end
+
+    # Account for any left over options
+    otherparams.reverse.each{|x| opts.unshift(x)}
 
     #---------------------------------------------------------------------------
     # Base case: dealing with options for a given command.
@@ -375,7 +376,7 @@ class Commander
     # Consume and set all positional options
     i = 0
     pos = -1
-    while i < opts.size
+    while i < opts.size && cmd_pos_opts.any?
       if !opts[i].start_with?('-')
         pos += 1
         cmd_opt = cmd_pos_opts.shift
@@ -517,7 +518,7 @@ class Commander
       other.select{|x| x.start_with?('-')}.any?{|x|
         short = x[@short_regex, 1]
         long = x[@long_regex, 1]
-        value = arg[@value_regex, 1]
+        value = x[@value_regex, 1]
         if short == arg.short || long == arg.long
           match.opt = arg
           match.value = value
