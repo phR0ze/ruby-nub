@@ -37,7 +37,7 @@ class TestCommander < Minitest::Test
   #-----------------------------------------------------------------------------
   def test_reduce_expressions
     cmdr = Commander.new
-    cmdr.add_global('-c|--cluster=CLUSTER', 'Name of the cluster to use', type:String)
+    cmdr.add_global('-p|--profile=PROFILE', 'Profile to use', type:String)
     cmdr.add('info', 'List build info')
     cmdr.add('list', 'List out components', nodes:[
       Option.new(nil, 'Components to list', type:Array,
