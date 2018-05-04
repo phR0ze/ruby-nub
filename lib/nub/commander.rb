@@ -280,26 +280,26 @@ class Commander
   # @param args [Array] array of arguments
   # @param results [Hash] of cmd results
   def parse_commands(cmd, others, args, results)
-    results[cmd.name.gsub('-', '_').to_sym] = {}             # Create command results entry
-    cmd_names = others.map{|x| x.name}        # Get other command names as markers
+    results[cmd.name.gsub('-', '_').to_sym] = {}    # Create command results entry
+    cmd_names = others.map{|x| x.name}              # Get other command names as markers
 
     # Collect all parameters until the next sibling command
     params = args.take_while{|x| !cmd_names.include?(x)}
     args.shift(params.size)
 
     # Separate this command's options from sub-commands and sub-command options
-    opts, subparams = split_cmd_params(cmd, params)
+    opts, otherparams = split_cmd_params(cmd, params)
 
     # Recurse on sub commands
     subcmds = cmd.nodes.select{|x| x.class == Command}
-    while (subcmd = subcmds.find{|x| x.name == subparams.first})
-      subparams.shift
+    while (subcmd = subcmds.find{|x| x.name == otherparams.first})
+      otherparams.shift
       subcmds.reject!{|x| x.name == subcmd.name}
-      parse_commands(subcmd, subcmds, subparams, results[cmd.name.gsub('-', '_').to_sym])
+      parse_commands(subcmd, subcmds, otherparams, results[cmd.name.gsub('-', '_').to_sym])
     end
 
     # Add any unconsumed sub-params back on to ensure everything is accounted for
-    subparams.reverse.each{|x| args.unshift(x)}
+    otherparams.reverse.each{|x| args.unshift(x)}
 
     # Handle help upfront before anything else
     if opts.any?{|x| m = match_named(x, cmd); m.hit? && m.sym == :help }
@@ -451,21 +451,27 @@ class Commander
   # @param params [Array] list of params
   def split_cmd_params(cmd, params)
     return params, [] if cmd.name == @k.global
-
-    # Command options will be any before a sub-command or any after all
-    # sub-commands that don't apply to the sub-command
-    # TODO: get those after all sub-commands
     subcmds = cmd.nodes.select{|x| x.class == Command}.map{|x| x.name}
-    opts = params.take_while{|x| !subcmds.include?(x)}
+
+    opts = []
+
+    # Command options will be any before any sub-command
+    if subcmds.any?
+      opts = params.take_while{|x| !subcmds.include?(x)}
+
+    # Base case: no more sub-commands so now only take what's needed
+    else
+      opts = params.take_while{|x| cmd.nodes}
+    end
 
     # Sub-command params is anything else
-    subparams = params[opts.size..-1]
+    otherparams = params[opts.size..-1]
 
     #puts("PARMS: #{params}")
     #puts("OPTS: #{opts}")
-    #puts("SUBPARMS: #{subparams}")
+    #puts("SUBPARMS: #{otherparams}")
 
-    return opts, subparams
+    return opts, otherparams
   end
 
   # Match the given command line arg with a configured named option

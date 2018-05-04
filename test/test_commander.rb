@@ -46,7 +46,9 @@ class TestCommander < Minitest::Test
     cmdr.add('clean', 'Clean ISO components', nodes:[
       Option.new(nil, 'Components to clean', type:Array,
         allowed:['all', 'pacman', 'pacman-all', 'initramfs', 'multiboot', 'iso', 'iso-full', 'vms']),
-      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to clean", type:Array)
+      Command.new('deployments', "Deployments to clean", nodes:[
+        Option.new(nil, "Deployments to clean", type:Array, required:true)
+      ])
     ])
     cmdr.add('build', 'Build ISO components', nodes:[
       Option.new(nil, 'Components to build', type:Array,
@@ -59,36 +61,88 @@ class TestCommander < Minitest::Test
     assert_equal(1, cmdr[:clean].size)
     assert_equal(['pacman', 'initramfs', 'multiboot', 'iso'], cmdr[:clean][:clean0])
 
-    ARGV.clear and ARGV << 'clean' << '-d' << 'x,y,z'
-    cmdr.parse!
-    assert_equal(['x', 'y', 'z'], cmdr[:clean][:deployments])
-
-    exp = "clean pacman,initramfs,multiboot,iso -d k8snode"
+    # Test clean sub-command with positional required option given
+    exp = "clean deployments x,y,z"
     ARGV.clear and ARGV.concat(exp.split(" "))
     cmdr.parse!
-    assert_equal(2, cmdr[:clean].size)
-    assert_equal(['k8snode'], cmdr[:clean][:deployments])
-    assert_equal(['pacman', 'initramfs', 'multiboot', 'iso'], cmdr[:clean][:clean0])
+    assert_equal(['x', 'y', 'z'], cmdr[:clean][:deployments][:deployments0])
 
-    exp = "build initramfs,multiboot,iso"
+    # Test clean sub-command with positional required option not given
+    expected =<<EOF
+Error: positional option required!
+Deployments to clean
+
+Usage: ./test_commander.rb clean deployments [options]
+    deployments0                            Deployments to clean: Array, Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    exp = "clean deployments"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+
+    # Test that clean options can co-exist with clean sub-commands in front
+    exp = "clean pacman,iso deployments x,y,z"
     ARGV.clear and ARGV.concat(exp.split(" "))
     cmdr.parse!
-    assert_equal(1, cmdr[:build].size)
-    assert_equal(['initramfs', 'multiboot', 'iso'], cmdr[:build][:build0])
+    assert_equal(['pacman', 'iso'], cmdr[:clean][:clean0])
+    assert_equal(['x', 'y', 'z'], cmdr[:clean][:deployments][:deployments0])
 
-    exp = "clean build iso-full -p standard"
-    ARGV.clear and ARGV.concat(exp.split(" "))
-
-    exp = "clean build initramfs,iso -p standard"
-    ARGV.clear and ARGV.concat(exp.split(" "))
-
-    exp = "clean build multiboot,iso -p standard"
-    ARGV.clear and ARGV.concat(exp.split(" "))
+    # Test that clean options can co-exist with clean sub-commands at end
+#    exp = "clean deployments x,y,z pacman,iso"
+#    ARGV.clear and ARGV.concat(exp.split(" "))
+#    cmdr.parse!
+#    assert_equal(['pacman', 'iso'], cmdr[:clean][:clean0])
+#    assert_equal(['x', 'y', 'z'], cmdr[:clean][:deployments][:deployments0])
+#
+#    exp = "clean pacman,initramfs,multiboot,iso -d k8snode"
+#    ARGV.clear and ARGV.concat(exp.split(" "))
+#    cmdr.parse!
+#    assert_equal(2, cmdr[:clean].size)
+#    assert_equal(['k8snode'], cmdr[:clean][:deployments])
+#    assert_equal(['pacman', 'initramfs', 'multiboot', 'iso'], cmdr[:clean][:clean0])
+#
+#    exp = "build initramfs,multiboot,iso"
+#    ARGV.clear and ARGV.concat(exp.split(" "))
+#    cmdr.parse!
+#    assert_equal(1, cmdr[:build].size)
+#    assert_equal(['initramfs', 'multiboot', 'iso'], cmdr[:build][:build0])
+#
+#    exp = "clean build iso-full -p standard"
+#    ARGV.clear and ARGV.concat(exp.split(" "))
+#    cmdr.parse!
+#    assert(cmdr[:clean])
+#    #assert_equal(1, cmdr[:clean].size)
+#    assert_equal(1, cmdr[:build].size)
+#
+#    exp = "clean build initramfs,iso -p standard"
+#    ARGV.clear and ARGV.concat(exp.split(" "))
+#
+#    exp = "clean build multiboot,iso -p standard"
+#    ARGV.clear and ARGV.concat(exp.split(" "))
   end
 
   #-----------------------------------------------------------------------------
   # Test sub-commands
   #-----------------------------------------------------------------------------
+  def test_subcommand_consumes_applicable_options
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean ISO components', nodes:[
+      Option.new(nil, 'Components to clean', type:Array,
+        allowed:['all', 'pacman', 'pacman-all', 'initramfs', 'multiboot', 'iso', 'iso-full', 'vms']),
+      Command.new('deployments', "Deployments to clean", nodes:[
+        Option.new(nil, "Deployments to clean", type:Array, required:true)
+      ])
+    ])
+
+    # Test that clean options can co-exist with clean sub-commands at end
+    exp = "clean deployments x,y,z pacman,iso"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    cmdr.parse!
+    assert_equal(['pacman', 'iso'], cmdr[:clean][:clean0])
+    assert_equal(['x', 'y', 'z'], cmdr[:clean][:deployments][:deployments0])
+  end
+
   def test_subcommands_chained
     cmdr = Commander.new
     cmdr.add('build', 'Build components', nodes:[
