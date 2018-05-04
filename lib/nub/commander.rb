@@ -18,6 +18,7 @@
 #LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
+require 'pry'
 require 'colorize'
 require 'ostruct'
 require_relative 'log'
@@ -259,7 +260,7 @@ class Commander
     move_globals_to_front!
     expand_chained_options!
     while (cmd = @config.find{|x| x.name == ARGV.first})
-      ARGV.shift && parse_commands(cmd, @config.select{|x| x.name != cmd.name}, ARGV, @cmds)
+      ARGV.shift && parse_commands(cmd, nil, @config.select{|x| x.name != cmd.name}, ARGV, @cmds)
     end
 
     # Ensure specials (global) are always set
@@ -287,10 +288,11 @@ class Commander
 
   # Parse the given args recursively
   # @param cmd [Command] command to work with
+  # @param parent [Command] command to work with
   # @param others [Array] sibling cmds to cmd
   # @param args [Array] array of arguments
   # @param results [Hash] of cmd results
-  def parse_commands(cmd, others, args, results)
+  def parse_commands(cmd, parent, others, args, results)
     results[cmd.to_sym] = {}                            # Create command results entry
     cmd_names = others.map{|x| x.name}                  # Get other command names as markers
     subcmds = cmd.nodes.select{|x| x.class == Command}  # Get sub-commands for this command
@@ -310,7 +312,7 @@ class Commander
     while subcmds.any? && (subcmd = subcmds.find{|x| x.name == otherparams.first})
       otherparams.shift                             # Consume sub-cmd from opts
       subcmds.reject!{|x| x.name == subcmd.name}    # Drop sub-command from further use
-      parse_commands(subcmd, subcmds, otherparams, results[cmd.to_sym])
+      parse_commands(subcmd, cmd, subcmds, otherparams, results[cmd.to_sym])
       otherparams.reverse.each{|x| opts.unshift(x)} # Account for all options
       otherparams.clear                             # Now zero them out to avoid left overs
     end
@@ -383,7 +385,16 @@ class Commander
     end
 
     # Add any unconsumed options back to parent to ensure everything is accounted for
-    opts.reverse.each{|x| args.unshift(x)}
+    if parent
+      opts.reverse.each{|x| args.unshift(x)}
+    else
+      opts.each{|x|
+        !puts("Error: invalid positional option '#{x}'!".colorize(:red)) and 
+          !puts(cmd.help) and exit if !x.start_with?('-')
+        !puts("Error: invalid named option '#{x}'!".colorize(:red)) and
+          !puts(cmd.help) and exit if x.start_with?('-')
+      }
+    end
   end
 
   # Parses the command line, moving all global options to the begining
