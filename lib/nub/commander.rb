@@ -146,7 +146,7 @@ class Commander
     @long_regex = /(--[\w\-]+)(=.+)*$/
     @value_regex = /.*=(.*)$/
 
-    # Incoming user set commands/options
+    # Command line expression results
     # {command_name => {}}
     @cmds = {}
 
@@ -154,7 +154,7 @@ class Commander
     @config = []
 
     # Configure default global options
-    add_global(Option.new('-h|--help', 'Print command/options help'))
+    add_global('-h|--help', 'Print command/options help')
   end
 
   # Hash like accessor for checking if a command or option is set
@@ -175,14 +175,14 @@ class Commander
     Log.die("'#{@k.global}' is a reserved command name") if cmd == @k.global
     Log.die("'#{cmd}' already exists") if @config.any?{|x| x.name == cmd}
     Log.die("'help' is a reserved option name") if nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
-    Log.die("command names must be pure lowercase letters") if cmd =~ /[^a-z]/
+    Log.die("command names must be pure lowercase letters or hypen") if cmd =~ /[^a-z-]/
 
     # Validate sub command key words
     validate_subcmd = ->(subcmd){
       subcmd.nodes = [] if !subcmd.nodes
       Log.die("'#{@k.global}' is a reserved command name") if subcmd.name == @k.global
       Log.die("'help' is a reserved option name") if subcmd.nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
-      Log.die("command names must be pure lowercase letters") if subcmd.name =~ /[^a-z]/
+      Log.die("command names must be pure lowercase letters or hypen") if subcmd.name =~ /[^a-z-]/
       subcmd.nodes.select{|x| x.class != Option}.each{|x| validate_subcmd.(x)}
     }
     nodes.select{|x| x.class != Option}.each{|x| validate_subcmd.(x)}
@@ -191,10 +191,13 @@ class Commander
   end
 
   # Add global options (any option coming before all commands)
-  # @param option/s [Array/Option] array or single option/s
-  def add_global(options)
-    options = [options] if options.class != Array
-    Log.die("only options are allowed as globals") if options.any?{|x| x.class != Option}
+  # @param key [String] option short hand, long hand and hint e.g. -s|--skip=COMPONENTS
+  # @param desc [String] the option's description
+  # @param type [Type] the option's type
+  # @param required [Bool] require the option if true else optional
+  # @param allowed [Array] array of allowed string values
+  def add_global(key, desc, type:nil, required:false, allowed:[])
+    options = [Option.new(key, desc, type:type, required:required, allowed:allowed)]
 
     # Aggregate global options
     if (global = @config.find{|x| x.name == @k.global})
@@ -235,6 +238,9 @@ class Commander
   # Construct the command line parser and parse
   def parse!
 
+    # Clear out the previous run every time, in case run more than once
+    @cmds = {}
+
     # Set help if nothing was given
     ARGV.clear and ARGV << '-h' if ARGV.empty?
 
@@ -274,7 +280,7 @@ class Commander
   # @param args [Array] array of arguments
   # @param results [Hash] of cmd results
   def parse_commands(cmd, others, args, results)
-    results[cmd.name.to_sym] = {}             # Create command results entry
+    results[cmd.name.gsub('-', '_').to_sym] = {}             # Create command results entry
     cmd_names = others.map{|x| x.name}        # Get other command names as markers
 
     # Collect all parameters until the next sibling command
@@ -289,7 +295,7 @@ class Commander
     while (subcmd = subcmds.find{|x| x.name == subparams.first})
       subparams.shift
       subcmds.reject!{|x| x.name == subcmd.name}
-      parse_commands(subcmd, subcmds, subparams, results[cmd.name.to_sym])
+      parse_commands(subcmd, subcmds, subparams, results[cmd.name.gsub('-', '_').to_sym])
     end
 
     # Add any unconsumed sub-params back on to ensure everything is accounted for
@@ -331,6 +337,8 @@ class Commander
         cmd_opt = match.opt
         value = match.value
         value = match.flag? || opts.shift if !value
+      elsif opt.start_with?('-')
+        !puts("Error: invalid named option '#{opt}'!".colorize(:red)) && !puts(cmd.help) and exit
 
       # Validate/set positional options
       # --------------------------------------------------------------------
@@ -340,7 +348,7 @@ class Commander
         cmd_opt = cmd_pos_opts.shift
         !puts("Error: invalid positional option '#{opt}'!".colorize(:red)) && !puts(cmd.help) and
           exit if cmd_opt.nil? || cmd_names.include?(value)
-        sym = "#{cmd.name}#{pos}".to_sym
+        sym = "#{cmd.name.gsub('-', '_')}#{pos}".to_sym
       end
 
       # Convert value to appropriate type and validate against allowed
@@ -350,7 +358,7 @@ class Commander
       # Set option with value
       # --------------------------------------------------------------------
       !puts("Error: unknown named option '#{opt}' given!".colorize(:red)) && !puts(cmd.help) and exit if !sym
-      @cmds[cmd.name.to_sym][sym] = value
+      results[cmd.name.gsub('-', '_').to_sym][sym] = value
     }
   end
 

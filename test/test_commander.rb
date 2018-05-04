@@ -33,33 +33,180 @@ class TestCommander < Minitest::Test
   end
 
   #-----------------------------------------------------------------------------
+  # Test reduce expressions
+  #-----------------------------------------------------------------------------
+  def test_reduce_expressions
+    cmdr = Commander.new
+    cmdr.add_global('-c|--cluster=CLUSTER', 'Name of the cluster to use', type:String)
+    cmdr.add('info', 'List build info')
+    cmdr.add('list', 'List out components', nodes:[
+      Option.new(nil, 'Components to list', type:Array,
+        allowed:['all', 'boxes', 'isos', 'images', 'raw'])
+    ])
+    cmdr.add('clean', 'Clean ISO components', nodes:[
+      Option.new(nil, 'Components to clean', type:Array,
+        allowed:['all', 'pacman', 'pacman-all', 'initramfs', 'multiboot', 'iso', 'iso-full', 'vms']),
+      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to clean", type:Array)
+    ])
+    cmdr.add('build', 'Build ISO components', nodes:[
+      Option.new(nil, 'Components to build', type:Array,
+        allowed:['iso', 'iso-full', 'initramfs', 'multiboot'])
+    ])
+
+    exp = "clean pacman,initramfs,multiboot,iso"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    cmdr.parse!
+    assert_equal(1, cmdr[:clean].size)
+    assert_equal(['pacman', 'initramfs', 'multiboot', 'iso'], cmdr[:clean][:clean0])
+
+    ARGV.clear and ARGV << 'clean' << '-d' << 'x,y,z'
+    cmdr.parse!
+    assert_equal(['x', 'y', 'z'], cmdr[:clean][:deployments])
+
+    exp = "clean pacman,initramfs,multiboot,iso -d k8snode"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    cmdr.parse!
+    assert_equal(2, cmdr[:clean].size)
+    assert_equal(['k8snode'], cmdr[:clean][:deployments])
+    assert_equal(['pacman', 'initramfs', 'multiboot', 'iso'], cmdr[:clean][:clean0])
+
+    exp = "build initramfs,multiboot,iso"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    cmdr.parse!
+    assert_equal(1, cmdr[:build].size)
+    assert_equal(['initramfs', 'multiboot', 'iso'], cmdr[:build][:build0])
+
+    exp = "clean build iso-full -p standard"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+
+    exp = "clean build initramfs,iso -p standard"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+
+    exp = "clean build multiboot,iso -p standard"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+  end
+
+  #-----------------------------------------------------------------------------
   # Test sub-commands
   #-----------------------------------------------------------------------------
-#  def test_single_subcommand_help
-#    ARGV.clear
-#    cmdr = Commander.new
-#    cmdr.add('enable', 'Enable features', nodes:[
-#      Commander::Command.new('foo', 'Feature foo')
-#    ])
-#    puts(cmdr.help(name:'enable'))
-#    # Add COMMAND section for sub commands
-#  end
-#
-#  def test_global_subcommand_should_fail
-#    cmdr = Commander.new
-#    capture = Sys.capture{ assert_raises(SystemExit){
-#      cmdr.add_global(Commander::Command.new('foo1', 'Feature foo1'))
-#    }}
-#    assert_equal("Error: only options are allowed as globals!\n", capture.stdout.strip_color)
-#  end
- 
+  def test_subcommands_chained
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Command.new('iso', 'Build ISO'),
+      Command.new('iso-full', 'Build Full ISO'),
+      Command.new('initramfs', 'Build InitRamFS'),
+      Command.new('multiboot', 'Build Multiboot'),
+    ])
+
+    # Test regular single command as named positional
+    ARGV.clear and ARGV << 'build' << 'iso'
+    cmdr.parse!
+    assert_equal(1, cmdr[:build].size)
+    assert(cmdr[:build][:iso])
+    assert_equal(0, cmdr[:build][:iso].size)
+
+    # Test chained case for multiple sub-commands (acting like named positionals)
+    ARGV.clear and ARGV << 'build' << 'iso' << 'iso-full' << 'initramfs' << 'multiboot'
+    cmdr.parse!
+    assert_equal(4, cmdr[:build].size)
+    assert(cmdr[:build][:iso])
+    assert(cmdr[:build][:iso_full])
+    assert(cmdr[:build][:initramfs])
+    assert(cmdr[:build][:multiboot])
+  end
+
+  def test_subcommand_named_options
+    expected =<<EOF
+Error: invalid named option '-s'!
+Feature foo
+
+Usage: ./test_commander.rb enable foo [options]
+    -b|--build=COMP                         Build component: String
+    -d|--debug                              Debug foo: Flag(false)
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    cmdr = Commander.new
+    cmdr.add('enable', 'Enable features', nodes:[
+      Command.new('foo', 'Feature foo', nodes:[
+        Option.new('-b|--build=COMP', 'Build component', type:String),
+        Option.new('-d|--debug', 'Debug foo'),
+      ])
+    ])
+
+    # Check that sub-command isn't set with bad arg
+    ARGV.clear and ARGV << 'enable' << 'foo' << '-s'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+
+    # Check that sub-command positional works
+    ARGV.clear and ARGV << 'enable' << 'foo' << '-d' << '-b' << 'bar'
+    cmdr.parse!
+    assert_equal(1, cmdr[:enable].size)
+    assert_equal(2, cmdr[:enable][:foo].size)
+    assert_equal('bar', cmdr[:enable][:foo][:build])
+    assert_equal(TrueClass, cmdr[:enable][:foo][:debug].class)
+  end
+
+  def test_subcommand_positional_options
+    expected =<<EOF
+Error: invalid positional option 'bar'!
+Enable features
+
+Usage: ./test_commander.rb enable [commands] [options]
+COMMANDS:
+    foo                                     Feature foo
+OPTIONS:
+    -h|--help                               Print command/options help: Flag(false)
+
+see './test_commander.rb enable COMMAND --help' for specific command help
+EOF
+    cmdr = Commander.new
+    cmdr.add('enable', 'Enable features', nodes:[
+      Command.new('foo', 'Feature foo', nodes:[
+        Option.new(nil, 'Foo positional option', allowed:['bar'])
+      ])
+    ])
+
+    # Check that sub-command isn't set with bad arg
+    ARGV.clear and ARGV << 'enable' << 'bar'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+
+    # Check that sub-command positional works
+    ARGV.clear and ARGV << 'enable' << 'foo' << 'bar'
+    cmdr.parse!
+    assert_equal(1, cmdr[:enable].size)
+    assert_equal(1, cmdr[:enable][:foo].size)
+    assert_equal('bar', cmdr[:enable][:foo][:foo0])
+  end
+
+  def test_subcommand_no_options
+    cmdr = Commander.new
+    cmdr.add('enable', 'Enable features', nodes:[
+      Command.new('foo', 'Feature foo')
+    ])
+
+    # Check that nothing is set yet
+    assert_nil(cmdr[:enable])
+
+    # Check that the enable comamnd is set but nothing else
+    ARGV.clear and ARGV << 'enable'
+    cmdr.parse!
+    assert(cmdr[:enable].class == Hash && !cmdr[:enable].any?)
+
+    # Check that the sub-command is set properly
+    ARGV.clear and ARGV << 'enable' << 'foo'
+    cmdr.parse!
+    assert(cmdr[:enable][:foo].class == Hash)
+  end
+
   #-----------------------------------------------------------------------------
   # Test global options
   #-----------------------------------------------------------------------------
   def test_global_named_with_value
     ARGV.clear and ARGV << '-c' << 'foo'
     cmdr = Commander.new
-    cmdr.add_global(Option.new('-c|--cluster=CLUSTER', 'Name of the cluster to use', type:String))
+    cmdr.add_global('-c|--cluster=CLUSTER', 'Name of the cluster to use', type:String)
     cmdr.parse!
     assert(cmdr.key?(:global))
     assert_equal("foo", cmdr[:global][:cluster])
@@ -78,10 +225,8 @@ class TestCommander < Minitest::Test
   def test_global_set_multiple
     ARGV.clear and ARGV << '-d' << '--skip'
     cmdr = Commander.new
-    cmdr.add_global([
-      Option.new('-d|--debug', 'Debug'),
-      Option.new('-s|--skip', 'Skip')
-    ])
+    cmdr.add_global('-d|--debug', 'Debug')
+    cmdr.add_global('-s|--skip', 'Skip')
     cmdr.parse!
     assert(cmdr[:global][:debug])
     assert(cmdr[:global][:skip])
@@ -96,7 +241,7 @@ Global options:
 EOF
     ARGV.clear and ARGV << 'build'
     cmdr = Commander.new
-    cmdr.add_global(Option.new(nil, 'Super foo bar', required:true))
+    cmdr.add_global(nil, 'Super foo bar', required:true)
     cmdr.add('build', 'Build components')
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! }}
     assert_equal(expected, capture.stdout.strip_color)
@@ -105,7 +250,7 @@ EOF
   def test_global_positional_set
     ARGV.clear and ARGV << 'foobar'
     cmdr = Commander.new
-    cmdr.add_global(Option.new(nil, 'Super foo bar'))
+    cmdr.add_global(nil, 'Super foo bar')
     cmdr.parse!
     assert_equal("foobar", cmdr[:global][:global0])
   end
@@ -113,7 +258,7 @@ EOF
   def test_global_named_set_in_middle
     ARGV.clear and ARGV << 'build' << '-d' << 'clean'
     cmdr = Commander.new
-    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add_global('-d|--debug', 'Debug')
     cmdr.add('clean', 'Clean components')
     cmdr.add('build', 'Build components')
     cmdr.parse!
@@ -125,7 +270,7 @@ EOF
   def test_global_named_at_end
     ARGV.clear and ARGV << 'build' << '-d'
     cmdr = Commander.new
-    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add_global('-d|--debug', 'Debug')
     cmdr.add('build', 'Build components')
     cmdr.parse!
     assert(cmdr[:global][:debug])
@@ -135,7 +280,7 @@ EOF
   def test_global_named_at_begining
     ARGV.clear and ARGV << '-d' << 'build'
     cmdr = Commander.new
-    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add_global('-d|--debug', 'Debug')
     cmdr.add('build', 'Build components')
     cmdr.parse!
     assert(cmdr[:global][:debug])
@@ -145,7 +290,7 @@ EOF
   def test_take_globals_at_begining_nothing_else
     ARGV.clear and ARGV << '-d'
     cmdr = Commander.new
-    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add_global('-d|--debug', 'Debug')
     cmdr.send(:move_globals_to_front!)
   end
 
@@ -171,7 +316,7 @@ see './test COMMAND --help' for specific command help
 EOF
     ARGV.clear and ARGV << '-h'
     cmdr = Commander.new(app:'test', version:'0.0.1')
-    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add_global('-d|--debug', 'Debug')
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
     assert_equal(expected, capture.stdout.strip_color)
   end
@@ -187,7 +332,7 @@ COMMANDS:
 see './test_commander.rb COMMAND --help' for specific command help
 EOF
     cmdr = Commander.new
-    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add_global('-d|--debug', 'Debug')
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
     assert_equal(expected, capture.stdout)
   end
@@ -204,8 +349,8 @@ COMMANDS:
 see './test_commander.rb COMMAND --help' for specific command help
 EOF
     cmdr = Commander.new
-    cmdr.add_global(Option.new(nil, 'Global positional'))
-    cmdr.add_global(Option.new('-d|--debug', 'Debug'))
+    cmdr.add_global(nil, 'Global positional')
+    cmdr.add_global('-d|--debug', 'Debug')
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
     assert_equal(expected, capture.stdout)
   end
@@ -621,14 +766,14 @@ EOF
     assert_equal(2, cmdr[:clean][:clean0])
   end
 
-  def test_command_name_with_non_lowercase_letters_should_fail
+  def test_command_name_invalid
     cmdr = Commander.new
-    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('clean-er', nil)}}
-    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('clean_er', nil)}}
+    assert(capture.stdout.include?("Error: command names must be pure lowercase letters or hypen"))
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('CLEAN', nil)}}
-    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
+    assert(capture.stdout.include?("Error: command names must be pure lowercase letters or hypen"))
     capture = Sys.capture{ assert_raises(SystemExit){ cmdr.add('clean1', nil)}}
-    assert(capture.stdout.include?("Error: command names must be pure lowercase letters"))
+    assert(capture.stdout.include?("Error: command names must be pure lowercase letters or hypen"))
   end
 
   #-----------------------------------------------------------------------------
