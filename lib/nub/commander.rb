@@ -340,8 +340,8 @@ class Commander
     }
 
     # Consume and set all named options
-    i = -1
-    while (i += 1) < opts.size
+    i = 0 
+    while i < opts.size
       if (match = match_named(opts[i], cmd)).hit?
         value = match.flag? || match.value  # Inline or Flag value
 
@@ -359,6 +359,8 @@ class Commander
         results[cmd.to_sym][match.sym] = convert_value(value, cmd, match.opt)
         opts.delete_at(i)                   # Consume option
         opts.delete_at(i) if separate       # Consume separate value
+      else
+        i += 1
       end
     end
 
@@ -371,9 +373,9 @@ class Commander
       exit if opts.select{|x| !x.start_with?('-')}.size < cmd_pos_opts.select{|x| x.required}.size
 
     # Consume and set all positional options
-    i = -1
+    i = 0
     pos = -1
-    while (i += 1) < opts.size
+    while i < opts.size
       if !opts[i].start_with?('-')
         pos += 1
         cmd_opt = cmd_pos_opts.shift
@@ -383,6 +385,8 @@ class Commander
         # Set result and consume options
         results[cmd.to_sym]["#{cmd.to_sym}#{pos}".to_sym] = convert_value(opts[i], cmd, cmd_opt)
         opts.delete_at(i)                   # Consume option
+      else
+        i += 1
       end
     end
 

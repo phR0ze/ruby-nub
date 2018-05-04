@@ -437,48 +437,47 @@ EOF
       Option.new(nil, 'Component name'),
       Option.new('-n|--namespace=NAMESPACE', 'Namespace to use', type:String),
     ])
-    cmdr.parse!
-    #out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
+    out = Sys.capture{ cmdr.parse! }.stdout.split("\n").map{|x| x.strip_color}
     assert(out.size == 2 && out.include?("test_v0.0.1"))
     assert_equal('deployment', cmdr[:delete][:delete0])
     assert_equal('tron', cmdr[:delete][:delete1])
     assert_equal('trondom', cmdr[:delete][:namespace])
   end
 
-#  #-----------------------------------------------------------------------------
-#  # Test chained commands
-#  #-----------------------------------------------------------------------------
-#  def test_expand_chained_options
-#    ARGV.clear and ARGV << 'clean' << 'build' << 'foo'
-#    cmdr = Commander.new
-#    cmdr.add('clean', 'Clean components', nodes:[
-#      Option.new(nil, 'Component to clean', required: true)
-#    ])
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new(nil, 'Component to build', required: true)
-#    ])
-#    cmdr.send(:expand_chained_options!)
-#    assert_equal(["clean", "foo", "build", "foo"], ARGV)
-#
-#    ARGV.clear and ARGV << 'clean' << 'foo' << 'build' << 'foo'
-#    cmdr.send(:expand_chained_options!)
-#    assert_equal(["clean", "foo", "build", "foo"], ARGV)
-#  end
-#
-#  def test_chained_named
-#    ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new('-c|--comp', 'Component to build', required:true)
-#    ])
-#    cmdr.add('publish', 'Publish components', nodes:[
-#      Option.new('-c|--comp', 'Component to publish', required:true)
-#    ])
-#    cmdr.parse!
-#    assert(cmdr[:build][:comp])
-#    assert(cmdr[:publish][:comp])
-#  end
-#
+  #-----------------------------------------------------------------------------
+  # Test chained commands
+  #-----------------------------------------------------------------------------
+  def test_expand_chained_options
+    ARGV.clear and ARGV << 'clean' << 'build' << 'foo'
+    cmdr = Commander.new
+    cmdr.add('clean', 'Clean components', nodes:[
+      Option.new(nil, 'Component to clean', required: true)
+    ])
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new(nil, 'Component to build', required: true)
+    ])
+    cmdr.send(:expand_chained_options!)
+    assert_equal(["clean", "foo", "build", "foo"], ARGV)
+
+    ARGV.clear and ARGV << 'clean' << 'foo' << 'build' << 'foo'
+    cmdr.send(:expand_chained_options!)
+    assert_equal(["clean", "foo", "build", "foo"], ARGV)
+  end
+
+  def test_chained_named
+    ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new('-c|--comp', 'Component to build', required:true)
+    ])
+    cmdr.add('publish', 'Publish components', nodes:[
+      Option.new('-c|--comp', 'Component to publish', required:true)
+    ])
+    cmdr.parse!
+    assert(cmdr[:build][:comp])
+    assert(cmdr[:publish][:comp])
+  end
+
 #  def test_chained_named_inconsistent_types
 #expected =<<EOF
 #Error: chained command options are not type consistent!
