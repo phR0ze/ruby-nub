@@ -293,7 +293,6 @@ class Commander
   # @param args [Array] array of arguments
   # @param results [Hash] of cmd results
   def parse_commands(cmd, parent, others, args, results)
-    #binding.pry
     results[cmd.to_sym] = {}                            # Create command results entry
     cmd_names = others.map{|x| x.name}                  # Get other command names as markers
     subcmds = cmd.nodes.select{|x| x.class == Command}  # Get sub-commands for this command
@@ -445,14 +444,15 @@ class Commander
   def expand_chained_options!
     args = ARGV[0..-1]
     results = {}
+    cmd_order = []
     cmd_names = @config.map{|x| x.name}
 
     chained = []
     while args.any?
       if !(cmd = @config.find{|x| x.name == args.first}).nil?
-        results[args.shift] = []                            # Add the command to the results
-        cmd_names.reject!{|x| x == cmd.name}                # Remove command from possible commands
-        cmd_required = cmd.nodes.select{|x| x.class == Option && x.required}
+        cmd_order << args.shift                   # Maintain oder of given commands
+        results[cmd.name] = []                    # Add the command to the results
+        cmd_names.reject!{|x| x == cmd.name}      # Remove command from possible commands
 
         # Collect command options from args to compare against
         opts = args.take_while{|x| !cmd_names.include?(x)}
@@ -461,30 +461,61 @@ class Commander
         # Globals are not to be considered for chaining
         results[cmd.name].concat(opts) and next if cmd.name == @k.global
 
-        # Chained case is when no options are given but some are required
-        if opts.size == 0 && cmd.nodes.any?{|x| x.class == Option && x.required}
+        # Chained case is when no options are given but the command has options
+        cmd_options = cmd.nodes.select{|x| x.class == Option}
+        if opts.size == 0 && cmd_options.any?
           chained << cmd
         else
           # Add cmd with options
           results[cmd.name].concat(opts)
 
-          # Check chained cmds against current cmd
-          chained.each{|x|
-            other_required = x.nodes.select{|x| x.class == Option && x.required}
-            !puts("Error: chained commands must satisfy required options!".colorize(:red)) && !puts(x.help) and
-              exit if cmd_required.size < other_required.size
-            other_required.each_with_index{|y,i|
-              !puts("Error: chained command options are not type consistent!".colorize(:red)) && !puts(x.help) and
-                exit if y.type != cmd_required[i].type || y.key != cmd_required[i].key
-            }
-            results[x.name].concat(opts.take(other_required.size))
+          # Add applicable options to chained as well
+          _opts = opts[0..-1]
+          chained.each{|other|
+            named_results = []
+            positional_results = []
+
+            # Add all matching named options
+            #-------------------------------------------------------------------
+            i = 0 
+            while i < _opts.size
+              if (match = match_named(_opts[i], other)).hit?
+                named_results << _opts[i];
+                _opts.delete_at(i)
+
+                # Get the next option to as the value was separate
+                if !(match.flag? || match.value)
+                  named_results << _opts[i]
+                  _opts.delete_at(i)
+                end
+              else
+                i += 1
+              end
+            end
+
+            # Add all matching positional options
+            #-------------------------------------------------------------------
+            i = 0
+            other_positional = other.nodes.select{|x| x.class == Option && x.key.nil?}
+            while i < _opts.size
+              if !_opts[i].start_with?('-') && other_positional.any?
+                positional_results << _opts[i]
+                other_positional.shift
+                _opts.delete_at(i)
+              else
+                i += 1
+              end
+            end
+
+            positional_results.each{|x| results[other.name] << x}
+            named_results.each{|x| results[other.name] << x}
           }
         end
       end
     end
 
     # Set results as new ARGV command line expression
-    ARGV.clear and results.each{|k, v| ARGV << k; ARGV.concat(v)}
+    ARGV.clear and cmd_order.each{|x| ARGV << x; ARGV.concat(results[x]) }
   end
 
   # Match the given command line arg with a configured named option
