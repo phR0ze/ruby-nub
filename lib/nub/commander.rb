@@ -470,8 +470,8 @@ class Commander
           results[cmd.name].concat(opts)
 
           # Add applicable options to chained as well
-          _opts = opts[0..-1]
           chained.each{|other|
+            _opts = opts[0..-1]
             named_results = []
             positional_results = []
 
