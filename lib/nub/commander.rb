@@ -41,14 +41,16 @@ class Option
   # @param desc [String] the option's description
   # @param type [Type] the option's type
   # @param required [Bool] require the option if true else optional
-  # @param allowed [Array] array of allowed string values
-  def initialize(key, desc, type:nil, required:false, allowed:[])
+  # @param allowed [Hash] hash of allowed strings to descriptions maps
+  def initialize(key, desc, type:nil, required:false, allowed:{})
     @hint = nil
     @long = nil
     @short = nil
     @desc = desc
-    @allowed = allowed || []
+    @allowed = allowed || {}
     @required = required || false
+    Log.die("allowed should be a hash of values to descriptions") if allowed.class != Hash
+    Log.die("required should be a boolean value") if ![TrueClass, FalseClass].include?(required.class)
 
     # Parse the key into its components (short hand, long hand, and hint)
     #https://bneijt.nl/pr/ruby-regular-expressions/
@@ -79,8 +81,8 @@ class Option
 
     # Validate allowed
     if @allowed.any?
-      allowed_type = @allowed.first.class
-      Log.die("mixed allowed types") if @allowed.any?{|x| x.class != allowed_type}
+      allowed_type = @allowed.first.first.class
+      Log.die("mixed allowed types") if @allowed.any?{|k,v| k.class != allowed_type}
     end
   end
 
@@ -207,8 +209,8 @@ class Commander
   # @param desc [String] the option's description
   # @param type [Type] the option's type
   # @param required [Bool] require the option if true else optional
-  # @param allowed [Array] array of allowed string values
-  def add_global(key, desc, type:nil, required:false, allowed:[])
+  # @param allowed [Hash] hash of allowed values to description map
+  def add_global(key, desc, type:nil, required:false, allowed:{})
     options = [Option.new(key, desc, type:type, required:required, allowed:allowed)]
 
     # Aggregate global options
@@ -571,20 +573,20 @@ class Commander
       if opt.type == String
         if opt.allowed.any?
           !puts("Error: invalid string value '#{value}'!".colorize(:red)) && !puts(cmd.help) and
-            exit if !opt.allowed.include?(value)
+            exit if !opt.allowed.key?(value) && !opt.allowed.key?(value.to_sym)
         end
       elsif opt.type == Integer
         value = value.to_i
         if opt.allowed.any?
           !puts("Error: invalid integer value '#{value}'!".colorize(:red)) && !puts(cmd.help) and
-            exit if !opt.allowed.include?(value)
+            exit if !opt.allowed.key?(value)
         end
       elsif opt.type == Array
         value = value.split(',')
         if opt.allowed.any?
           value.each{|x|
             !puts("Error: invalid array value '#{x}'!".colorize(:red)) && !puts(cmd.help) and
-              exit if !opt.allowed.include?(x)
+              exit if !opt.allowed.key?(x) && !opt.allowed.key?(x.to_sym)
           }
         end
       end
@@ -626,11 +628,17 @@ class Commander
     positional_index = -1
     sorted_options.each{|x|
       required = x.required ? ", Required" : ""
-      allowed = x.allowed.empty? ? "" : " (#{x.allowed * ','})"
       positional_index += 1 if x.key.nil?
       key = x.key.nil? ? "#{name}#{positional_index}" : x.key
-      type = (x.type == FalseClass || x.type == TrueClass) ? "Flag(#{x.type.to_s[/(.*)Class/, 1].downcase})" : x.type
-      cmd.help += "    #{key.ljust(@just)}#{x.desc}#{allowed}: #{type}#{required}\n"
+      if x.type == FalseClass || x.type == TrueClass
+        type = "Flag(#{x.type.to_s[/(.*)Class/, 1].downcase})"
+      elsif x.type == Array
+        type = "#{x.type}(String)"
+      else
+        type = x.type
+      end
+      cmd.help += "    #{key.ljust(@just)}#{x.desc}: #{type}#{required}\n"
+      x.allowed.sort{|x,y| x <=> y}.each{|x| cmd.help += "    #{''.ljust(@just)}  #{x.first}: #{x.last}\n" }
     }
 
     # Add hint as to how to get specific sub command help
