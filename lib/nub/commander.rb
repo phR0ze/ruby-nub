@@ -484,7 +484,7 @@ class Commander
                 _opts.delete_at(i)
 
                 # Get the next option to as the value was separate
-                if !(match.flag? || match.value)
+                if i < _opts.size && !(match.flag? || match.value)
                   named_results << _opts[i]
                   _opts.delete_at(i)
                 end

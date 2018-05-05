@@ -531,52 +531,51 @@ class TestCommander < Minitest::Test
 #    assert(cmdr[:build][:comp])
 #    assert(cmdr[:publish][:comp])
 #  end
-#
-#  def test_chained_named_inconsistent_types
-#expected =<<EOF
-#Error: chained command options are not type consistent!
-#Build components
-#
-#Usage: ./test_commander.rb build [options]
-#    -c|--comp=COMPONENT                     Component to build: Array, Required
-#    -h|--help                               Print command/options help: Flag(false)
-#EOF
-#
-#    ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new('-c|--comp=COMPONENT', 'Component to build', required:true, type:Array)
-#    ])
-#    cmdr.add('publish', 'Publish components', nodes:[
-#      Option.new('-c|--comp=COMPONENT', 'Component to publish', required:true, type:String)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout.strip_color)
-#  end
-#
-#  def test_chained_positional_inconsistent_numbers_bad
-#expected =<<EOF
-#Error: chained commands must satisfy required options!
-#Build components
-#
-#Usage: ./test_commander.rb build [options]
-#    build0                                  Component to build: String, Required
-#    build1                                  Extra positional: String, Required
-#    -h|--help                               Print command/options help: Flag(false)
-#EOF
-#
-#    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
-#    cmdr = Commander.new
-#    cmdr.add('build', 'Build components', nodes:[
-#      Option.new(nil, 'Component to build', required:true),
-#      Option.new(nil, 'Extra positional', required:true)
-#    ])
-#    cmdr.add('publish', 'Publish components', nodes:[
-#      Option.new(nil, 'Component to publish', required:true)
-#    ])
-#    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
-#    assert_equal(expected, capture.stdout.strip_color)
-#  end
+
+  def test_chained_named_inconsistent_types
+expected =<<EOF
+Error: named option '--comp' value not found!
+Build components
+
+Usage: ./test_commander.rb build [options]
+    -c|--comp=COMPONENT                     Component to build: Array, Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new('-c|--comp=COMPONENT', 'Component to build', required:true, type:Array)
+    ])
+    cmdr.add('publish', 'Publish components', nodes:[
+      Option.new('-c|--comp=COMPONENT', 'Component to publish', required:true, type:String)
+    ])
+
+    ARGV.clear and ARGV << 'build' << 'publish' << '--comp'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
+  def test_chained_positional_inconsistent_numbers_bad
+expected =<<EOF
+Error: invalid positional option 'extra'!
+Publish components
+
+Usage: ./test_commander.rb publish [options]
+    publish0                                Component to publish: String, Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+
+    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
+    cmdr = Commander.new
+    cmdr.add('build', 'Build components', nodes:[
+      Option.new(nil, 'Component to build', required:true),
+      Option.new(nil, 'Extra positional', required:true)
+    ])
+    cmdr.add('publish', 'Publish components', nodes:[
+      Option.new(nil, 'Component to publish', required:true)
+    ])
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
+    assert_equal(expected, capture.stdout.strip_color)
+  end
 
   def test_chained_positional_inconsistent_numbers_good
     ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
