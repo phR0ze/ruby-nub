@@ -577,23 +577,23 @@ class TestCommander < Minitest::Test
 #    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse! } }
 #    assert_equal(expected, capture.stdout.strip_color)
 #  end
-
-  def test_chained_positional_inconsistent_numbers_good
-    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
-    cmdr = Commander.new
-    cmdr.add('build', 'Build components', nodes:[
-      Option.new(nil, 'Component to build', required:true)
-    ])
-    cmdr.add('publish', 'Publish components', nodes:[
-      Option.new(nil, 'Component to publish', required:true),
-      Option.new(nil, 'Extra positional', required:true)
-    ])
-    cmdr.parse!
-    assert_equal("debug", cmdr[:build][:build0])
-    assert_nil(cmdr[:build][:build1])
-    assert_equal("debug", cmdr[:publish][:publish0])
-    assert_equal("extra", cmdr[:publish][:publish1])
-  end
+#
+#  def test_chained_positional_inconsistent_numbers_good
+#    ARGV.clear and ARGV << 'build' << 'publish' << 'debug' << 'extra'
+#    cmdr = Commander.new
+#    cmdr.add('build', 'Build components', nodes:[
+#      Option.new(nil, 'Component to build', required:true)
+#    ])
+#    cmdr.add('publish', 'Publish components', nodes:[
+#      Option.new(nil, 'Component to publish', required:true),
+#      Option.new(nil, 'Extra positional', required:true)
+#    ])
+#    cmdr.parse!
+#    assert_equal("debug", cmdr[:build][:build0])
+#    assert_nil(cmdr[:build][:build1])
+#    assert_equal("debug", cmdr[:publish][:publish0])
+#    assert_equal("extra", cmdr[:publish][:publish1])
+#  end
 
   def test_chained_positional
     ARGV.clear and ARGV << 'build' << 'publish' << 'deploy' << 'debug'
