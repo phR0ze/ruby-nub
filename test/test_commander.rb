@@ -50,16 +50,23 @@ class TestCommander < Minitest::Test
     ])
     cmdr.add('clean', 'Clean ISO components', nodes:[
       Option.new(nil, 'Components to clean', type:Array, allowed:{
-        all: nil,
-        pacman: nil,
-        initramfs', 'multiboot', 'iso', 'vms'
+        all: 'Clean all components',
+        initramfs: 'Clean initramfs image',
+        multiboot: 'Clean grub multiboot image',
+        iso: 'Clean bootable ISO'
       }),
+      Option.new('--pacman', "Clean pacman repos"),
       Option.new('--cache', "Clean pacman/ruby package cache"),
       Option.new('--vms', "Clean VMs that are no longer deployed"),
       Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to clean", type:Array, required:true)
     ])
     cmdr.add('build', 'Build ISO components', nodes:[
-      Option.new(nil, 'Components to build', type:Array, allowed:['iso', 'iso-full', 'initramfs', 'multiboot']),
+      Option.new(nil, 'Components to build', type:Array, allowed:{
+        all: 'Build all components',
+        initramfs: 'Build initramfs image',
+        multiboot: 'Build grub multiboot image',
+        iso: 'Clean bootable ISO',
+      }),
       Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to build", type:Array, required:true)
     ])
     cmdr.add('pack', 'Pack ISO deployments into vagrant boxes', nodes:[
