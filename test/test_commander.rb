@@ -36,7 +36,17 @@ class TestCommander < Minitest::Test
   # Test reduce expressions
   #-----------------------------------------------------------------------------
   def test_reduce_expressions
-    cmdr = Commander.new
+    app = 'reduce'
+    examples = "Full ISO Build: sudo ./#{app} clean build all -p personal\n".colorize(:green)
+    examples += "Rebuild initramfs: sudo ./#{app} clean build initramfs,iso -p personal\n".colorize(:green)
+    examples += "Rebuild multiboot: sudo ./#{app} clean build multiboot,iso -p personal\n".colorize(:green)
+    examples += "Clean pacman dbs: sudo ./#{app} clean --pacman\n".colorize(:green)
+    examples += "Build k8snode deployment: sudo ./#{app} clean build iso -d k8snode -p personal\n".colorize(:green)
+    examples += "Pack k8snode deployment: ./#{app} pack k8snode\n".colorize(:green)
+    examples += "Deploy nodes: sudo ./#{app} deploy k8snode 10,11,12\n".colorize(:green)
+    examples += "Deploy container: sudo ./#{app} deploy build --run\n".colorize(:green)
+
+    cmdr = Commander.new(app:app, version:'0.0.1', examples:examples)
     cmdr.add_global('-p|--profile=PROFILE', 'Profile to use', type:String)
     cmdr.add('info', 'List build info')
     cmdr.add('list', 'List out components', nodes:[
@@ -76,16 +86,18 @@ class TestCommander < Minitest::Test
     ])
     cmdr.add('deploy', 'Deploy VMs or containers', nodes:[
       Option.new(nil, "Deployments to pack", type:Array, required:true),
-      Option.new('--name=NAME', "Give a name to the nodes being deployed", type:Array),
-      Option.new('-n|--nodes=NODES', "Comma delimited list of last octet IPs (e.g. 10,11,12", type:Array),
+      Option.new(nil, "Comma delimited list of last octet IPs (e.g. 10,11,12", type:Array),
+      Option.new('-n|--name=NAME', "Give a name to the nodes being deployed", type:String),
+      Option.new('-f|--force', "Deploy the given deployment/s even if they already exist"),
+      Option.new('-r|--run', "Run the container with defaults"),
+      Option.new('-e|--exec=CMD', "Specific command to run in container", type:String),
       Option.new('--ipv6', "Enable IPv6 on the given nodes"),
       Option.new('--vagrantfile', "Export the Vagrantfile only"),
-      Option.new('--force', "Deploy the given deployment/s even if they already exist")
     ])
 
     exp = "clean build all -p standard"
     ARGV.clear and ARGV.concat(exp.split(" "))
-    cmdr.parse!
+    Sys.capture{cmdr.parse!}
     assert_equal('standard', cmdr[:global][:profile])
     assert_equal(1, cmdr[:clean].size)
     assert_nil(cmdr[:clean][:pacman])
@@ -95,7 +107,7 @@ class TestCommander < Minitest::Test
 
     exp = "clean build initramfs,iso -p standard"
     ARGV.clear and ARGV.concat(exp.split(" "))
-    cmdr.parse!
+    Sys.capture{cmdr.parse!}
     assert_equal('standard', cmdr[:global][:profile])
     assert_equal(['initramfs', 'iso'], cmdr[:clean][:clean0])
     assert_equal(['initramfs', 'iso'], cmdr[:build][:build0])
@@ -103,36 +115,59 @@ class TestCommander < Minitest::Test
     # Test clean sub-command with positional required option given
     exp = "clean all --pacman"
     ARGV.clear and ARGV.concat(exp.split(" "))
-    cmdr.parse!
+    Sys.capture{cmdr.parse!}
+    assert_equal(2, cmdr[:clean].size)
     assert(cmdr[:clean][:pacman])
     assert_equal(['all'], cmdr[:clean][:clean0])
 
     # Test clean sub-command with positional required option not given
-#    exp = "clean pacman,initramfs,multiboot,iso -d k8snode"
-#    ARGV.clear and ARGV.concat(exp.split(" "))
-#    cmdr.parse!
-#    assert_equal(2, cmdr[:clean].size)
-#    assert_equal(['k8snode'], cmdr[:clean][:deployments])
-#    assert_equal(['pacman', 'initramfs', 'multiboot', 'iso'], cmdr[:clean][:clean0])
-#
-#    exp = "build initramfs,multiboot,iso"
-#    ARGV.clear and ARGV.concat(exp.split(" "))
-#    cmdr.parse!
-#    assert_equal(1, cmdr[:build].size)
-#    assert_equal(['initramfs', 'multiboot', 'iso'], cmdr[:build][:build0])
-#
-#    exp = "clean build iso-full -p standard"
-#    ARGV.clear and ARGV.concat(exp.split(" "))
-#    cmdr.parse!
-#    assert(cmdr[:clean])
-#    #assert_equal(1, cmdr[:clean].size)
-#    assert_equal(1, cmdr[:build].size)
-#
-#    exp = "clean build initramfs,iso -p standard"
-#    ARGV.clear and ARGV.concat(exp.split(" "))
-#
-#    exp = "clean build multiboot,iso -p standard"
-#    ARGV.clear and ARGV.concat(exp.split(" "))
+    exp = "clean build initramfs,multiboot,iso -d k8snode -p standard"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    Sys.capture{cmdr.parse!}
+    assert_equal('standard', cmdr[:global][:profile])
+    assert_equal(2, cmdr[:clean].size)
+    assert_equal(['k8snode'], cmdr[:clean][:deployments])
+    assert_equal(['initramfs', 'multiboot', 'iso'], cmdr[:clean][:clean0])
+    assert_equal(2, cmdr[:clean].size)
+    assert_equal(['k8snode'], cmdr[:build][:deployments])
+    assert_equal(['initramfs', 'multiboot', 'iso'], cmdr[:build][:build0])
+
+    exp = "pack base,lite,heavy -p standard"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    Sys.capture{cmdr.parse!}
+    assert_equal('standard', cmdr[:global][:profile])
+    assert_equal(1, cmdr[:pack].size)
+    assert_equal(['base', 'lite', 'heavy'], cmdr[:pack][:pack0])
+
+    exp = "deploy k8snode 10,11,12 -n node -p standard"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    Sys.capture{cmdr.parse!}
+    assert_equal('standard', cmdr[:global][:profile])
+    assert_equal(3, cmdr[:deploy].size)
+    assert_equal(['k8snode'], cmdr[:deploy][:deploy0])
+    assert_equal(['10', '11', '12'], cmdr[:deploy][:deploy1])
+    assert_equal('node', cmdr[:deploy][:name])
+
+    exp = "deploy k8snode 10,11,12 --vagrantfile"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    Sys.capture{cmdr.parse!}
+    assert_equal(3, cmdr[:deploy].size)
+    assert_equal(['k8snode'], cmdr[:deploy][:deploy0])
+    assert_equal(['10', '11', '12'], cmdr[:deploy][:deploy1])
+    assert(cmdr[:deploy][:vagrantfile])
+
+    exp = "deploy k8snode -r"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    Sys.capture{cmdr.parse!}
+    assert_equal(2, cmdr[:deploy].size)
+    assert_equal(['k8snode'], cmdr[:deploy][:deploy0])
+    assert(cmdr[:deploy][:run])
+
+    ARGV.clear and ARGV << 'deploy' << 'k8snode' << '-e' << 'curl www.google.com'
+    Sys.capture{cmdr.parse!}
+    assert_equal(2, cmdr[:deploy].size)
+    assert_equal(['k8snode'], cmdr[:deploy][:deploy0])
+    assert_equal('curl www.google.com', cmdr[:deploy][:exec])
   end
 
   #-----------------------------------------------------------------------------

@@ -19,6 +19,9 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
     * [Allowed Values](#allowed-values)
     * [Global Options](#global-options)
   * [Configuration](#configuration)
+    * [Named Option Examples](#named-option-examples)
+    * [Positional Option Examples](#positional-option-examples)
+    * [Chained Command Expression Examples](#chained-command-expression-examples)
   * [Help](#help)
     * [Examples](#examples)
     * [Indicators](#indicators)
@@ -106,75 +109,131 @@ properly.
 Example ruby configuration:
 ```ruby
 if __FILE__ == $0
-  examples = "Clean all: sudo ./#{app} clean all\n".colorize(:green)
+  # Create examples for app
+  app = 'reduce'
+  examples = "Full ISO Build: sudo ./#{app} clean build all -p personal\n".colorize(:green)
+  examples += "Rebuild initramfs: sudo ./#{app} clean build initramfs,iso -p personal\n".colorize(:green)
+  examples += "Rebuild multiboot: sudo ./#{app} clean build multiboot,iso -p personal\n".colorize(:green)
+  examples += "Clean pacman dbs: sudo ./#{app} clean --pacman\n".colorize(:green)
+  examples += "Build k8snode deployment: sudo ./#{app} clean build iso -d k8snode -p personal\n".colorize(:green)
+  examples += "Pack k8snode deployment: ./#{app} pack k8snode\n".colorize(:green)
+  examples += "Deploy nodes: sudo ./#{app} deploy k8snode 10,11,12\n".colorize(:green)
+  examples += "Deploy container: sudo ./#{app} deploy build --run\n".colorize(:green)
 
-  # Creates a new instance of commander
-  cmdr = Commander.new(examples:examples)
-
-  # Add global options
-  cmdr.add_global([
-    Option.new('-d|--debug', 'Debug output')
+  # Create a new instance of commander
+  cmdr = Commander.new(app:app, version:'0.0.1', examples:examples)
+  cmdr.add_global('-p|--profile=PROFILE', 'Profile to use', type:String)
+  cmdr.add('info', 'List build info')
+  cmdr.add('list', 'List out components', nodes:[
+    Option.new(nil, 'Components to list', type:Array, allowed:{
+      all: 'List all components',
+      boxes: 'List all boxes',
+      isos: 'List all isos',
+      images: 'List all docker images'
+    }),
+    Option.new('--raw', "Produce output suitable for automation"),
+  ])
+  cmdr.add('clean', 'Clean ISO components', nodes:[
+    Option.new(nil, 'Components to clean', type:Array, allowed:{
+      all: 'Clean all components including deployments',
+      initramfs: 'Clean initramfs image',
+      multiboot: 'Clean grub multiboot image',
+      iso: 'Clean bootable ISO'
+    }),
+    Option.new('--pacman', "Clean pacman repos"),
+    Option.new('--cache', "Clean pacman/ruby package cache"),
+    Option.new('--vms', "Clean VMs that are no longer deployed"),
+    Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to clean", type:Array)
+  ])
+  cmdr.add('build', 'Build ISO components', nodes:[
+    Option.new(nil, 'Components to build', type:Array, allowed:{
+      all: 'Build all components including deployments',
+      initramfs: 'Build initramfs image',
+      multiboot: 'Build grub multiboot image',
+      iso: 'Clean bootable ISO',
+    }),
+    Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to build", type:Array)
+  ])
+  cmdr.add('pack', 'Pack ISO deployments into vagrant boxes', nodes:[
+    Option.new(nil, "Deployments to pack", type:Array, required:true),
+    Option.new('--disk-size=DISK_SIZE', "Set the disk size in MB e.g. 10000", type:String),
+    Option.new('--force', "Pack the given deployment/s even if they already exist")
+  ])
+  cmdr.add('deploy', 'Deploy VMs or containers', nodes:[
+    Option.new(nil, "Deployments to pack", type:Array, required:true),
+    Option.new(nil, "Comma delimited list of last octet IPs (e.g. 10,11,12", type:Array),
+    Option.new('-n|--name=NAME', "Give a name to the nodes being deployed", type:String),
+    Option.new('-f|--force', "Deploy the given deployment/s even if they already exist"),
+    Option.new('-r|--run', "Run the container with defaults"),
+    Option.new('-e|--exec=CMD', "Specific command to run in container", type:String),
+    Option.new('--ipv6', "Enable IPv6 on the given nodes"),
+    Option.new('--vagrantfile', "Export the Vagrantfile only"),
   ])
 
-  # Create two commands with a chainable positional option
-  cmdr.add('clean', 'Clean build', options:[
-    Option.new(nil, 'Clean given components', allowed:['all', 'iso'])
-  ])
-  cmdr.add('build', 'Build components', options:[
-    Option.new(nil, 'Build given components')
-  ])
+  # Invoke commander parse
   cmdr.parse!
 
-  debug = cmdr[:global][:debug]
-  clean(cmdr[:clean][:clean0], debug:debug) if cmdr[:clean]
-  build(cmdr[:build][:build0], debug:debug) if cmdr[:build]
+  # Execute 'info' command
+  reduce.info if cmdr[:info]
+
+  # Execute 'list' command
+  reduce.list(cmdr[:list][:list0]) if cmdr[:list]
+
+  # Execute 'clean' command
+  reduce.clean(cmdr[:clean][:clean0], deployments: cmdr[:clean][:deployments],
+    pacman: cmdr[:clean][:pacman], cache: cmdr[:clean][:cache], vms: cmdr[:vms]) if cmdr[:clean]
+
+  # Execute 'build' command
+  reduce.build(cmdr[:clean][:clean0], deployments: cmdr[:clean][:deployments]) if cmdr[:build]
+
+  # Execute 'pack' command
+  reduce.pack(cmdr[:pack][:pack0], disksize: cmdr[:pack][:disksize], force: cmdr[:pack][:force]) if cmdr[:pack]
+
+  # Execute 'deploy' command
+  reduce.deploy(cmdr[:deploy][:pack0], nodes: cmdr[:deploy][:deploy1], name: cmdr[:deploy][:name],
+    run: cmdr[:deploy][:run], exec: cmdr[:deploy][:exec], ipv6: cmdr[:ipv6],
+    vagrantfile: cmdr[:vagrantfile], force: cmdr[:force]) if cmdr[:deploy]
 end
 ```
 
-Example command line expressions:
+#### Named Option Examples <a name="named-option-examples"></a>
 ```bash
-# Chained commands 'clean' and 'build' share the 'all' positional option, thus 'clean' will be
-# executed first with the 'all' option then 'build' will be executed second with the 'all' option.
-./app clean build all
-# Chained commands 'clean' and 'build' with their own specific 'all' positional option which is
-# exactly equivalent to the previous usage
-./app clean all build all
-```
-
-Example ruby configuration:
-```ruby
-# Creates a new instance of commander with app settings as given
-cmdr = Commander.new('app-name', 'app-version', 'examples')
-# Create command with a positional argument
-cmdr.add('clean', 'Clean build', options:[
-  Option.new(nil, 'Clean given components', allowed:['all', 'iso', 'image']),,,,
-  Option.new('-d|--debug', 'Debug mode'),
-  Option.new('-s|--skip=COMPONENT', 'Skip the given components', allowed:['iso', 'image'], type:String)
-])
-# Create command with a single positional option with an allowed check for value
-cmdr.add('build', 'Build components', options:[
-  Option.new(nil, 'Build given components', allowed:['all', 'iso', 'image'])
-])
-cmdr.parse!
-```
-
-Example command line expressions:
-```bash
-# The parameter 'all' coming after the command 'clean' is a positional option with a default type of
-# String that is checked against the optional 'allowed' values configuration
-./app clean all
 # The parameter '-d' coming after the command 'clean' is a named option using short hand form with
-# an input type defaulted to Flag (i.e. a simple flag)
-./app clean -d
-# The parameter '--debug' coming after the command 'clean' is a named option using long hand form with
-# an input type defaulted to Flag (i.e. a simple flag); exactly equivalent to the former expression
-./app clean --debug
-# The parameter '-s' coming after the command 'clean' is a named option using short hand form with
-# an input value 'iso' of type String
-./app clean -s iso
-# The parameter '--skip' coming after the command 'clean' is a named option using long hand form
-# with an input value 'iso' of type String; exactly equivalent to the former expression
-./app clean --skip=iso
+# an input type of Array without any checking as configured above
+./app clean -d base
+
+# This is a variation using long form which is exactly equivalent
+./app clean --deployments base
+
+# This is a variation using long form with assignement syntax which is also exactly equivalent
+./app clean --deployments=base
+
+# This is a variation providing multiple values for the array named parameter 'deployments'
+./app clean -d base,lite,heavy
+```
+
+#### Positional Option Examples <a name="positional-option-examples"></a>
+```bash
+# The parameter 'all' coming after the command 'clean' is a positional array option with a default
+# type of String that is checked against the configured allowed values ['all', 'initramfs',
+# 'multiboot', 'ios'].
+./app clean all
+
+# This is a variation of the previous command line expression with multiple values specified for the
+# array.
+./app clean initramfs,multiboot,iso
+```
+
+#### Chained Command Expression Examples <a name="chained-command-expression-examples"></a>
+```bash
+# Chained commands 'clean' and 'build' share the 'all' positional option. Additionally there is one
+# global option '-p personal'. Thus 'clean' will be  executed first with the 'all' option in the
+# context of '-p personal' then the 'build' command will be executed second with the 'all' option
+# in the context of '-p personal'.
+./app clean build all -p standard
+
+# The above chained command is exactly equivalent to its expanded counter part below
+./app clean all build all -p personal
 ```
 
 ### Help <a name="help"></a>
