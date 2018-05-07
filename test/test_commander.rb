@@ -50,7 +50,7 @@ class TestCommander < Minitest::Test
     ])
     cmdr.add('clean', 'Clean ISO components', nodes:[
       Option.new(nil, 'Components to clean', type:Array, allowed:{
-        all: 'Clean all components',
+        all: 'Clean all components including deployments',
         initramfs: 'Clean initramfs image',
         multiboot: 'Clean grub multiboot image',
         iso: 'Clean bootable ISO'
@@ -58,33 +58,40 @@ class TestCommander < Minitest::Test
       Option.new('--pacman', "Clean pacman repos"),
       Option.new('--cache', "Clean pacman/ruby package cache"),
       Option.new('--vms', "Clean VMs that are no longer deployed"),
-      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to clean", type:Array, required:true)
+      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to clean", type:Array)
     ])
     cmdr.add('build', 'Build ISO components', nodes:[
       Option.new(nil, 'Components to build', type:Array, allowed:{
-        all: 'Build all components',
+        all: 'Build all components including deployments',
         initramfs: 'Build initramfs image',
         multiboot: 'Build grub multiboot image',
         iso: 'Clean bootable ISO',
       }),
-      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to build", type:Array, required:true)
+      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to build", type:Array)
     ])
     cmdr.add('pack', 'Pack ISO deployments into vagrant boxes', nodes:[
-      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to pack", type:Array, required:true)
+      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to pack", type:Array, required:true),
+      Option.new('--disk-size=DISK_SIZE', "Set the disk size in MB e.g. 10000", type:String),
+      Option.new('--force', "Pack the given deployment/s even if they already exist")
     ])
     cmdr.add('deploy', 'Deploy VMs or containers', nodes:[
-      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to pack", type:Array, required:true)
+      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to pack", type:Array, required:true),
+      Option.new('--name=NAME', "Give a name to the nodes being deployed", type:Array),
+      Option.new('-n|--nodes=NODES', "Comma delimited list of last octet IPs (e.g. 10,11,12", type:Array),
+      Option.new('--ipv6', "Enable IPv6 on the given nodes"),
+      Option.new('--vagrantfile', "Export the Vagrantfile only"),
+      Option.new('--force', "Deploy the given deployment/s even if they already exist")
     ])
 
-#    exp = "clean build iso-full -d all -p standard"
-#    ARGV.clear and ARGV.concat(exp.split(" "))
-#    cmdr.parse!
-#    assert_equal('standard', cmdr[:global][:profile])
-#    assert_equal(1, cmdr[:clean].size)
-#    assert_equal(['iso-full'], cmdr[:clean][:clean0])
-#    assert_equal(1, cmdr[:build].size)
-#    assert_equal(['iso-full'], cmdr[:build][:build0])
-#
+    exp = "clean build all -p standard"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    cmdr.parse!
+    assert_equal('standard', cmdr[:global][:profile])
+    assert_equal(1, cmdr[:clean].size)
+    assert_equal(['all'], cmdr[:clean][:clean0])
+    assert_equal(1, cmdr[:build].size)
+    assert_equal(['all'], cmdr[:build][:build0])
+
 #    exp = "clean build initramfs,iso -p standard"
 #    ARGV.clear and ARGV.concat(exp.split(" "))
 #    cmdr.parse!
@@ -500,7 +507,7 @@ EOF
       Option.new(nil, 'Components to clean', type:Array, allowed:{ iso: nil, initramfs: nil, pacman: nil}),
     ])
     cmdr.add('build', 'Build ISO components', nodes:[
-      Option.new(nil, 'Components to build', type:Array, allowed:{iso: nil, initramfs: nil})
+      Option.new(nil, 'Components to build', type:Array, allowed:{iso: '2', initramfs: '1'})
     ])
 
     exp = "clean pacman,initramfs,iso"
@@ -521,8 +528,8 @@ Build ISO components
 
 Usage: ./test_commander.rb build [options]
     build0                                  Components to build: Array(String)
-                                              initramfs: 
-                                              iso: 
+                                              initramfs: 1
+                                              iso: 2
     -h|--help                               Print command/options help: Flag(false)
 EOF
     exp = "clean build pacman,initramfs,iso"
