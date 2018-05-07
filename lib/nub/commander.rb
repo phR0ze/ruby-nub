@@ -538,7 +538,7 @@ class Commander
         match.value = arg[@value_regex, 1]
 
         # Set symbol converting dashes to underscores for named options
-        if (match.opt = options.find{|x| x.short == short || x.long == long})
+        if (match.opt = options.find{|x| (short && short == x.short) || (long && long == x.long)})
           match.sym = match.opt.to_sym
         end
       end
@@ -551,7 +551,7 @@ class Commander
         short = x[@short_regex, 1]
         long = x[@long_regex, 1]
         value = x[@value_regex, 1]
-        if short == arg.short || long == arg.long
+        if (short && short == arg.short) || (long && long == arg.long)
           match.opt = arg
           match.value = value
           match.sym = match.opt.to_sym

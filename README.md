@@ -38,7 +38,7 @@ Run: `bundle install --system`
 ## Commander <a name="commander"></a>
 Commander was created mainly because all available options parsers seemed overly complicated and
 overweight and partly because I enjoyed understanding every bit going into it. Commander offers
-***git*** like command syntax that is becoming so popular.
+***git*** or ***kubectl*** like command syntax.
 
 There are two kinds of paramaters that commander deals with ***commands*** and ***options***.
 
@@ -53,19 +53,20 @@ sub-command, which follow the same rules in a recursive fashion as any command, 
 Command options modify how the command behaves.
 
 #### Chained Commands <a name="chained-commands"></a>
-The chained command expressions allow a cleaner multi-command type expression with reusable options.
+Chained command expressions allow a cleaner multi-command type expression with reusable options.
 
 Whenever more than one command is used in the command line expression the expression is interpreted
 as being a ***chained command expression*** a.k.a ***chained commands***. Chained commands are
 executed left to right, such that you can execute the first command then the second command or more
 in a single command line expression. Each command in a chained command expression may have its own
-specific options (those coming after the command but before the next command) or if options are
-omitted the options from the next command will be used in the order they are given to satisfy the
-options of the command before. Only options of the same type and position will be used.
+specific options (those coming after the command but before the next command) which are taken into
+account for the command as usual. However if options are omitted the options from the next command
+will be used in the order they are given to satisfy the options of the command before. Only options
+of the same type and position will be used.
 
 ### Options <a name="options"></a>
 Options are additional parameters that are given that modify the behavior of a command. There are
-two kinds of options available for use, ***positional*** and ***named***.
+two kinds of options available for use ***positional*** and ***named***.
 
 #### Positional Options <a name="positional-options"></a>
 Positional options are identified by the absence of preceding dash/dashes and are interpreted

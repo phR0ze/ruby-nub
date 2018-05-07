@@ -70,12 +70,12 @@ class TestCommander < Minitest::Test
       Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to build", type:Array)
     ])
     cmdr.add('pack', 'Pack ISO deployments into vagrant boxes', nodes:[
-      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to pack", type:Array, required:true),
+      Option.new(nil, "Deployments to pack", type:Array, required:true),
       Option.new('--disk-size=DISK_SIZE', "Set the disk size in MB e.g. 10000", type:String),
       Option.new('--force', "Pack the given deployment/s even if they already exist")
     ])
     cmdr.add('deploy', 'Deploy VMs or containers', nodes:[
-      Option.new('-d|--deployments=DEPLOYMENTS', "Deployments to pack", type:Array, required:true),
+      Option.new(nil, "Deployments to pack", type:Array, required:true),
       Option.new('--name=NAME', "Give a name to the nodes being deployed", type:Array),
       Option.new('-n|--nodes=NODES', "Comma delimited list of last octet IPs (e.g. 10,11,12", type:Array),
       Option.new('--ipv6', "Enable IPv6 on the given nodes"),
@@ -88,22 +88,24 @@ class TestCommander < Minitest::Test
     cmdr.parse!
     assert_equal('standard', cmdr[:global][:profile])
     assert_equal(1, cmdr[:clean].size)
+    assert_nil(cmdr[:clean][:pacman])
     assert_equal(['all'], cmdr[:clean][:clean0])
     assert_equal(1, cmdr[:build].size)
     assert_equal(['all'], cmdr[:build][:build0])
 
-#    exp = "clean build initramfs,iso -p standard"
-#    ARGV.clear and ARGV.concat(exp.split(" "))
-#    cmdr.parse!
-#    assert_equal('standard', cmdr[:global][:profile])
-#    assert_equal(['initramfs', 'iso'], cmdr[:clean][:clean0])
-#    assert_equal(['initramfs', 'iso'], cmdr[:build][:build0])
-#
+    exp = "clean build initramfs,iso -p standard"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    cmdr.parse!
+    assert_equal('standard', cmdr[:global][:profile])
+    assert_equal(['initramfs', 'iso'], cmdr[:clean][:clean0])
+    assert_equal(['initramfs', 'iso'], cmdr[:build][:build0])
+
     # Test clean sub-command with positional required option given
-    #exp = "clean deployments x,y,z"
-    #ARGV.clear and ARGV.concat(exp.split(" "))
-    #cmdr.parse!
-    #assert_equal(['x', 'y', 'z'], cmdr[:clean][:deployments][:deployments0])
+    exp = "clean all --pacman"
+    ARGV.clear and ARGV.concat(exp.split(" "))
+    cmdr.parse!
+    assert(cmdr[:clean][:pacman])
+    assert_equal(['all'], cmdr[:clean][:clean0])
 
     # Test clean sub-command with positional required option not given
 #    exp = "clean pacman,initramfs,multiboot,iso -d k8snode"
