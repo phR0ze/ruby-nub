@@ -19,22 +19,22 @@
 #LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
-#
-# Enable code coverage when in CI
-if ENV['TRAVIS']
-  require 'coveralls'
-  Coveralls.wear!
+
+require 'minitest/autorun'
+require_relative '../lib/nub/module'
+
+module Foo
+  mattr_reader(:foo1)
+  mattr_accessor(:foo2)
+  @@foo1 = 'foo1'
 end
 
-require_relative 'test_commander'
-require_relative 'test_config'
-require_relative 'test_fileutils'
-require_relative 'test_log'
-require_relative 'test_module'
-require_relative 'test_net'
-require_relative 'test_string'
-require_relative 'test_sys'
-require_relative 'test_thread_comm'
-require_relative 'test_user'
+class TestModule < Minitest::Test
+
+  def test_mattr
+    assert_equal('foo1', Foo.foo1)
+    assert_nil(Foo.foo2)
+  end
+end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

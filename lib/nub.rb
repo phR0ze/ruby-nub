@@ -26,6 +26,7 @@ module Nub
   require 'nub/config'
   require 'nub/fileutils'
   require 'nub/log'
+  require 'nub/module'
   require 'nub/net'
   require 'nub/string'
   require 'nub/thread_comm'
