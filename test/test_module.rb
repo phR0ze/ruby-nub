@@ -30,8 +30,12 @@ module Foo
   mattr_writer(:foo1)
   mattr_accessor(:foo2)
 
-  def setval
+  def setval_with_self
     self.foo1 = 'bob2'
+  end
+
+  def setval_with_at_at
+    @@foo1 = 'bob3'
   end
 end
 
@@ -55,10 +59,15 @@ class TestModule < Minitest::Test
     other = Other.new
     assert_equal('bob', other.foo1)
 
-    # Set value in module and check externally
-    Foo.setval
+    # Set value with self in module and check externally
+    Foo.setval_with_self
     assert_equal('bob2', Foo.foo1)
     assert_equal('bob2', other.foo1)
+
+    # Set value with at at in module and check externally
+    Foo.setval_with_at_at
+    assert_equal('bob3', Foo.foo1)
+    assert_equal('bob3', other.foo1)
   end
 
   def test_mattr_accessor
