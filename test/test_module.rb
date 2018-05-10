@@ -24,18 +24,41 @@ require 'minitest/autorun'
 require_relative '../lib/nub/module'
 
 module Foo
+  extend self
+  @@foo1 = 'foo1'
   mattr_reader(:foo1)
   mattr_writer(:foo1)
   mattr_accessor(:foo2)
-  @@foo1 = 'foo1'
+
+  def setval
+    self.foo1 = 'bob2'
+  end
+end
+
+class Other
+  def foo1
+    return Foo.foo1
+  end
 end
 
 class TestModule < Minitest::Test
 
   def test_mattr_reader_writer
+    # Validate default value
     assert_equal('foo1', Foo.foo1)
+
+    # Test writer/reader
     Foo.foo1 = 'bob'
     assert_equal('bob', Foo.foo1)
+
+    # Test other class context
+    other = Other.new
+    assert_equal('bob', other.foo1)
+
+    # Set value in module and check externally
+    Foo.setval
+    assert_equal('bob2', Foo.foo1)
+    assert_equal('bob2', other.foo1)
   end
 
   def test_mattr_accessor
