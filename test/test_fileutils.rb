@@ -25,6 +25,23 @@ require_relative '../lib/nub/fileutils'
 
 class TestFileUtils < Minitest::Test
 
+  def test_exec_success
+    mock = Minitest::Mock.new
+    mock.expect(:file?, true)
+    mock.expect(:executable?, true)
+    File.stub(:stat, mock){
+      assert_equal('/test/bob', FileUtils.exec?('bob', path:['/test']))
+    }
+  end
+
+  def test_exec_fail
+    mock = Minitest::Mock.new
+    mock.expect(:file?, false)
+    File.stub(:stat, mock){
+      assert_nil(FileUtils.exec?('bob', path:['/test']))
+    }
+  end
+
   def test_modify
   end
 

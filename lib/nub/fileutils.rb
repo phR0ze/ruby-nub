@@ -24,10 +24,24 @@ require 'fileutils'
 # Monkey patch FileUtils with some useful methods
 module FileUtils
 
+  # Check PATH for executable
+  # @param name [String] name of executable to find
+  # @param path [Array] path to search
+  # @return path of executable or nil
+  def self.exec?(name, path:nil)
+    (path || ENV['PATH'].split(File::PATH_SEPARATOR).uniq).each{|dir|
+      target = File.join(dir, name)
+      if stat = File.stat(target) rescue nil
+        return target if stat.file? && stat.executable?
+      end
+    }
+    return nil
+  end
+
   # Check copyright and update if required
   # @param path [String] path of the file to update
   # @param copyright [String] copyright match string e.g. Copyright (c)
-  def update_copyright(path, copyright, year)
+  def self.update_copyright(path, copyright, year)
     modify(path){|line|
       if line =~ /##{Regexp.quote(copyright)}/
         year = line[/##{Regexp.quote(copyright)}\s+((\d{4}\s)|(\d{4}-\d{4})).*/, 1].strip
