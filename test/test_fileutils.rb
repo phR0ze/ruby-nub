@@ -20,16 +20,17 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-# Nub is the top level module useful for requiring all sub-modules at once.
-module Nub
-  require 'nub/commander'
-  require 'nub/config'
-  require 'nub/fileutils'
-  require 'nub/log'
-  require 'nub/net'
-  require 'nub/string'
-  require 'nub/thread_comm'
-  require 'nub/user'
+require 'minitest/autorun'
+require_relative '../lib/nub/fileutils'
+
+class TestFileUtils < Minitest::Test
+
+  def test_modify
+  end
+
+  def test_update_copyright
+    puts("here")
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

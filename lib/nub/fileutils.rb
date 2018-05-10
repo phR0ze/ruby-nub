@@ -1,4 +1,3 @@
-#!/usr/bin/env ruby
 #MIT License
 #Copyright (c) 2018 phR0ze
 #
@@ -20,16 +19,28 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-# Nub is the top level module useful for requiring all sub-modules at once.
-module Nub
-  require 'nub/commander'
-  require 'nub/config'
-  require 'nub/fileutils'
-  require 'nub/log'
-  require 'nub/net'
-  require 'nub/string'
-  require 'nub/thread_comm'
-  require 'nub/user'
+require 'fileutils'
+
+# Monkey patch FileUtils with some useful methods
+module FileUtils
+
+  # Check copyright and update if required
+  # @param path [String] path of the file to update
+  # @param copyright [String] copyright match string e.g. Copyright (c)
+  def update_copyright(path, copyright, year)
+    modify(path){|line|
+      if line =~ /##{Regexp.quote(copyright)}/
+        year = line[/##{Regexp.quote(copyright)}\s+((\d{4}\s)|(\d{4}-\d{4})).*/, 1].strip
+        if year.include?("-")
+          years = year.split("-")
+          line.gsub!(year, "#{years.first}-#{curr_year}") if years.last != curr_year
+        else
+          prev_year = year == curr_year.to_s ? year.to_i - 1 : year
+          line.gsub!(year.to_s, "#{prev_year}-#{curr_year}")
+        end
+      end
+    }
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
