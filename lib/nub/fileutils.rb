@@ -38,22 +38,54 @@ module FileUtils
     return nil
   end
 
+  # Update the file using a block, revert on failure.
+  # Use this for simple line edits. Block is passed in each line of the file
+  # @param filename [String] name of the file to change
+  def self.update(filename)
+    changed = false
+    block = Proc.new # Most efficient way to get block
+
+    begin
+      lines = nil
+      File.open(filename, 'r+'){|f|
+        lines = f.readlines
+        lines.each{|line|
+          line_copy = line.dup
+          block.call(line)
+          changed |= line_copy != line
+        }
+
+        # Save the changes back to the file
+        f.seek(0)
+        f.truncate(0)
+        f.puts(lines)
+      }
+    rescue
+      # Revert back to the original incase of failure
+      File.open(filename, 'w'){|f| f.puts(lines)} if lines
+      raise
+    end
+
+    return changed
+  end
+
   # Check copyright and update if required
   # @param path [String] path of the file to update
   # @param copyright [String] copyright match string e.g. Copyright (c)
-  def self.update_copyright(path, copyright, year)
-    modify(path){|line|
-      if line =~ /##{Regexp.quote(copyright)}/
-        year = line[/##{Regexp.quote(copyright)}\s+((\d{4}\s)|(\d{4}-\d{4})).*/, 1].strip
-        if year.include?("-")
-          years = year.split("-")
-          line.gsub!(year, "#{years.first}-#{curr_year}") if years.last != curr_year
-        else
-          prev_year = year == curr_year.to_s ? year.to_i - 1 : year
-          line.gsub!(year.to_s, "#{prev_year}-#{curr_year}")
+  # @param year [String] year to add if needed
+  def self.update_copyright(path, copyright, year:Time.now.year)
+    changed = self.update(path){|line|
+      if line =~ /#{Regexp.quote(copyright)}/
+        _year = line[/#{Regexp.quote(copyright)}\s+((\d{4}\s)|(\d{4}-\d{4})).*/, 1].strip
+        if _year.include?("-")
+          years = _year.split("-")
+          line.gsub!(_year, "#{years.first}-#{year}") if years.last != year
+        elsif prev_year = _year != year.to_s ? year.to_i - 1 : nil
+          line.gsub!(_year.to_s, "#{prev_year}-#{year}")
         end
       end
     }
+    return changed
   end
 end
 

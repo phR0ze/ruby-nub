@@ -32,6 +32,7 @@ class TestFileUtils < Minitest::Test
     File.stub(:stat, mock){
       assert_equal('/test/bob', FileUtils.exec?('bob', path:['/test']))
     }
+    assert_mock(mock)
   end
 
   def test_exec_fail
@@ -40,12 +41,120 @@ class TestFileUtils < Minitest::Test
     File.stub(:stat, mock){
       assert_nil(FileUtils.exec?('bob', path:['/test']))
     }
+    assert_mock(mock)
   end
 
-  def test_modify
+  def test_update_changed
+    data = ['MIT License', 'Copyright (c) 2018 phR0ze', '',
+      'Permission is hereby granted, free of charge, to any person obtaining a copy']
+    _data = ['MIT License', 'Foobar100', '',
+      'Permission is hereby granted, free of charge, to any person obtaining a copy']
+
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:seek, nil, [0])
+    mock.expect(:truncate, nil, [0])
+    mock.expect(:puts, nil){|x| x == _data}
+
+    File.stub(:open, true, mock){
+      assert(FileUtils.update('foobar'){|line|
+        line.gsub!(/Copyright.*/, 'Foobar100') if line =~ /Copyright/
+      })
+    }
+    assert_mock(mock)
   end
 
-  def test_update_copyright
+  def test_update_no_change
+    data = ['MIT License', 'Copyright (c) 2018 phR0ze']
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:seek, nil, [0])
+    mock.expect(:truncate, nil, [0])
+    mock.expect(:puts, nil){|x| x == data}
+
+    File.stub(:open, true, mock){
+      assert(!FileUtils.update('foobar'){|line| })
+    }
+    assert_mock(mock)
+  end
+
+
+  def test_update_rescue
+    data = ['MIT License', 'Copyright (c) 2018 phR0ze', '',
+      'Permission is hereby granted, free of charge, to any person obtaining a copy']
+
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:puts, nil){|x| x == data}
+
+    File.stub(:open, true, mock){
+      assert_raises(RuntimeError){
+        FileUtils.update('foobar'){|line| raise RuntimeError.new("foo")}
+      }
+    }
+    assert_mock(mock)
+  end
+
+  def test_update_copyright_single_todate_year
+    data = ['MIT License', '#Copyright (c) 2018 phR0ze']
+
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:seek, nil, [0])
+    mock.expect(:truncate, nil, [0])
+    mock.expect(:puts, nil){|x| x == data}
+
+    File.stub(:open, true, mock){
+      assert(!FileUtils.update_copyright('filepath', '#Copyright (c)', year:'2018'))
+    }
+    assert_mock(mock)
+  end
+
+  def test_update_copyright_single_outdated_year
+    data = ['MIT License', '#Copyright (c) 2017 phR0ze']
+    _data = ['MIT License', '#Copyright (c) 2017-2018 phR0ze']
+
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:seek, nil, [0])
+    mock.expect(:truncate, nil, [0])
+    mock.expect(:puts, nil){|x| x == _data}
+
+    File.stub(:open, true, mock){
+      assert(FileUtils.update_copyright('filepath', '#Copyright (c)', year:'2018'))
+    }
+    assert_mock(mock)
+  end
+
+  def test_update_copyright_year_range_todate
+    data = ['MIT License', '#Copyright (c) 2016-2017 phR0ze']
+
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:seek, nil, [0])
+    mock.expect(:truncate, nil, [0])
+    mock.expect(:puts, nil){|x| x == data}
+
+    File.stub(:open, true, mock){
+      assert(!FileUtils.update_copyright('filepath', '#Copyright (c)', year:'2017'))
+    }
+    assert_mock(mock)
+  end
+
+  def test_update_copyright_year_range_outdated
+    data = ['MIT License', '#Copyright (c) 2016-2017 phR0ze']
+    _data = ['MIT License', '#Copyright (c) 2016-2018 phR0ze']
+
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:seek, nil, [0])
+    mock.expect(:truncate, nil, [0])
+    mock.expect(:puts, nil){|x| x == _data}
+
+    File.stub(:open, true, mock){
+      assert(FileUtils.update_copyright('filepath', '#Copyright (c)', year:'2018'))
+    }
+    assert_mock(mock)
   end
 end
 
