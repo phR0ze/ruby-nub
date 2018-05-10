@@ -25,15 +25,23 @@ require_relative '../lib/nub/module'
 
 module Foo
   mattr_reader(:foo1)
+  mattr_writer(:foo1)
   mattr_accessor(:foo2)
   @@foo1 = 'foo1'
 end
 
 class TestModule < Minitest::Test
 
-  def test_mattr
+  def test_mattr_reader_writer
     assert_equal('foo1', Foo.foo1)
+    Foo.foo1 = 'bob'
+    assert_equal('bob', Foo.foo1)
+  end
+
+  def test_mattr_accessor
     assert_nil(Foo.foo2)
+    Foo.foo2 = 'bob'
+    assert_equal('bob', Foo.foo2)
   end
 end
 

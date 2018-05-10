@@ -29,7 +29,6 @@ class TestFileUtils < Minitest::Test
   end
 
   def test_update_copyright
-    puts("here")
   end
 end
 

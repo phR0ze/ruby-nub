@@ -33,13 +33,14 @@ class Module
   #   self.google_api_key = "123456789"
   # end
   # AppConfiguration.google_api_key = "overriding the api key!"
+  
+  # Create reader class/module methods for property
+  # @param syms [Array(Symbol)] splat array of property names
   def mattr_reader(*syms)
-    syms.each do |sym|
+    syms.each{|sym|
       next if sym.is_a?(Hash)
       class_eval(<<-EOS, __FILE__, __LINE__)
-        unless defined? @@#{sym}
-          @@#{sym} = nil
-        end
+        @@#{sym} = nil if !defined?(@@#{sym})
         
         def self.#{sym}
           @@#{sym}
@@ -48,28 +49,24 @@ class Module
           @@#{sym}
         end
       EOS
-    end
+    }
   end
   
+  # Create reader class/module methods for property
+  # @param syms [Array(Symbol)] splat array of property names
   def mattr_writer(*syms)
-    options = syms.extract_options!
-    syms.each do |sym|
+    syms.each{|sym|
       class_eval(<<-EOS, __FILE__, __LINE__)
-        unless defined? @@#{sym}
-          @@#{sym} = nil
-        end
+        @@#{sym} = nil if !defined?(@@#{sym})
         
         def self.#{sym}=(obj)
           @@#{sym} = obj
         end
-        
-        #{"
         def #{sym}=(obj)
           @@#{sym} = obj
         end
-        " unless options[:instance_writer] == false }
       EOS
-    end
+    }
   end
   
   def mattr_accessor(*syms)
