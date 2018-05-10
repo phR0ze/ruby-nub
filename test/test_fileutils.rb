@@ -156,6 +156,55 @@ class TestFileUtils < Minitest::Test
     }
     assert_mock(mock)
   end
+
+  def test_inc_version_revision_only
+    data = ['MIT License', "   spec.version = '0.0.1'"]
+    _data = ['MIT License', "   spec.version = '0.0.2'"]
+
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:seek, nil, [0])
+    mock.expect(:truncate, nil, [0])
+    mock.expect(:puts, nil){|x| x == _data}
+
+    File.stub(:open, true, mock){
+      assert(FileUtils.inc_version('filepath', /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/))
+    }
+    assert_mock(mock)
+  end
+
+  def test_inc_version_minor_only
+    data = ['MIT License', "   spec.version = '0.0.1'"]
+    _data = ['MIT License', "   spec.version = '0.1.1'"]
+
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:seek, nil, [0])
+    mock.expect(:truncate, nil, [0])
+    mock.expect(:puts, nil){|x| x == _data}
+
+    File.stub(:open, true, mock){
+      assert(FileUtils.inc_version('filepath', /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/, minor:true, rev:false))
+    }
+    assert_mock(mock)
+  end
+
+  def test_inc_version_all
+    data = ['MIT License', "   spec.version = '0.0.1'"]
+    _data = ['MIT License', "   spec.version = '1.1.2'"]
+
+    mock = Minitest::Mock.new
+    mock.expect(:readlines, data)
+    mock.expect(:seek, nil, [0])
+    mock.expect(:truncate, nil, [0])
+    mock.expect(:puts, nil){|x| x == _data}
+
+    File.stub(:open, true, mock){
+      assert(FileUtils.inc_version('filepath', /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/, major:true, minor:true))
+    }
+    assert_mock(mock)
+  end
+
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

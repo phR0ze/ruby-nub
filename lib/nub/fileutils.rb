@@ -38,9 +38,47 @@ module FileUtils
     return nil
   end
 
+  # Increment SemVer formatted versions
+  # @param files [String/Array] files to increment version for
+  # @param regex [Regex] capture pattern for version match
+  # @param major [Bool] true then increment the major
+  # @param minor [Bool] true then increment the minor
+  # @param rev [Bool] true then increment the revision
+  # @param override [String] value to use for version if set
+  # @return true on change
+  def self.inc_version(files, regex, major:false, minor:false, rev:true, override:nil)
+    changed = nil
+    files = [files] if files.is_a?(String)
+
+    files.each{|filename|
+      changed |= self.update(filename){|line|
+
+        # Increment version
+        if ver = line[regex, 1]
+          new_ver = nil
+          if not override
+            new_ver = ver.strip.split('.')
+            new_ver[0] = new_ver[0].to_i + 1 if major
+            new_ver[1] = new_ver[1].to_i + 1 if minor
+            new_ver[2] = new_ver[2].to_i + 1 if rev
+            new_ver = new_ver * '.'
+          else
+            new_ver = override
+          end
+
+          # Modify the original line
+          line.gsub!(ver, new_ver)
+        end
+      }
+    }
+
+    return changed
+  end
+
   # Update the file using a block, revert on failure.
   # Use this for simple line edits. Block is passed in each line of the file
   # @param filename [String] name of the file to change
+  # @return true on change
   def self.update(filename)
     changed = false
     block = Proc.new # Most efficient way to get block
@@ -73,6 +111,7 @@ module FileUtils
   # @param path [String] path of the file to update
   # @param copyright [String] copyright match string e.g. Copyright (c)
   # @param year [String] year to add if needed
+  # @return true on change
   def self.update_copyright(path, copyright, year:Time.now.year)
     changed = self.update(path){|line|
       if line =~ /#{Regexp.quote(copyright)}/
@@ -87,6 +126,7 @@ module FileUtils
     }
     return changed
   end
+
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
