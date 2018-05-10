@@ -13,8 +13,5 @@ deploy:
   gem: nub
   on:
     tags: true
-branches:
-  only:
-    - master
 notifications:
   email: false
