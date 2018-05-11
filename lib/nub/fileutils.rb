@@ -1,5 +1,5 @@
 #MIT License
-#Copyright (c) 2017 phR0ze
+#Copyright (c) 2017-2018 phR0ze
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files (the "Software"), to deal
@@ -110,8 +110,11 @@ module FileUtils
   # @param year [String] year to add if needed
   # @return true on change
   def self.update_copyright(path, copyright, year:Time.now.year)
+    set_copyright = false
+
     changed = self.update(path){|line|
-      if line =~ /#{Regexp.quote(copyright)}/
+      if !set_copyright && line =~ /#{Regexp.quote(copyright)}/
+        set_copyright = true
         _year = line[/#{Regexp.quote(copyright)}\s+((\d{4}\s)|(\d{4}-\d{4})).*/, 1].strip
         if _year.include?("-")
           years = _year.split("-")
@@ -120,7 +123,6 @@ module FileUtils
           line.gsub!(_year.to_s, "#{prev_year}-#{year}")
         end
       end
-      break
     }
     return changed
   end
