@@ -39,40 +39,37 @@ module FileUtils
   end
 
   # Increment SemVer formatted versions
-  # @param files [String/Array] files to increment version for
+  # @param path [String] file to increment version for
   # @param regex [Regex] capture pattern for version match
   # @param major [Bool] true then increment the major
   # @param minor [Bool] true then increment the minor
   # @param rev [Bool] true then increment the revision
   # @param override [String] value to use for version if set
-  # @return true on change
-  def self.inc_version(files, regex, major:false, minor:false, rev:true, override:nil)
-    changed = nil
-    files = [files] if files.is_a?(String)
+  # @return new version
+  def self.inc_version(path, regex, major:false, minor:false, rev:true, override:nil)
+    version = nil
+    self.update(path){|line|
 
-    files.each{|filename|
-      changed |= self.update(filename){|line|
-
-        # Increment version
-        if ver = line[regex, 1]
-          new_ver = nil
-          if not override
-            new_ver = ver.strip.split('.')
-            new_ver[0] = new_ver[0].to_i + 1 if major
-            new_ver[1] = new_ver[1].to_i + 1 if minor
-            new_ver[2] = new_ver[2].to_i + 1 if rev
-            new_ver = new_ver * '.'
-          else
-            new_ver = override
-          end
-
-          # Modify the original line
-          line.gsub!(ver, new_ver)
+      # Increment version
+      if ver = line[regex, 1]
+        new_ver = nil
+        if not override
+          new_ver = ver.strip.split('.')
+          new_ver[0] = new_ver[0].to_i + 1 if major
+          new_ver[1] = new_ver[1].to_i + 1 if minor
+          new_ver[2] = new_ver[2].to_i + 1 if rev
+          new_ver = new_ver * '.'
+        else
+          new_ver = override
         end
-      }
+
+        # Modify the original line
+        version = new_ver
+        line.gsub!(ver, new_ver)
+      end
     }
 
-    return changed
+    return version
   end
 
   # Update the file using a block, revert on failure.
@@ -127,6 +124,20 @@ module FileUtils
     return changed
   end
 
+  # Get SemVer formatted versions
+  # @param path [String] file to increment version for
+  # @param regex [Regex] capture pattern for version match
+  # @return version
+  def self.version(path, regex)
+    if File.file?(path)
+      File.readlines(path).each{|line|
+        if ver = line[regex, 1]
+          return ver
+        end
+      }
+    end
+    return nil
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

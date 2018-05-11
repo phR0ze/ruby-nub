@@ -168,7 +168,7 @@ class TestFileUtils < Minitest::Test
     mock.expect(:puts, nil){|x| x == _data}
 
     File.stub(:open, true, mock){
-      assert(FileUtils.inc_version('filepath', /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/))
+      assert_equal('0.0.2', FileUtils.inc_version('filepath', /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/))
     }
     assert_mock(mock)
   end
@@ -184,7 +184,7 @@ class TestFileUtils < Minitest::Test
     mock.expect(:puts, nil){|x| x == _data}
 
     File.stub(:open, true, mock){
-      assert(FileUtils.inc_version('filepath', /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/, minor:true, rev:false))
+      assert_equal('0.1.1', FileUtils.inc_version('filepath', /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/, minor:true, rev:false))
     }
     assert_mock(mock)
   end
@@ -200,9 +200,20 @@ class TestFileUtils < Minitest::Test
     mock.expect(:puts, nil){|x| x == _data}
 
     File.stub(:open, true, mock){
-      assert(FileUtils.inc_version('filepath', /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/, major:true, minor:true))
+      assert_equal('1.1.2', FileUtils.inc_version('filepath', /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/, major:true, minor:true))
     }
     assert_mock(mock)
+  end
+
+  def test_version
+    data = ['MIT License', "   spec.version = '0.0.1'"]
+    regex = /\s*spec\.version\s*=.*(\d+\.\d+\.\d+).*/
+
+    File.stub(:file?, true){
+      File.stub(:readlines, data){
+        assert_equal('0.0.1', FileUtils.version('foobar', regex))
+      }
+    }
   end
 
 end
