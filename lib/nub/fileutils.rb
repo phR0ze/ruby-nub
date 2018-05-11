@@ -120,6 +120,7 @@ module FileUtils
           line.gsub!(_year.to_s, "#{prev_year}-#{year}")
         end
       end
+      break
     }
     return changed
   end
