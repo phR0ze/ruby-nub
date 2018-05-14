@@ -1,4 +1,3 @@
-#!/usr/bin/env ruby
 #MIT License
 #Copyright (c) 2018 phR0ze
 #
@@ -20,18 +19,22 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-# Nub is the top level module useful for requiring all sub-modules at once.
-module Nub
-  require 'nub/commander'
-  require 'nub/config'
-  require 'nub/fileutils'
-  require 'nub/hash'
-  require 'nub/log'
-  require 'nub/module'
-  require 'nub/net'
-  require 'nub/string'
-  require 'nub/thread_comm'
-  require 'nub/user'
+# Monkey patch string with some useful methods
+class Hash
+
+  # Deep merge hash with other
+  # @param other [Hash] other hash to merge with
+  def deep_merge(other, &block)
+    merge(other){|k, av, bv|
+      if av.is_a?(Hash) && bv.is_a?(Hash)
+        av.deep_merge(bv, &block)
+      elsif block_given?
+        block.call(k, av, bv)
+      else
+        bv
+      end
+    }
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

@@ -29,6 +29,7 @@ end
 require_relative 'test_commander'
 require_relative 'test_config'
 require_relative 'test_fileutils'
+require_relative 'test_hash'
 require_relative 'test_log'
 require_relative 'test_module'
 require_relative 'test_net'
