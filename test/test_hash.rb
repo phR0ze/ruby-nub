@@ -27,7 +27,15 @@ require_relative '../lib/nub/hash'
 class TestString < Minitest::Test
 
   def test_hash_deep_merge
+    a = {foo1: 1, foo2: {foo3: 3, foo4: 4}}
+    b = {foo1: 1, foo2: {foo3: 5}}
+    assert_equal({foo1: 1, foo2: {foo3: 5, foo4: 4}}, a.deep_merge(b))
+  end
 
+  def test_hash_deep_merge
+    a = {foo1: 1, foo2: {foo3: 3, foo4: 4}}
+    b = {foo1: 1, foo2: {foo3: 5}}
+    assert_equal({foo1: 1, foo2: {foo3: 5, foo4: 4}}, a.deep_merge(b))
   end
 end
 

@@ -24,12 +24,10 @@ class Hash
 
   # Deep merge hash with other
   # @param other [Hash] other hash to merge with
-  def deep_merge(other, &block)
+  def deep_merge(other)
     merge(other){|k, av, bv|
       if av.is_a?(Hash) && bv.is_a?(Hash)
-        av.deep_merge(bv, &block)
-      elsif block_given?
-        block.call(k, av, bv)
+        av.deep_merge(bv)
       else
         bv
       end
