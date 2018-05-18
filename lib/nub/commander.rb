@@ -103,15 +103,18 @@ class Command
   attr_reader(:desc)
   attr_accessor(:nodes)
   attr_accessor(:help)
+  attr_accessor(:examples)
 
   # Create a new command
   # @param name [String] command name used on command line
   # @param desc [String] the command's description
   # @param nodes [String] the command's description
-  def initialize(name, desc, nodes:[])
+  # @param examples [String] the command's examples
+  def initialize(name, desc, nodes:[], examples:nil)
     @name = name
     @desc = desc
     @nodes = nodes
+    @examples = examples
     @help = ""
   end
 
@@ -184,7 +187,8 @@ class Commander
   # @param cmd [String] name of the command
   # @param desc [String] description of the command
   # @param nodes [List] list of command nodes (i.e. options or commands)
-  def add(cmd, desc, nodes:[])
+  # @param examples [String] the command's examples
+  def add(cmd, desc, nodes:[], examples:nil)
     Log.die("'#{@k.global}' is a reserved command name") if cmd == @k.global
     Log.die("'#{cmd}' already exists") if @config.any?{|x| x.name == cmd}
     Log.die("'help' is a reserved option name") if nodes.any?{|x| x.class == Option && !x.key.nil? && x.key.include?('help')}
@@ -200,7 +204,7 @@ class Commander
     }
     nodes.select{|x| x.class != Option}.each{|x| validate_subcmd.(x)}
 
-    @config << add_cmd(cmd, desc, nodes)
+    @config << add_cmd(cmd, desc, nodes, examples:examples)
   end
 
   # Add global options (any option coming before all commands)
@@ -600,14 +604,18 @@ class Commander
   # @param nodes [Array] list of command nodes (i.e. options or commands)
   # @param hierarchy [Array] list of commands
   # @return [Command] new command
-  def add_cmd(name, desc, nodes, hierarchy:[])
+  def add_cmd(name, desc, nodes, examples:nil, hierarchy:[])
     hierarchy << name
-    cmd = Command.new(name, desc)
+    cmd = Command.new(name, desc, examples:examples)
     subcmds = nodes.select{|x| x.class == Command}.sort{|x,y| x.name <=> y.name}
 
     # Build help for command
     #---------------------------------------------------------------------------
     cmd.help = "#{desc}\n"
+    if !cmd.examples.nil? && !cmd.examples.empty?
+      newline = cmd.examples.strip_color[-1] != "\n" ? "\n" : ""
+      cmd.help += "Examples:\n#{cmd.examples.colorize(:green)}#{newline}"
+    end
     app = @app || @app_default
     cmd_prompt = subcmds.any? ? "[commands] " : ""
     cmd.help += "\nUsage: ./#{app} #{hierarchy * ' '} #{cmd_prompt}[options]\n" if name != @k.global
@@ -644,7 +652,7 @@ class Commander
     cmd.help += "\nsee './#{app} #{name} COMMAND --help' for specific command help\n" if subcmds.any?
 
     # Configure help for each sub command
-    subcmds.each{|x| cmd.nodes << add_cmd(x.name, x.desc, x.nodes, hierarchy:hierarchy)}
+    subcmds.each{|x| cmd.nodes << add_cmd(x.name, x.desc, x.nodes, examples:x.examples, hierarchy:hierarchy)}
 
     # Add options after any sub-commands
     cmd.nodes += sorted_options

@@ -959,6 +959,56 @@ EOF
   #-----------------------------------------------------------------------------
   # Test Help
   #-----------------------------------------------------------------------------
+  def test_sub_command_help_with_examples
+    expected =<<EOF
+Create a new K8s cluster
+Examples:
+create foo1 dev foo@example.com
+
+Usage: ./test_commander.rb parent create [options]
+    create0                                 Name of the cluster to create: String, Required
+    create1                                 Type of cluster to create: String, Required
+    create2                                 Email address of owner: String, Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    cmdr = Commander.new
+    cmdr.add('parent', 'Something to contain sub', nodes:[
+      Command.new('create', 'Create a new K8s cluster', nodes:[
+        Option.new(nil, 'Name of the cluster to create', required:true),
+        Option.new(nil, 'Type of cluster to create', required:true),
+        Option.new(nil, 'Email address of owner', required:true),
+      ], examples: "create foo1 dev foo@example.com")
+    ])
+
+    ARGV.clear and ARGV << 'parent' << 'create' << '-h'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse!}}
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
+  def test_command_help_with_examples
+    expected =<<EOF
+Create a new K8s cluster
+Examples:
+create foo1 dev foo@example.com
+
+Usage: ./test_commander.rb create [options]
+    create0                                 Name of the cluster to create: String, Required
+    create1                                 Type of cluster to create: String, Required
+    create2                                 Email address of owner: String, Required
+    -h|--help                               Print command/options help: Flag(false)
+EOF
+    cmdr = Commander.new
+    cmdr.add('create', 'Create a new K8s cluster', nodes:[
+      Option.new(nil, 'Name of the cluster to create', required:true),
+      Option.new(nil, 'Type of cluster to create', required:true),
+      Option.new(nil, 'Email address of owner', required:true),
+    ], examples: "create foo1 dev foo@example.com")
+
+    ARGV.clear and ARGV << 'create' << '-h'
+    capture = Sys.capture{ assert_raises(SystemExit){ cmdr.parse!}}
+    assert_equal(expected, capture.stdout.strip_color)
+  end
+
   def test_sub_command_help_with_more_sub_commands
     sub1_expected =<<EOF
 Enable foo component
