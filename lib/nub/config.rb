@@ -80,7 +80,8 @@ module Config
 
   # Save the config file
   def save
-    File.write(@path, @@_yml.to_yaml) if @@_yml
+    return unless @@_yml
+    File.open(@path, 'w', 0600){|f| f.write(@@_yml.to_yaml)}
   end
 end
 
