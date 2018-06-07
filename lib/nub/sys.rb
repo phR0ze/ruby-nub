@@ -61,23 +61,6 @@ module Sys
     return OpenStruct.new(result: result, stdout: stdout.string, stderr: stderr.string)
   end
 
-  # Drop root privileges to original user
-  # Only affects ruby commands not system commands
-  # Params:
-  # +returns+:: uid, gid of prior user
-  def drop_privileges()
-    uid = gid = nil
-
-    if Process.uid.zero?
-      uid, gid = Process.uid, Process.gid
-      sudo_uid, sudo_gid = ENV['SUDO_UID'].to_i, ENV['SUDO_GID'].to_i
-      Process::Sys.setegid(sudo_uid)
-      Process::Sys.seteuid(sudo_gid)
-    end
-
-    return uid, gid
-  end
-
   # Get the given environment variable by nam
   # @param var [String] name of the environment var
   # @param required [Bool] require that the variable exists by default
@@ -137,18 +120,6 @@ module Sys
     end
   end
 
-  # Raise privileges if dropped earlier
-  # Only affects ruby commands not system commands
-  # Params:
-  # +uid+:: uid of user to assume
-  # +gid+:: gid of user to assume
-  def raise_privileges(uid, gid)
-    if uid and gid
-      Process::Sys.seteuid(uid)
-      Process::Sys.setegid(gid)
-    end
-  end
-
   # Remove given dir or file
   # Params:
   # +path+:: path to delete
@@ -184,12 +155,6 @@ module Sys
     # Die if still mounted
     !puts("Error: Failed to umount #{mount}".colorize(:red)) and
       exit if check[mount]
-  end
-
-  # Get the current user taking into account sudo
-  # @returns the current user
-  def user
-    return Process.uid.zero? ? Etc.getpwuid(ENV['SUDO_UID'].to_i).name : ENV['USER']
   end
 end
 

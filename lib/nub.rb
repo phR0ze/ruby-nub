@@ -32,6 +32,7 @@ module Nub
   require 'nub/string'
   require 'nub/thread_comm'
   require 'nub/user'
+  require 'nub/sys'
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
