@@ -24,7 +24,7 @@ require 'monitor'
 require 'ostruct'
 require 'colorize'
 require_relative 'sys'
-require_relative 'string'
+require_relative 'core'
 
 LogLevel = OpenStruct.new({
   error: 0,

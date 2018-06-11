@@ -22,7 +22,7 @@ require 'colorize'
 require 'ostruct'
 require_relative 'log'
 require_relative 'sys'
-require_relative 'string'
+require_relative 'core'
 
 # Command option encapsulation
 class Option

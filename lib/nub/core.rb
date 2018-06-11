@@ -19,6 +19,8 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
+require 'erb'
+
 ColorPair = Struct.new(:str, :color_code, :color_name)
 ColorMap = {
   30 => "black",
@@ -32,8 +34,91 @@ ColorMap = {
   39 => "gray88"   # default
 }
 
+class ERBContext
+
+  # Creates an isolated ERB variable context easily from a hash
+  # @param hash [Hash] variables to use for ERB context
+  def initialize(hash)
+    hash.each{|k,v| singleton_class.send(:define_method, k){ v }}
+  end
+
+  def get_binding
+    binding
+  end
+end
+
+class ERBResolve
+
+  # Resolve variables for the given data type
+  # @param vars [Hash/OpenStruct] hash or OpenStruct of ERB variables to use
+  def initialize(vars)
+    raise ArgumentError.new("Variables are required") if not vars
+
+    @vars = vars.is_a?(OpenStruct) ? vars.to_h : vars
+    @context = ERBContext.new(@vars).get_binding
+  end
+
+  # Resolve variables for the given data type
+  # @data [string/array/hash] data to replace vars
+  # @returns mutated data structure
+  def resolve(data)
+
+    # Recurse
+    if data.is_a?(Array)
+      data = data.map{|x| resolve(x)}
+    elsif data.is_a?(Hash)
+      data.each{|k,v| data[k] = resolve(v)}
+    end
+
+    # Base case
+    if data.is_a?(String)
+      data = ERB.new(data).result(@context)
+    end
+
+    return data
+  end
+end
+
+# Hash extensions
+class Hash
+
+  # Do a deep copy on the object
+  def clone
+    hash = {}
+    self.each{|k, v| hash[k] = v.clone }
+    return hash
+  end
+
+  # Easily inject ERB variables into hash values
+  # +vars+:: hash of variables to inject into the string
+  def erb(vars = {})
+    ERBResolve.new(vars).resolve(self)
+  end
+end
+
+# Array extensions
+class Array
+
+  # Do a deep copy on the object
+  def clone
+    return self.map{|x| x.clone }
+  end
+
+  # Easily inject ERB variables into Array values
+  # +vars+:: hash of variables to inject into the string
+  def erb(vars = {})
+    ERBResolve.new(vars).resolve(self)
+  end
+end
+
 # Monkey patch string with some useful methods
 class String
+
+  # Easily inject ERB variables into a string
+  # @param vars [Hash] of variables to inject into the string
+  def erb(vars = {})
+    ERBResolve.new(vars).resolve(self)
+  end
 
   # Convert the string to ascii, stripping out or converting all non-ascii characters
   def to_ascii

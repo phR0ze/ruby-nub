@@ -24,12 +24,12 @@
 module Nub
   require 'nub/commander'
   require 'nub/config'
+  require 'nub/core'
   require 'nub/fileutils'
   require 'nub/hash'
   require 'nub/log'
   require 'nub/module'
   require 'nub/net'
-  require 'nub/string'
   require 'nub/thread_comm'
   require 'nub/user'
   require 'nub/sys'

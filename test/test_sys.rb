@@ -22,9 +22,24 @@
 
 require 'minitest/autorun'
 require_relative '../lib/nub/sys'
-require_relative '../lib/nub/string'
+require_relative '../lib/nub/core'
 
 class TestSys < Minitest::Test
+
+  def test_rm_rf_with_tmp_file
+    Sys.stub(:puts, nil){
+      assert(Sys.exec("touch foobar"))
+      assert(File.exist?('foobar'))
+      assert_equal(Sys.rm_rf('foobar'), 'foobar')
+      refute(File.exist?('foobar'))
+    }
+  end
+
+  def test_rm_rf_with_bogus_file
+    Sys.stub(:puts, nil){
+      assert_equal(Sys.rm_rf('bogus'), 'bogus')
+    }
+  end
 
   def test_env_die_when_not_exist
     Log.init(path:nil, queue: false, stdout: true)

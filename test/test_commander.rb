@@ -22,7 +22,7 @@
 
 require 'minitest/autorun'
 require_relative '../lib/nub/sys'
-require_relative '../lib/nub/string'
+require_relative '../lib/nub/core'
 require_relative '../lib/nub/commander'
 
 class TestCommander < Minitest::Test

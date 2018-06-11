@@ -23,7 +23,7 @@
 require 'minitest/autorun'
 require_relative '../lib/nub/log'
 require_relative '../lib/nub/sys'
-require_relative '../lib/nub/string'
+require_relative '../lib/nub/core'
 require_relative '../lib/nub/config'
 
 class TestConfig < Minitest::Test
