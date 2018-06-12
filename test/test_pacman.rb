@@ -20,22 +20,12 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-# Enable code coverage when in CI
-if ENV['TRAVIS']
-  require 'coveralls'
-  Coveralls.wear!
-end
+require 'minitest/autorun'
+require_relative '../lib/nub/sys'
+require_relative '../lib/nub/core'
 
-require_relative 'test_commander'
-require_relative 'test_config'
-require_relative 'test_core'
-require_relative 'test_fileutils'
-require_relative 'test_hash'
-require_relative 'test_log'
-require_relative 'test_module'
-require_relative 'test_net'
-require_relative 'test_sys'
-require_relative 'test_thread_comm'
-require_relative 'test_user'
+class TestPacman < Minitest::Test
+
+end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

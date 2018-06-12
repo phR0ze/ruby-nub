@@ -107,19 +107,6 @@ module Sys
     return pass
   end
 
-  # Update pacman database
-  def pacman_update
-    success = false
-    while not success
-      begin
-        Sys.exec("pacman -Sy")
-        success = true
-      rescue Exception => e
-        puts(e.message)
-      end
-    end
-  end
-
   # Remove given dir or file
   # Params:
   # +path+:: path to delete

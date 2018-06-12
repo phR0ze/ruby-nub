@@ -30,6 +30,24 @@ class TestERBExtensions < Minitest::Test
     @vars ||= {'arch' => 'x86_64','release' => '4.7.4-1', 'distro' => 'cyberlinux'}
   end
 
+  def test_string_erb!
+    data = "<%= arch %>"
+    data.erb!(@vars)
+    assert_equal(data, @vars['arch'])
+  end
+
+  def test_array_erb!
+    data = ["<%= arch %>", "test"]
+    data.erb!(@vars)
+    assert_equal(data, [@vars['arch'], "test"])
+  end
+
+  def test_hash_erb!
+    data = {"test" => "<%= arch %>"}
+    data.erb!(@vars)
+    assert_equal(data, {"test" => @vars['arch']})
+  end
+
   def test_erb_with_nil_vars
     assert_raises(ArgumentError){"<%= arch %>".erb(nil)}
   end

@@ -20,6 +20,7 @@
 #SOFTWARE.
 
 require 'erb'
+require 'ostruct'
 
 ColorPair = Struct.new(:str, :color_code, :color_name)
 ColorMap = {
@@ -77,6 +78,27 @@ class ERBResolve
 
     return data
   end
+
+  # Resolve variables for the given data type, changes are done inplace
+  # @data [string/array/hash] data to replace vars
+  def resolve!(data)
+
+    # Recurse
+    if data.is_a?(Array)
+      for i in 0...data.size
+        resolve!(data[i])
+      end
+    elsif data.is_a?(Hash)
+      data.each{|k,v| data[k] = resolve!(v)}
+    end
+
+    # Base case
+    if data.is_a?(String)
+      data.gsub!(data, ERB.new(data).result(@context))
+    end
+
+    return data
+  end
 end
 
 # Hash extensions
@@ -94,6 +116,12 @@ class Hash
   def erb(vars = {})
     ERBResolve.new(vars).resolve(self)
   end
+
+  # Easily inject ERB variables into hash values
+  # +vars+:: hash of variables to inject into the string
+  def erb!(vars = {})
+    ERBResolve.new(vars).resolve!(self)
+  end
 end
 
 # Array extensions
@@ -109,6 +137,12 @@ class Array
   def erb(vars = {})
     ERBResolve.new(vars).resolve(self)
   end
+
+  # Easily inject ERB variables into Array values
+  # +vars+:: hash of variables to inject into the string
+  def erb!(vars = {})
+    ERBResolve.new(vars).resolve!(self)
+  end
 end
 
 # Monkey patch string with some useful methods
@@ -118,6 +152,12 @@ class String
   # @param vars [Hash] of variables to inject into the string
   def erb(vars = {})
     ERBResolve.new(vars).resolve(self)
+  end
+
+  # Easily inject ERB variables into a string
+  # @param vars [Hash] of variables to inject into the string
+  def erb!(vars = {})
+    ERBResolve.new(vars).resolve!(self)
   end
 
   # Convert the string to ascii, stripping out or converting all non-ascii characters
@@ -175,8 +215,6 @@ class String
 
     return tokens
   end
-
-
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

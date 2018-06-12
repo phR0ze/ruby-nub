@@ -30,6 +30,7 @@ module Nub
   require 'nub/log'
   require 'nub/module'
   require 'nub/net'
+  require 'nub/pacman'
   require 'nub/thread_comm'
   require 'nub/user'
   require 'nub/sys'

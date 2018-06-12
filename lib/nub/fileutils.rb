@@ -19,10 +19,44 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
+require 'digest'
 require 'fileutils'
+require 'yaml'
+
+require_relative 'core'
 
 # Monkey patch FileUtils with some useful methods
 module FileUtils
+
+  # Check if any digests have changed based on the given files
+  # @param key [yaml] yalm section heading to give digests
+  # @param digestfile [string] digest file to check against
+  # @param files [array] files to get digests for
+  # @returns (newfiles, modifiedfiles, deletedfiles)
+  def self.digests_changed?(key, digestfile, files)
+    files = [files] if files.is_a?(String)
+    newfiles, modifiedfiles, deletedfiles = [], [], []
+
+    # Since layers are stacked and the digest file may be from a lower
+    # layer this should be ignored unless the layer matches
+    if (digests = File.exist?(digestfile) ? YAML.load_file(digestfile)[key] : nil)
+
+      # New files: in files but not yaml
+      newfiles = files.select{|x| not digests[x]}
+
+      # Delete files: in yaml but not files
+      deletedfiles = digests.map{|k,v| k}.select{|x| not files.include?(x)}
+
+      # Modified files: in both but digest is different
+      modifiedfiles = files.select{|x| digests[x] and
+        Digest::MD5.hexdigest(File.binread(x)) != digests[x]}
+    else
+      newfiles = files
+    end
+
+    return newfiles, modifiedfiles, deletedfiles
+  end
+
 
   # Check PATH for executable
   # @param name [String] name of executable to find
@@ -48,9 +82,10 @@ module FileUtils
   # @return new version
   def self.inc_version(path, regex, major:false, minor:false, rev:true, override:nil)
     version = nil
-    self.update(path){|line|
+    self.update(path){|data|
 
       # Increment version
+      line = data.split("\n").find{|x| x[regex, 1]}
       if ver = line[regex, 1]
         new_ver = nil
         if not override
@@ -65,15 +100,92 @@ module FileUtils
 
         # Modify the original line
         version = new_ver
-        line.gsub!(ver, new_ver)
+        newline = line.gsub(ver, new_ver)
+        data.gsub!(line, newline)
       end
     }
 
     return version
   end
 
+  # Insert into a file
+  # Location of insert is determined by the given regex and offset.
+  # Append is used if no regex is given.
+  # @param file [string] path of file to modify
+  # @param values [array] string or list of string values to insert
+  # @param regex [string] regular expression for location, not used if offset is nil
+  # @param offset [int] offset insert location by this amount for regexs
+  # @returns true if a change was made to the file
+  def self.insert(file, values, regex:nil, offset:1)
+    return false if not values or values.empty?
+
+    changed = false
+    values = [values] if values.is_a?(String)
+    FileUtils.touch(file) if not File.exist?(file)
+
+    begin
+      data = nil
+      File.open(file, 'r+') do |f|
+        data = f.read
+        lines = data.split("\n")
+
+        # Match regex for insert location
+        regex = Regexp.new(regex) if regex.is_a?(String)
+        i = regex ? lines.index{|x| x =~ regex} : lines.size
+        return false if not i
+        i += offset if regex and offset
+
+        # Insert at offset
+        values.each{|x|
+          lines.insert(i, x) and i += 1
+          changed = true
+        }
+
+        # Truncate then write out new content
+        f.seek(0)
+        f.truncate(0)
+        f.puts(lines)
+      end
+    rescue
+      # Revert back to the original incase of failure
+      File.open(file, 'w'){|f| f << data} if data
+      raise
+    end
+
+    return changed
+  end
+
+
+  # Replace in file
+  # @param file [string] file to modify
+  # @param regex [string] regular expression match on
+  # @param value [string] regular expression string replacement
+  # @returns true on change
+  def self.replace(file, regex, value)
+    changed = self.update(file){|data|
+      lines = data.split("\n")
+
+      # Search replace
+      regex = Regexp.new(regex) if regex.is_a?(String)
+      lines.each{|x| x.gsub!(regex, value)}
+
+      # Change data inline
+      data.gsub!(data, lines * "\n")
+    }
+
+    return changed
+  end
+
+  # Resolve template
+  # @param file [string] file to resolve templates for
+  # @param vars [hash/ostruct] templating variables to use while resolving
+  # @returns true on change
+  def self.resolve(file, vars)
+    return self.update(file){|data| data.erb!(vars)}
+  end
+
   # Update the file using a block, revert on failure.
-  # Use this for simple line edits. Block is passed in each line of the file
+  # Use this for file edits. Block is passed in the file data
   # @param filename [String] name of the file to change
   # @return true on change
   def self.update(filename)
@@ -81,23 +193,25 @@ module FileUtils
     block = Proc.new # Most efficient way to get block
 
     begin
-      lines = nil
+      data = nil
       File.open(filename, 'r+'){|f|
-        lines = f.readlines
-        lines.each{|line|
-          line_copy = line.dup
-          block.call(line)
-          changed |= line_copy != line
-        }
+        data = f.read
+        data_orig = data.dup
+
+        # Call block
+        block.call(data)
+        changed |= data_orig != data
 
         # Save the changes back to the file
-        f.seek(0)
-        f.truncate(0)
-        f.puts(lines)
+        if changed
+          f.seek(0)
+          f.truncate(0)
+          f << data
+        end
       }
-    rescue
+    rescue Exception => e
       # Revert back to the original incase of failure
-      File.open(filename, 'w'){|f| f.puts(lines)} if lines
+      File.open(filename, 'w'){|f| f << data} if data
       raise
     end
 
@@ -112,19 +226,39 @@ module FileUtils
   def self.update_copyright(path, copyright, year:Time.now.year)
     set_copyright = false
 
-    changed = self.update(path){|line|
+    changed = self.update(path){|data|
+      line = data.split("\n").find{|x| x[/#{Regexp.quote(copyright)}/]}
       if !set_copyright && line =~ /#{Regexp.quote(copyright)}/
         set_copyright = true
         _year = line[/#{Regexp.quote(copyright)}\s+((\d{4}\s)|(\d{4}-\d{4})).*/, 1].strip
         if _year.include?("-")
           years = _year.split("-")
-          line.gsub!(_year, "#{years.first}-#{year}") if years.last != year
+          if years.last != year
+            newline = line.gsub(_year, "#{years.first}-#{year}")
+            data.gsub!(line, newline)
+          end
         elsif prev_year = _year != year.to_s ? year.to_i - 1 : nil
-          line.gsub!(_year.to_s, "#{prev_year}-#{year}")
+          newline = line.gsub(_year.to_s, "#{prev_year}-#{year}")
+          data.gsub!(line, newline)
         end
       end
     }
     return changed
+  end
+
+  # Generate digests for array of files given and save them
+  # @param key [yaml] yalm section heading to give digests
+  # @param digestfile [string] digest file to update
+  # @param files [array] files to get digests for
+  def self.update_digests(key, digestfile, files)
+    files = [files] if files.is_a?(String)
+
+    # Build up digests structure
+    digests = {}
+    files.each{|x| digests[x] = Digest::MD5.hexdigest(File.binread(x)) if File.exist?(x)}
+
+    # Write out digests structure as yaml with named header
+    File.open(digestfile, 'w'){|f| f.puts({key => digests}.to_yaml)}
   end
 
   # Get SemVer formatted versions
