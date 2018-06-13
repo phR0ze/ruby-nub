@@ -82,23 +82,23 @@ module Pacman
   # @param pkgs [Array] of packages to install
   # @param ignore [Array] of packages to ignore
   def install(pkgs, ignore:nil)
-    cmd = []
+    if pkgs && pkgs.any?
+      cmd = []
 
-    if self.sysroot
-      cmd += ["pacstrap", "-GMc", self.sysroot, '--config', self.config]
-    else
-      cmd += ["pacman", "-S"]
-    end
+      if self.sysroot
+        cmd += ["pacstrap", "-GMc", self.sysroot, '--config', self.config]
+      else
+        cmd += ["pacman", "-S"]
+      end
 
-    # Ignore any packages called out
-    ignore = [ignore] if ignore.is_a?(String)
-    cmd += ["--ignore", "#{ignore * ','}"] if ignore && ignore.any?
+      # Ignore any packages called out
+      ignore = [ignore] if ignore.is_a?(String)
+      cmd += ["--ignore", "#{ignore * ','}"] if ignore && ignore.any?
 
-    # Add packages to install
-    cmd += ['--needed', *pkgs]
+      # Add packages to install
+      cmd += ['--needed', *pkgs]
 
-    # Execute if there are any packages given
-    if pkgs.any?
+      # Execute
       self.env ? Sys.exec(cmd, env:self.env) : Sys.exec(cmd)
     end
   end
