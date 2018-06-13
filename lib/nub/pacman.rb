@@ -28,7 +28,7 @@ require_relative 'fileutils'
 # Wrapper around system Arch Linux pacman
 module Pacman
   extend self
-  mattr_accessor(:path, :config, :sysroot, :mirrors, :repos, :arch)
+  mattr_accessor(:path, :config, :sysroot, :mirrors, :repos, :arch, :env)
 
   # Configure pacman for the given root
   # @param path [String] path where all pacman artifacts will be (i.e. logs, cache etc...)
@@ -37,7 +37,8 @@ module Pacman
   #                        name of the repo e.g. archlinux.mirrorlist
   # @param arch [String] capturing the pacman target architecture e.g. x86_64
   # @param sysroot [String] path to the system root to use
-  def init(path, config, mirrors, arch:'x86_64', sysroot:nil)
+  # @param env [Hash] of environment variables to set for session
+  def init(path, config, mirrors, arch:'x86_64', sysroot:nil, env:nil)
     mirrors = [mirrors] if mirrors.is_a?(String)
     self.path = path
     self.arch = arch
@@ -47,18 +48,18 @@ module Pacman
     self.mirrors = mirrors.map{|x| File.join(path, File.basename(x))}
 
     # Validate incoming params
-    Log.die("pacman path '#{path}' doesn't exist") unless Dir.exist?(path)
     Log.die("pacman config '#{config}' doesn't exist") unless File.exist?(config)
-    Log.die("pacman sysroot '#{sysroot}' doesn't exist") if sysroot && !Dir.exist?(sysroot)
 
     # Copy in pacman files for use in target
     FileUtils.rm_rf(File.join(path, '.'))
+    FileUtils.mkdir_p(File.join(self.path, 'db'))
+    FileUtils.mkdir_p(self.sysroot) if self.sysroot && !Dir.exist?(self.sysroot)
     FileUtils.cp(config, path, preserve: true)
     FileUtils.cp(mirrors, path, preserve: true)
 
     # Update the given pacman config file to use the given path
     FileUtils.replace(self.config, /(Architecture = ).*/, "\\1#{self.arch}")
-    # Leave DBPath set as /var/lib/pacman and copy out sync
+    FileUtils.replace(self.config, /#(DBPath\s+= ).*/, "\\1#{File.join(self.path, 'db')}")
     FileUtils.replace(self.config, /#(CacheDir\s+= ).*/, "\\1#{File.join(self.path, 'cache')}")
     FileUtils.replace(self.config, /#(LogFile\s+= ).*/, "\\1#{File.join(self.path, 'pacman.log')}")
     FileUtils.replace(self.config, /#(GPGDir\s+= ).*/, "\\1#{File.join(self.path, 'gnupg')}")
@@ -66,33 +67,40 @@ module Pacman
     FileUtils.replace(self.config, /.*(\/.*mirrorlist).*/, "Include = #{self.path}\\1")
 
     # Initialize pacman keyring
-    #Sys.exec("pacman-key --config #{self.config} --init")
-    #Sys.exec("pacman-key --config #{self.config} --populate #{repos * ' '}")
+    Sys.exec("pacman-key --config #{self.config} --init")
+    Sys.exec("pacman-key --config #{self.config} --populate #{repos * ' '}")
   end
 
   # Update the pacman database
   def update
-    success = false
-    while not success
-      begin
-        cmd = "pacman -Sy"
-        cmd += " --sysroot #{self.sysroot}" if self.sysroot
-        Sys.exec(cmd)
-        success = true
-      rescue Exception => e
-        puts(e.message)
-      end
-    end
+    cmd = "pacman -Sy"
+    cmd += " --config #{self.config}" if self.config
+    Sys.exec(cmd)
   end
 
   # Install the given packages
-  # @param pkgs [Array] List of packages to install
-  def install()
-    puts("Pacstrap package installs for '#{deployment}'...".colorize(:cyan))
-    cmd = ['pacstrap', '-GMc', deployment_work, '--config', @pacman_conf, '--needed', *apps[:reg]]
-    cmd += ['--ignore', apps[:ignore] * ','] if apps[:ignore].any?
-    !puts("Error: Failed to install packages correctly".colorize(:red)) and
-      exit unless Sys.exec(cmd, env:@proxyenv)
+  # @param pkgs [Array] of packages to install
+  # @param ignore [Array] of packages to ignore
+  def install(pkgs, ignore:nil)
+    cmd = ["pacman", "-S", "--needed"]
+
+    # Use alternate configuration file
+    cmd += ["--config", "#{self.config}"] if self.config
+
+    # Use alternate root for installation
+    cmd += ["--sysroot", "#{self.sysroot}"] if self.sysroot
+
+    # Ignore any packages called out
+    ignore = [ignore] if ignore.is_a?(String)
+    cmd += ["--ignore", "#{ignore * ','}"] if ignore && ignore.any?
+
+    # Add packages to install
+    cmd += pkgs
+
+    # Execute if there are any packages given
+    if pkgs.any?
+      self.env ? Sys.exec(cmd, env:self.env) : Sys.exec(cmd)
+    end
   end
 end
 

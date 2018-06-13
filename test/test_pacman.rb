@@ -21,29 +21,32 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
+require_relative '../lib/nub/log'
 require_relative '../lib/nub/sys'
 require_relative '../lib/nub/core'
+require_relative '../lib/nub/user'
 require_relative '../lib/nub/pacman'
 
 # Intentionally left these out of the automated suite due to the archlinux requirement
 class TestPacman < Minitest::Test
 
   def setup
+    Log.die("have to be root to run this") unless User.root?
+
     @test_dir = File.dirname(File.expand_path(__FILE__))
     @test_data = File.join(@test_dir, 'data')
     @pacman_dir = File.join(@test_dir, '.pacman')
     @pacman_config = File.join(@test_data, 'pacman.conf')
     @pacman_mirrors = Dir[File.join(@test_data, "*.mirrorlist")]
+    @sysroot = File.join(@test_dir, '.sysroot')
+    FileUtils.rm_rf(@sysroot)
     FileUtils.rm_rf(@pacman_dir)
-    FileUtils.mkdir(@pacman_dir)
-  end
-
-  def teardown
-    #FileUtils.rm_rf(@pacman_dir)
   end
 
   def test_init
-    Pacman.init(@pacman_dir, @pacman_config, @pacman_mirrors)
+    Pacman.init(@pacman_dir, @pacman_config, @pacman_mirrors, sysroot: @sysroot)
+    Pacman.update
+    Pacman.install(['ruby-spider'])
   end
 end
 
