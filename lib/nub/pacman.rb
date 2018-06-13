@@ -23,42 +23,46 @@ require 'fileutils'
 require_relative 'log'
 require_relative 'sys'
 require_relative 'module'
+require_relative 'fileutils'
 
 # Wrapper around system Arch Linux pacman
 module Pacman
   extend self
-  mattr_accessor(:path, :config, :sysroot)
+  mattr_accessor(:path, :config, :sysroot, :mirrors, :repos, :arch)
 
   # Configure pacman for the given root
   # @param path [String] path where all pacman artifacts will be (i.e. logs, cache etc...)
   # @param config [String] config file path to use, note gets copied in
+  # @param mirrors [Array] of mirror paths to use, mirror file name is expected to be the
+  #                        name of the repo e.g. archlinux.mirrorlist
+  # @param arch [String] capturing the pacman target architecture e.g. x86_64
   # @param sysroot [String] path to the system root to use
-  def init(path, config, sysroot)
+  def init(path, config, mirrors, arch:'x86_64', sysroot:nil)
     self.path = path
+    self.arch = arch
     self.sysroot = sysroot
     self.config = File.join(path, File.basename(config))
+    self.repos = mirrors.map{|x| File.basename(x, '.mirrorlist')}
+    self.mirrors = mirrors.map{|x| File.join(path, File.basename(x))}
 
     # Validate incoming params
     Log.die("pacman path '#{path}' doesn't exist") unless Dir.exist?(path)
-    Log.die("pacman sysroot '#{sysroot}' doesn't exist") unless Dir.exist?(sysroot)
-    Log.die("pacman config file '#{config}' doesn't exist") unless File.exist?(config)
+    Log.die("pacman config '#{config}' doesn't exist") unless File.exist?(config)
+    Log.die("pacman sysroot '#{sysroot}' doesn't exist") if sysroot && !Dir.exist?(sysroot)
 
-    # Update the given pacman config file to use the given path
+    # Copy in pacman files for use in target
     FileUtils.rm_rf(File.join(path, '.'))
     FileUtils.cp(config, path, preserve: true)
-    
-    Sys.exec("cp -a #{@pacman_src_mirrors} #{@pacman_path}")
-    Fedit.replace(@pacman_conf, /(Architecture = ).*/, "\\1#{@vars.arch}")
-    # Leave DBPath set as /var/lib/pacman and copy out sync
-    Fedit.replace(@pacman_conf, /#(CacheDir\s+= ).*/, "\\1#{File.join(@pacman_path, 'cache')}")
-    Fedit.replace(@pacman_conf, /#(LogFile\s+= ).*/, "\\1#{File.join(@pacman_path, 'pacman.log')}")
-    Fedit.replace(@pacman_conf, /#(GPGDir\s+= ).*/, "\\1#{File.join(@pacman_path, 'gnupg')}")
-    Fedit.replace(@pacman_conf, /#(HookDir\s+= ).*/, "\\1#{File.join(@pacman_path, 'hooks')}")
-    Fedit.replace(@pacman_conf, /.*(\/.*mirrorlist).*/, "Include = #{@pacman_path}\\1")
+    FileUtils.cp(mirrors, path, preserve: true)
 
-    repos = Dir[File.join(@pacman_path, "*.mirrorlist")].map{|x| File.basename(x, '.mirrorlist')}
-    Sys.exec("pacman-key --config #{@pacman_conf} --init")
-    Sys.exec("pacman-key --config #{@pacman_conf} --populate #{repos * ' '}")
+    # Update the given pacman config file to use the given path
+    FileUtils.replace(self.config, /(Architecture = ).*/, "\\1#{self.arch}")
+    # Leave DBPath set as /var/lib/pacman and copy out sync
+    FileUtils.replace(self.config, /#(CacheDir\s+= ).*/, "\\1#{File.join(self.path, 'cache')}")
+    FileUtils.replace(self.config, /#(LogFile\s+= ).*/, "\\1#{File.join(self.path, 'pacman.log')}")
+    FileUtils.replace(self.config, /#(GPGDir\s+= ).*/, "\\1#{File.join(self.path, 'gnupg')}")
+    FileUtils.replace(self.config, /#(HookDir\s+= ).*/, "\\1#{File.join(self.path, 'hooks')}")
+    FileUtils.replace(self.config, /.*(\/.*mirrorlist).*/, "Include = #{self.path}\\1")
 
     # Initialize pacman keyring
     #Sys.exec("pacman-key --config #{self.config} --init")

@@ -24,8 +24,26 @@ require 'minitest/autorun'
 require_relative '../lib/nub/sys'
 require_relative '../lib/nub/core'
 
+# Intentionally left these out of the automated suite due to the archlinux requirement
 class TestPacman < Minitest::Test
 
+  def setup
+    @test_dir = File.dirname(File.expand_path(__FILE__))
+    @test_data = File.join(@test_dir, 'data')
+    @pacman_dir = File.join(@test_dir, '.pacman')
+    @pacman_config = File.join(@test_data, 'pacman.conf')
+    @pacman_mirror = File.join(@test_data, 'archlinux.mirrorlist')
+    FileUtils.rm_rf(@pacman_dir)
+    FileUtils.mkdir(@pacman_dir)
+  end
+
+  def teardown
+    FileUtils.rm_rf(@pacman_dir)
+  end
+
+  def test_init
+    Pacman.init(@pacman_dir, @pacman_config, @pacman_mirror)
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
