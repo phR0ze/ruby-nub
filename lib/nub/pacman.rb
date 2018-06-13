@@ -38,6 +38,7 @@ module Pacman
   # @param arch [String] capturing the pacman target architecture e.g. x86_64
   # @param sysroot [String] path to the system root to use
   def init(path, config, mirrors, arch:'x86_64', sysroot:nil)
+    mirrors = [mirrors] if mirrors.is_a?(String)
     self.path = path
     self.arch = arch
     self.sysroot = sysroot

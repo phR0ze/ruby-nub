@@ -23,6 +23,7 @@
 require 'minitest/autorun'
 require_relative '../lib/nub/sys'
 require_relative '../lib/nub/core'
+require_relative '../lib/nub/pacman'
 
 # Intentionally left these out of the automated suite due to the archlinux requirement
 class TestPacman < Minitest::Test
@@ -32,17 +33,17 @@ class TestPacman < Minitest::Test
     @test_data = File.join(@test_dir, 'data')
     @pacman_dir = File.join(@test_dir, '.pacman')
     @pacman_config = File.join(@test_data, 'pacman.conf')
-    @pacman_mirror = File.join(@test_data, 'archlinux.mirrorlist')
+    @pacman_mirrors = Dir[File.join(@test_data, "*.mirrorlist")]
     FileUtils.rm_rf(@pacman_dir)
     FileUtils.mkdir(@pacman_dir)
   end
 
   def teardown
-    FileUtils.rm_rf(@pacman_dir)
+    #FileUtils.rm_rf(@pacman_dir)
   end
 
   def test_init
-    Pacman.init(@pacman_dir, @pacman_config, @pacman_mirror)
+    Pacman.init(@pacman_dir, @pacman_config, @pacman_mirrors)
   end
 end
 
