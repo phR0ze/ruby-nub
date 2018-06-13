@@ -81,7 +81,8 @@ module Pacman
   # Install the given packages
   # @param pkgs [Array] of packages to install
   # @param ignore [Array] of packages to ignore
-  def install(pkgs, ignore:nil)
+  # @param force [Bool] true to force install given packages
+  def install(pkgs, ignore:nil, force:false)
     if pkgs && pkgs.any?
       cmd = []
 
@@ -94,6 +95,9 @@ module Pacman
       # Ignore any packages called out
       ignore = [ignore] if ignore.is_a?(String)
       cmd += ["--ignore", "#{ignore * ','}"] if ignore && ignore.any?
+
+      # Optionally force the install
+      cmd += ['--force'] if force
 
       # Add packages to install
       cmd += ['--needed', *pkgs]
