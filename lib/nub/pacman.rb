@@ -90,7 +90,7 @@ module Pacman
       cmd = []
 
       if self.sysroot
-        cmd += ["pacstrap", "-GMc", self.sysroot, '--config', self.config]
+        cmd += ["pacstrap", "-Mc", self.sysroot, '--config', self.config]
       else
         cmd += ["pacman", "-S"]
       end
