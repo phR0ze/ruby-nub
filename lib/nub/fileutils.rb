@@ -119,38 +119,24 @@ module FileUtils
   def self.insert(file, values, regex:nil, offset:1)
     return false if not values or values.empty?
 
-    changed = false
     values = [values] if values.is_a?(String)
     FileUtils.touch(file) if not File.exist?(file)
 
-    begin
-      data = nil
-      File.open(file, 'r+') do |f|
-        data = f.read
-        lines = data.split("\n")
+    changed = self.update(file){|data|
+      lines = data.split("\n")
 
-        # Match regex for insert location
-        regex = Regexp.new(regex) if regex.is_a?(String)
-        i = regex ? lines.index{|x| x =~ regex} : lines.size
-        return false if not i
+      # Match regex for insert location
+      regex = Regexp.new(regex) if regex.is_a?(String)
+      if i = regex ? lines.index{|x| x =~ regex} : lines.size
         i += offset if regex and offset
 
         # Insert at offset
-        values.each{|x|
-          lines.insert(i, x) and i += 1
-          changed = true
-        }
+        values.each{|x| lines.insert(i, x) and i += 1}
 
-        # Truncate then write out new content
-        f.seek(0)
-        f.truncate(0)
-        f.puts(lines)
+        # Change data inline
+        data.gsub!(data, lines * "\n")
       end
-    rescue
-      # Revert back to the original incase of failure
-      File.open(file, 'w'){|f| f << data} if data
-      raise
-    end
+    }
 
     return changed
   end
