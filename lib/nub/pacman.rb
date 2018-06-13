@@ -106,10 +106,12 @@ module Pacman
   # Remove the given conflicting packages
   # @param pkgs [Array] of packages to remove
   def remove_conflict(pkgs)
-    cmd = "pacman -Rn"
-    cmd += " -r #{self.sysroot}" if self.sysroot
-    cmd += " -d -d --noconfirm #{pkgs * ' '} &>/dev/null || true"
-    Sys.exec(cmd)
+    if pkgs && pkgs.any?
+      cmd = "pacman -Rn"
+      cmd += " -r #{self.sysroot}" if self.sysroot
+      cmd += " -d -d --noconfirm #{pkgs * ' '} &>/dev/null || true"
+      Sys.exec(cmd)
+    end
   end
 end
 
