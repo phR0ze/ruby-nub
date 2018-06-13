@@ -38,7 +38,8 @@ module Pacman
   # @param arch [String] capturing the pacman target architecture e.g. x86_64
   # @param sysroot [String] path to the system root to use
   # @param env [Hash] of environment variables to set for session
-  def init(path, config, mirrors, arch:'x86_64', sysroot:nil, env:nil)
+  # @param clean [Bool] true triggers a clean overwrite
+  def init(path, config, mirrors, arch:'x86_64', sysroot:nil, env:nil, clean:false)
     mirrors = [mirrors] if mirrors.is_a?(String)
     self.path = path
     self.arch = arch
@@ -51,24 +52,26 @@ module Pacman
     Log.die("pacman config '#{config}' doesn't exist") unless File.exist?(config)
 
     # Copy in pacman files for use in target
-    FileUtils.rm_rf(File.join(path, '.'))
-    FileUtils.mkdir_p(File.join(self.path, 'db'))
-    FileUtils.mkdir_p(self.sysroot) if self.sysroot && !Dir.exist?(self.sysroot)
-    FileUtils.cp(config, path, preserve: true)
-    FileUtils.cp(mirrors, path, preserve: true)
+    if clean || !File.exist?(self.config)
+      FileUtils.rm_rf(File.join(path, '.'))
+      FileUtils.mkdir_p(File.join(self.path, 'db'))
+      FileUtils.mkdir_p(self.sysroot) if self.sysroot && !Dir.exist?(self.sysroot)
+      FileUtils.cp(config, path, preserve: true)
+      FileUtils.cp(mirrors, path, preserve: true)
 
-    # Update the given pacman config file to use the given path
-    FileUtils.replace(self.config, /(Architecture = ).*/, "\\1#{self.arch}")
-    FileUtils.replace(self.config, /#(DBPath\s+= ).*/, "\\1#{File.join(self.path, 'db')}")
-    FileUtils.replace(self.config, /#(CacheDir\s+= ).*/, "\\1#{File.join(self.path, 'cache')}")
-    FileUtils.replace(self.config, /#(LogFile\s+= ).*/, "\\1#{File.join(self.path, 'pacman.log')}")
-    FileUtils.replace(self.config, /#(GPGDir\s+= ).*/, "\\1#{File.join(self.path, 'gnupg')}")
-    FileUtils.replace(self.config, /#(HookDir\s+= ).*/, "\\1#{File.join(self.path, 'hooks')}")
-    FileUtils.replace(self.config, /.*(\/.*mirrorlist).*/, "Include = #{self.path}\\1")
+      # Update the given pacman config file to use the given path
+      FileUtils.replace(self.config, /(Architecture = ).*/, "\\1#{self.arch}")
+      FileUtils.replace(self.config, /#(DBPath\s+= ).*/, "\\1#{File.join(self.path, 'db')}")
+      FileUtils.replace(self.config, /#(CacheDir\s+= ).*/, "\\1#{File.join(self.path, 'cache')}")
+      FileUtils.replace(self.config, /#(LogFile\s+= ).*/, "\\1#{File.join(self.path, 'pacman.log')}")
+      FileUtils.replace(self.config, /#(GPGDir\s+= ).*/, "\\1#{File.join(self.path, 'gnupg')}")
+      FileUtils.replace(self.config, /#(HookDir\s+= ).*/, "\\1#{File.join(self.path, 'hooks')}")
+      FileUtils.replace(self.config, /.*(\/.*mirrorlist).*/, "Include = #{self.path}\\1")
 
-    # Initialize pacman keyring
-    Sys.exec("pacman-key --config #{self.config} --init")
-    Sys.exec("pacman-key --config #{self.config} --populate #{repos * ' '}")
+      # Initialize pacman keyring
+      Sys.exec("pacman-key --config #{self.config} --init")
+      Sys.exec("pacman-key --config #{self.config} --populate #{repos * ' '}")
+    end
   end
 
   # Update the pacman database
