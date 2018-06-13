@@ -47,6 +47,9 @@ class TestPacman < Minitest::Test
     Pacman.init(@pacman_dir, @pacman_config, @pacman_mirrors, sysroot: @sysroot)
     Pacman.update
     Pacman.install(['ruby-spider'])
+    assert(File.exist?(File.join(@sysroot, '/usr/lib/ruby/gems/2.5.0/gems/spider-0.5.1')))
+    Pacman.remove_conflict(['ruby-spider'])
+    assert(!File.exist?(File.join(@sysroot, '/usr/lib/ruby/gems/2.5.0/gems/spider-0.5.1')))
   end
 end
 

@@ -82,25 +82,34 @@ module Pacman
   # @param pkgs [Array] of packages to install
   # @param ignore [Array] of packages to ignore
   def install(pkgs, ignore:nil)
-    cmd = ["pacman", "-S", "--needed"]
+    cmd = []
 
-    # Use alternate configuration file
-    cmd += ["--config", "#{self.config}"] if self.config
-
-    # Use alternate root for installation
-    cmd += ["--sysroot", "#{self.sysroot}"] if self.sysroot
+    if self.sysroot
+      cmd += ["pacstrap", "-GMc", self.sysroot, '--config', self.config]
+    else
+      cmd += ["pacman", "-S"]
+    end
 
     # Ignore any packages called out
     ignore = [ignore] if ignore.is_a?(String)
     cmd += ["--ignore", "#{ignore * ','}"] if ignore && ignore.any?
 
     # Add packages to install
-    cmd += pkgs
+    cmd += ['--needed', *pkgs]
 
     # Execute if there are any packages given
     if pkgs.any?
       self.env ? Sys.exec(cmd, env:self.env) : Sys.exec(cmd)
     end
+  end
+
+  # Remove the given conflicting packages
+  # @param pkgs [Array] of packages to remove
+  def remove_conflict(pkgs)
+    cmd = "pacman -Rn"
+    cmd += " -r #{self.sysroot}" if self.sysroot
+    cmd += " -d -d --noconfirm #{pkgs * ' '} &>/dev/null || true"
+    Sys.exec(cmd)
   end
 end
 

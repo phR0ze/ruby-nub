@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name        = 'nub'
-  spec.version     = '0.0.80'
+  spec.version     = '0.0.81'
   spec.summary     = "Collection of useful utilities"
   spec.authors     = ["Patrick Crummett"]
   spec.homepage    = 'https://github.com/phR0ze/ruby-nub'
