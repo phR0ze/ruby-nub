@@ -32,10 +32,47 @@ class TestString < Minitest::Test
     assert_equal({foo1: 1, foo2: {foo3: 5, foo4: 4}}, a.deep_merge(b))
   end
 
-  def test_hash_deep_merge
+  def test_hash_deep_merge_inplace
     a = {foo1: 1, foo2: {foo3: 3, foo4: 4}}
     b = {foo1: 1, foo2: {foo3: 5}}
-    assert_equal({foo1: 1, foo2: {foo3: 5, foo4: 4}}, a.deep_merge(b))
+
+    a.deep_merge(b)
+    assert({foo1: 1, foo2: {foo3: 5, foo4: 4}} != a)
+    assert({foo1: 1, foo2: {foo3: 5, foo4: 4}} == a.deep_merge(b))
+
+    a.deep_merge!(b)
+    assert_equal({foo1: 1, foo2: {foo3: 5, foo4: 4}}, a)
+  end
+
+  def test_hash_deep_merge_build
+    a = {
+      "type" => "container",
+      "multilib" => true,
+      "docker" => {
+        "params" => '-e TERM=xterm -v /var/run/docker.sock:/var/run/docker.sock --privileged=true',
+        "command" => 'bash -c "while :; do sleep 5; done"',
+      },
+      "apps" => [
+        { "install" => "linux", "desc" => "Linux kernel and supporting modules" }
+      ]
+    }
+    b = {
+      "apps" => [
+        { "install" => "linux-celes"}
+      ]
+    }
+
+    assert_equal({
+      "type" => "container",
+      "multilib" => true,
+      "docker" => {
+        "params" => '-e TERM=xterm -v /var/run/docker.sock:/var/run/docker.sock --privileged=true',
+        "command" => 'bash -c "while :; do sleep 5; done"',
+      },
+      "apps" => [
+        { "install" => "linux-celes"}
+      ]
+    }, a.deep_merge(b))
   end
 end
 
