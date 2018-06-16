@@ -134,7 +134,9 @@ module FileUtils
         values.each{|x| lines.insert(i, x) and i += 1}
 
         # Change data inline
-        data.gsub!(data, lines * "\n")
+        newdata = lines * "\n"
+        newdata += "\n" if data[-1] == "\n"
+        data.gsub!(data, newdata)
       end
     }
 
@@ -156,7 +158,9 @@ module FileUtils
       lines.each{|x| x.gsub!(regex, value)}
 
       # Change data inline
-      data.gsub!(data, lines * "\n")
+      newdata = lines * "\n"
+      newdata += "\n" if data[-1] == "\n"
+      data.gsub!(data, newdata)
     }
 
     return changed
