@@ -28,47 +28,59 @@ require_relative 'fileutils'
 # Wrapper around system Arch Linux pacman
 module Pacman
   extend self
-  mattr_accessor(:path, :config, :sysroot, :mirrors, :repos, :arch, :env)
+  mattr_accessor(:path, :sysroot, :config, :mirrors, :repos, :arch,
+    :env, :log, :db_path, :gpg_path, :hooks_path, :cache_path)
 
   # Configure pacman for the given root
-  # @param path [String] path where all pacman artifacts will be (i.e. logs, cache etc...)
+  # @param path [String] is the path on the host for pacman
+  # @param sysroot [String] path to the system root to use
   # @param config [String] config file path to use, note gets copied in
   # @param mirrors [Array] of mirror paths to use, mirror file name is expected to be the
   #                        name of the repo e.g. archlinux.mirrorlist
   # @param arch [String] capturing the pacman target architecture e.g. x86_64
-  # @param sysroot [String] path to the system root to use
   # @param env [Hash] of environment variables to set for session
-  # @param clean [Bool] true triggers a clean overwrite
-  def init(path, config, mirrors, arch:'x86_64', sysroot:nil, env:nil, clean:false)
+  def init(path, sysroot, config, mirrors, arch:'x86_64', env:nil)
+
+    # All configs are on the sysroot except config and cache
     mirrors = [mirrors] if mirrors.is_a?(String)
     self.path = path
     self.arch = arch
+    self.env = env
     self.sysroot = sysroot
-    self.config = File.join(path, File.basename(config))
+    self.log = File.join(sysroot, 'var/log/pacman.log')
+    self.db_path = File.join(self.sysroot, 'var/lib/pacman')
+    self.gpg_path = File.join(self.sysroot, 'etc/pacman.d/gnupg')
+    self.hooks_path = File.join(self.sysroot, 'etc/pacman.d/hooks')
     self.repos = mirrors.map{|x| File.basename(x, '.mirrorlist')}
-    self.mirrors = mirrors.map{|x| File.join(path, File.basename(x))}
+    mirrors_path = File.join(self.sysroot, 'etc/pacman.d')
+    self.mirrors = mirrors.map{|x| File.join(mirrors_path, File.basename(x))}
+
+    # Config and cache are kept separate from the sysroot
+    self.config = File.join(self.path, File.basename(config))
+    self.cache_path = File.join(self.path, 'cache')
 
     # Validate incoming params
     Log.die("pacman config '#{config}' doesn't exist") unless File.exist?(config)
 
     # Copy in pacman files for use in target
-    if clean || !File.exist?(self.config)
-      FileUtils.rm_rf(File.join(path, '.'))
-      FileUtils.mkdir_p(File.join(self.path, 'db'))
-      FileUtils.mkdir_p(self.sysroot) if self.sysroot && !Dir.exist?(self.sysroot)
-      FileUtils.cp(config, path, preserve: true)
-      FileUtils.cp(mirrors, path, preserve: true)
+    FileUtils.mkdir_p(self.db_path)
+    FileUtils.mkdir_p(self.gpg_path)
+    FileUtils.mkdir_p(self.hooks_path)
+    FileUtils.mkdir_p(self.cache_path)
+    FileUtils.cp(config, self.config, preserve: true)
+    FileUtils.cp(mirrors, mirrors_path, preserve: true)
 
-      # Update the given pacman config file to use the given path
-      FileUtils.replace(self.config, /(Architecture = ).*/, "\\1#{self.arch}")
-      FileUtils.replace(self.config, /#(DBPath\s+= ).*/, "\\1#{File.join(self.path, 'db')}")
-      FileUtils.replace(self.config, /#(CacheDir\s+= ).*/, "\\1#{File.join(self.path, 'cache')}")
-      FileUtils.replace(self.config, /#(LogFile\s+= ).*/, "\\1#{File.join(self.path, 'pacman.log')}")
-      FileUtils.replace(self.config, /#(GPGDir\s+= ).*/, "\\1#{File.join(self.path, 'gnupg')}")
-      FileUtils.replace(self.config, /#(HookDir\s+= ).*/, "\\1#{File.join(self.path, 'hooks')}")
-      FileUtils.replace(self.config, /.*(\/.*mirrorlist).*/, "Include = #{self.path}\\1")
+    # Update the given pacman config file to use the given path
+    FileUtils.replace(self.config, /(Architecture = ).*/, "\\1#{self.arch}")
+    FileUtils.replace(self.config, /#(DBPath\s+= ).*/, "\\1#{self.db_path}")
+    FileUtils.replace(self.config, /#(CacheDir\s+= ).*/, "\\1#{self.cache_path}")
+    FileUtils.replace(self.config, /#(LogFile\s+= ).*/, "\\1#{self.log}")
+    FileUtils.replace(self.config, /#(GPGDir\s+= ).*/, "\\1#{self.gpg_path}")
+    FileUtils.replace(self.config, /#(HookDir\s+= ).*/, "\\1#{self.hooks_path}")
+    FileUtils.replace(self.config, /.*(\/.*mirrorlist).*/, "Include = #{mirrors_path}\\1")
 
-      # Initialize pacman keyring
+    # Initialize pacman keyring
+    if !File.exist?(self.config)
       Sys.exec("pacman-key --config #{self.config} --init")
       Sys.exec("pacman-key --config #{self.config} --populate #{repos * ' '}")
     end
@@ -89,7 +101,7 @@ module Pacman
       cmd = []
 
       if self.sysroot
-        cmd += ["pacstrap", "-Mc", self.sysroot, '--config', self.config]
+        cmd += ["pacstrap", "-c", self.sysroot, '--config', self.config]
       else
         cmd += ["pacman", "-S"]
       end
