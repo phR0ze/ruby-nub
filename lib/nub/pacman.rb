@@ -80,7 +80,7 @@ module Pacman
     FileUtils.replace(self.config, /.*(\/.*mirrorlist).*/, "Include = #{mirrors_path}\\1")
 
     # Initialize pacman keyring
-    if !File.exist?(self.config)
+    if !File.exist?(File.join(self.gpg_path, 'trustdb.gpg'))
       Sys.exec("pacman-key --config #{self.config} --init")
       Sys.exec("pacman-key --config #{self.config} --populate #{repos * ' '}")
     end
