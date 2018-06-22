@@ -124,6 +124,7 @@ module FileUtils
 
     changed = self.update(file){|data|
       lines = data.split("\n")
+      lastline = lines[-1].dup
 
       # Match regex for insert location
       regex = Regexp.new(regex) if regex.is_a?(String)
@@ -135,7 +136,7 @@ module FileUtils
 
         # Change data inline
         newdata = lines * "\n"
-        newdata += "\n" if data[-1] == "\n"
+        newdata += "\n" if lines[-1] != lastline
         data.gsub!(data, newdata)
       end
     }

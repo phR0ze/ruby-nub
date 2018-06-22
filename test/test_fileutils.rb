@@ -393,7 +393,7 @@ class TestInsert < Minitest::Test
   def test_insert_multi_matching_regex_existing_file_with_neg_offset
     values = ['foo1', 'foo2']
     data = ['bar1', 'bar2', 'bar3']
-    @mock.expect(:read, data * "\n")
+    @mock.expect(:read, data * "\n" + "\n")
     @mock.expect(:<<, nil){|x| x == (values + data) * "\n"}
 
     assert(@insert_lam[@mock, @file, values, regex:/.*bar2.*/, offset:-1])
@@ -402,7 +402,7 @@ class TestInsert < Minitest::Test
   def test_insert_multi_matching_regex_existing_file_with_zero_offset
     values = ['foo1', 'foo2']
     data = ['bar1', 'bar2', 'bar3']
-    _data = data * "\n"
+    _data = data * "\n" + "\n"
     data.insert(1, values.first)
     data.insert(2, values.last)
     @mock.expect(:read, _data)
@@ -414,11 +414,11 @@ class TestInsert < Minitest::Test
   def test_insert_multi_matching_regex_existing_file_with_pos_offset
     values = ['foo1', 'foo2']
     data = ['bar1', 'bar2', 'bar3']
-    _data = data * "\n"
+    _data = data * "\n" + "\n"
     data.insert(3, values.first)
     data.insert(4, values.last)
     @mock.expect(:read, _data)
-    @mock.expect(:<<, nil){|x| x == data * "\n"}
+    @mock.expect(:<<, nil){|x| x == data * "\n" + "\n"}
 
     assert(@insert_lam[@mock, @file, values, regex:/.*bar2.*/, offset:2])
   end
@@ -435,7 +435,7 @@ class TestInsert < Minitest::Test
   def test_insert_multi_matching_regex_existing_file_default_offset
     values = ['foo1', 'foo2']
     data = ['bar1', 'bar2', 'bar3']
-    _data = data * "\n"
+    _data = data * "\n" + "\n"
     data.insert(2, values.first)
     data.insert(3, values.last)
     @mock.expect(:read, _data)
@@ -447,7 +447,7 @@ class TestInsert < Minitest::Test
   def test_insert_single_matching_regex_existing_file_default_offset
     values = ['foo']
     data = ['bar1', 'bar2', 'bar3']
-    _data = data * "\n"
+    _data = data * "\n" + "\n"
     data.insert(2, values.first)
     @mock.expect(:read, _data)
     @mock.expect(:<<, nil){|x| x == data * "\n"}
@@ -470,7 +470,7 @@ class TestInsert < Minitest::Test
     data = ['bar1', 'bar2', 'bar3']
     _data = data * "\n"
     @mock.expect(:read, _data)
-    @mock.expect(:<<, nil){|x| x == (data + values) * "\n"}
+    @mock.expect(:<<, nil){|x| x == (data + values) * "\n" + "\n"}
 
     assert(@insert_lam[@mock, @file, values])
   end
@@ -478,7 +478,7 @@ class TestInsert < Minitest::Test
   def test_insert_single_append_new_file_nil_offset
     values = ['foo']
     @mock.expect(:read, "")
-    @mock.expect(:<<, nil){|x| x == values * "\n"}
+    @mock.expect(:<<, nil){|x| x == values * "\n" + "\n"}
 
     assert(@insert_lam[@mock, @file, values, offset:nil])
   end
@@ -486,7 +486,7 @@ class TestInsert < Minitest::Test
   def test_insert_single_append_new_file
     values = ['foo']
     @mock.expect(:read, "")
-    @mock.expect(:<<, nil){|x| x == values * "\n"}
+    @mock.expect(:<<, nil){|x| x == values * "\n" + "\n"}
 
     assert(@insert_lam[@mock, @file, values])
   end
@@ -496,7 +496,7 @@ class TestInsert < Minitest::Test
     data = ['bar1', 'bar2', 'bar3']
     _data = data * "\n"
     @mock.expect(:read, _data)
-    @mock.expect(:<<, nil){|x| x == (data + values) * "\n"}
+    @mock.expect(:<<, nil){|x| x == (data + values) * "\n" + "\n"}
 
     assert(@insert_lam[@mock, @file, values])
   end
@@ -504,7 +504,7 @@ class TestInsert < Minitest::Test
   def test_insert_multi_append_new_file
     values = ['foo1', 'foo2']
     @mock.expect(:read, "")
-    @mock.expect(:<<, nil){|x| x == values * "\n"}
+    @mock.expect(:<<, nil){|x| x == values * "\n" + "\n"}
 
     assert(@insert_lam[@mock, @file, values])
   end
