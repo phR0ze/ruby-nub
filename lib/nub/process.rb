@@ -1,4 +1,3 @@
-#!/usr/bin/env ruby
 #MIT License
 #Copyright (c) 2018 phR0ze
 #
@@ -20,21 +19,26 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-# Nub is the top level module useful for requiring all sub-modules at once.
-module Nub
-  require 'nub/commander'
-  require 'nub/config'
-  require 'nub/core'
-  require 'nub/fileutils'
-  require 'nub/hash'
-  require 'nub/log'
-  require 'nub/module'
-  require 'nub/net'
-  require 'nub/pacman'
-  require 'nub/process'
-  require 'nub/thread_comm'
-  require 'nub/user'
-  require 'nub/sys'
+# Monkey patch Process with some useful methods
+module Process
+
+  # Get the pid of the process found with the given search term
+  # @param term [String] search term to use to find the pid
+  def self.pidof(term)
+    pid = nil
+
+    str = `ps -ef | grep "[#{term[0]}]#{term[1..-1]}"`
+    pid = str.split()[1].to_i if !str.empty?
+
+    return pid
+  end
+
+  # Kill the process found with the given search term
+  # @param term [String] search term to use to find the pid
+  def self.killall(term)
+    pid = pidof(term)
+    Process.kill("KILL", pid) if pid
+  end
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
