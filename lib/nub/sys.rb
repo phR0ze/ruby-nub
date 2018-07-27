@@ -98,6 +98,27 @@ module Sys
     return result
   end
 
+  # Execute the shell command and print status
+  # @param cmd [String] command to execute
+  # @param die [bool] exit on true
+  # @result status [bool] true on success else false
+  def exec_status(cmd, die:true, check:nil)
+    out = `#{cmd}`
+    status = true
+    status = check == out if !check.nil?
+    status = $?.exitstatus == 0 if check.nil?
+
+    #if status
+    if $?.exitstatus == 0
+      Log.puts("...success!".colorize(:green), notime:true)
+    else
+      Log.puts("...failed!".colorize(:red), notime:true)
+      Log.puts(out.colorize(:red)) and exit if die
+    end
+
+    return status
+  end
+
   # Read a password from stdin without echoing
   # @returns pass [String] the password read in
   def getpass
