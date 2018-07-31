@@ -25,6 +25,7 @@ require 'ostruct'
 require 'colorize'
 require_relative 'sys'
 require_relative 'core'
+require_relative 'module'
 
 LogLevel = OpenStruct.new({
   error: 0,
@@ -38,15 +39,13 @@ LogLevel = OpenStruct.new({
 # Uses Mutex.synchronize where required to provide thread safety.
 module Log
   extend self
-  @@_level = 3
+  mattr_accessor(:id, :path, :level)
+
+  @@level = 3
+  @@path = nil
   @@_queue = nil
   @@_stdout = true
   @@_monitor = Monitor.new
-
-  # Public properties
-  class << self
-    attr_reader(:id, :path)
-  end
 
   # Singleton's init method can be called multiple times to reset.
   # @param path [String] path to log file
@@ -54,18 +53,18 @@ module Log
   # @param stdout [Bool] turn on or off stdout
   # @param level [LogLevel] level at which to log
   def init(path:nil, level:LogLevel.debug, queue:false, stdout:true)
-    @id ||= 'singleton'.object_id
+    self.id ||= 'singleton'.object_id
+    self.path = path ? File.expand_path(path) : nil
+    self.level = level
 
-    @path = path ? File.expand_path(path) : nil
-    @@_level = level
     @@_queue = queue ? Queue.new : nil
     @@_stdout = stdout
     $stdout.sync = true
 
     # Open log file creating as needed
-    if @path
-      FileUtils.mkdir_p(File.dirname(@path)) if !File.exist?(File.dirname(@path))
-      @file = File.open(@path, 'a')
+    if self.path
+      FileUtils.mkdir_p(File.dirname(self.path)) if !File.exist?(File.dirname(self.path))
+      @file = File.open(self.path, 'a')
       @file.sync = true
     end
   end
@@ -74,7 +73,7 @@ module Log
   def call_details
     @@_monitor.synchronize{
 
-      # Skip first 3 on stack (i.e. 0 = block in call_details, 1 = synchronize, 2 = call_detail) 
+      # Skip first 3 on stack (i.e. 0 = block in call_details, 1 = synchronize, 2 = call_detail)
       stack = caller_locations(3, 20)
 
       # Skip past any calls in 'log.rb' or 'monitor.rb'
@@ -124,7 +123,7 @@ module Log
 
       # Handle output
       if !str.empty?
-        @file << str.strip_color if @path
+        @file << str.strip_color if self.path
         @@_queue << str if @@_queue
         $stdout.print(str) if @@_stdout
       end
@@ -154,7 +153,7 @@ module Log
       end
 
       # Handle output
-      @file.puts(str.strip_color) if @path
+      @file.puts(str.strip_color) if self.path
       @@_queue << "#{str}\n" if @@_queue
       $stdout.puts(str) if @@_stdout
 
@@ -174,7 +173,7 @@ module Log
 
   def warn(*args)
     @@_monitor.synchronize{
-      if LogLevel.warn <= @@_level
+      if LogLevel.warn <= self.level
         opts = args.find{|x| x.is_a?(Hash)}
         opts[:type] = 'W' if opts
         args << {:type => 'W'} if !opts
@@ -187,7 +186,7 @@ module Log
 
   def info(*args)
     @@_monitor.synchronize{
-      if LogLevel.info <= @@_level
+      if LogLevel.info <= self.level
         opts = args.find{|x| x.is_a?(Hash)}
         opts[:type] = 'I' if opts
         args << {:type => 'I'} if !opts
@@ -200,7 +199,7 @@ module Log
 
   def debug(*args)
     @@_monitor.synchronize{
-      if LogLevel.debug <= @@_level
+      if LogLevel.debug <= self.level
         opts = args.find{|x| x.is_a?(Hash)}
         opts[:type] = 'D' if opts
         args << {:type => 'D'} if !opts

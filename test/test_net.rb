@@ -58,9 +58,19 @@ class TestProxy < Minitest::Test
     assert_equal('8080', Net.proxy.port)
   end
 
-  def test_proxy_export
+  def test_proxy_export_nil
+    assert_nil(Net.proxy_export)
+  end
+
+  def test_proxy_export_default
     ENV['http_proxy'] = 'http://proxy.com:8080'
     assert_equal('export http_proxy=http://proxy.com:8080;', Net.proxy_export)
+  end
+
+  def test_proxy_export_set
+    proxy = "http://proxy.com:8080"
+    export = "export ftp_proxy=#{proxy};export http_proxy=#{proxy};export https_proxy=#{proxy};"
+    assert_equal(export, Net.proxy_export(proxy:'http://proxy.com:8080'))
   end
 
   def test_ip_forward_true
