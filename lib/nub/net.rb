@@ -26,7 +26,7 @@ require_relative 'sys'
 require_relative 'module'
 
 # Collection of network related helpers
-module Net 
+module Net
   extend self
   mattr_accessor(:agents)
 
@@ -71,7 +71,7 @@ module Net
 
   # Check if the system is configured for the kernel to forward ip traffic
   def ip_forward?
-    return `cat /proc/sys/net/ipv4/ip_forward`.include?('1')
+    return File.read('/proc/sys/net/ipv4/ip_forward').include?('1')
   end
 
   # ----------------------------------------------------------------------------
@@ -94,9 +94,15 @@ module Net
   # @param namespace [String] name to use when creating it
   def namespace_connectivity?(namespace)
     success = false
-    Log.info("Checking that namespace #{namespace.colorize(:cyan)} has connectivity to google.com")
-    ping = 'curl -sL -w "%{http_code}" http://www.google.com/ -o /dev/null'
-    return Sys.exec_status("ip netns exec #{namespace} bash -c '#{@proxy}#{ping}'", die:false, check:"200")
+    Log.info("Checking namespace #{namespace.colorize(:cyan)} for connectivity to google.com", newline:false)
+
+    if File.exists?(File.join("/etc/netns", namespace))
+      ping = 'curl -sL -w "%{http_code}" http://www.google.com -o /dev/null'
+      return Sys.exec_status("ip netns exec #{namespace} bash -c '#{self.proxy_export}#{ping}'", die:false, check:"200")
+    else
+      Sys.exec_status(":", die:false, check:"200")
+      Log.warn("Namespace #{namespace} doesn't exist!")
+    end
   end
 
   # Create a network namespace with the given name
@@ -106,7 +112,7 @@ module Net
   # @param network [Network] describes the network to share
   def create_namespace(namespace, host_veth, guest_veth, network)
     namespace_conf = File.join("/etc/netns", namespace)
-    
+
     # Create new network namespace and start included loopback device
     if !File.exists?(File.join("/var/run/netns", namespace))
       Log.info("Creating VPN Namespace #{namespace.colorize(:cyan)}")

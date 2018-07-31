@@ -25,19 +25,27 @@ require_relative '../lib/nub/net'
 
 class TestProxy < Minitest::Test
 
+  def setup
+    ENV['http_proxy'] = nil
+  end
+
   def test_agents
     assert_equal(Net.agents.windows_ie_6, 'Windows IE 6')
     assert_equal(Net.agents.iphone, 'iPhone')
   end
 
   def test_unset_proxy?
-    ENV['http_proxy'] = nil
     assert(!Net.proxy?)
   end
 
   def test_set_proxy?
     ENV['http_proxy'] = 'http://proxy.com:8080'
     assert(Net.proxy?)
+  end
+
+  def test_proxy_uri
+    ENV['http_proxy'] = 'http://proxy.com:8080'
+    assert_equal('http://proxy.com:8080', Net.proxy.http)
   end
 
   def test_proxy_uri
@@ -53,6 +61,24 @@ class TestProxy < Minitest::Test
   def test_proxy_export
     ENV['http_proxy'] = 'http://proxy.com:8080'
     assert_equal('export http_proxy=http://proxy.com:8080;', Net.proxy_export)
+  end
+
+  def test_ip_forward_true
+    File.stub(:read, '1'){
+      assert(Net.ip_forward?)
+    }
+  end
+
+  def test_ip_forward_false
+    File.stub(:read, ''){assert(!Net.ip_forward?)}
+    File.stub(:read, '0'){assert(!Net.ip_forward?)}
+  end
+
+  def test_namespace_connectivity_false
+    File.stub(:exists?, false){
+      capture = Sys.capture{Net.namespace_connectivity?('bob')}
+      assert(capture.stdout.include?("Namespace bob doesn't exist"))
+    }
   end
 end
 

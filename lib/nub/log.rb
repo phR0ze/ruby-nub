@@ -167,8 +167,8 @@ module Log
       opts = args.find{|x| x.is_a?(Hash)}
       opts[:loc] = true and opts[:type] = 'E' if opts
       args << {:loc => true, :type => 'E'} if !opts
-
-      return self.puts(*args)
+      newline = (opts && opts.key?(:newline)) ? opts[:newline] : true
+      return newline ? self.puts(*args) : self.print(*args)
     }
   end
 
@@ -178,7 +178,8 @@ module Log
         opts = args.find{|x| x.is_a?(Hash)}
         opts[:type] = 'W' if opts
         args << {:type => 'W'} if !opts
-        return self.puts(*args)
+        newline = (opts && opts.key?(:newline)) ? opts[:newline] : true
+        return newline ? self.puts(*args) : self.print(*args)
       end
       return true
     }
@@ -190,7 +191,8 @@ module Log
         opts = args.find{|x| x.is_a?(Hash)}
         opts[:type] = 'I' if opts
         args << {:type => 'I'} if !opts
-        return self.puts(*args)
+        newline = (opts && opts.key?(:newline)) ? opts[:newline] : true
+        return newline ? self.puts(*args) : self.print(*args)
       end
       return true
     }
@@ -202,7 +204,8 @@ module Log
         opts = args.find{|x| x.is_a?(Hash)}
         opts[:type] = 'D' if opts
         args << {:type => 'D'} if !opts
-        return self.puts(*args)
+        newline = (opts && opts.key?(:newline)) ? opts[:newline] : true
+        return newline ? self.puts(*args) : self.print(*args)
       end
       return true
     }

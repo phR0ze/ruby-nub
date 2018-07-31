@@ -109,10 +109,10 @@ module Sys
     status = $?.exitstatus == 0 if check.nil?
 
     #if status
-    if $?.exitstatus == 0
-      Log.puts("...success!".colorize(:green), notime:true)
+    if status
+      Log.puts("...success!".colorize(:green), stamp:false)
     else
-      Log.puts("...failed!".colorize(:red), notime:true)
+      Log.puts("...failed!".colorize(:red), stamp:false)
       Log.puts(out.colorize(:red)) and exit if die
     end
 
