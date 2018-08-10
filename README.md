@@ -25,6 +25,9 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
     * [Examples](#examples)
     * [Indicators](#indicators)
 * [Config](#config)
+* [Net Module](#net-module)
+  * [Network Namespaces](#network-namespaces)
+  * [Network Proxy](#network-proxy)
 * [Ruby Gem Creation](#ruby-gem-creation)
   * [Package Layout](#package-layout)
   * [Build Gem](#build-gem)
@@ -332,6 +335,32 @@ unless the given config exists along side the app's path. If the config file alr
 Initialize once on entry of your app and leverage throughout:
 ```ruby
 Config.init("openvpn.yml")
+```
+
+## Net Module <a name="net-module"></a>
+The network module is a collection of network related helpers and automation to simplify tasks and
+encapsulate functionality into reusable components.
+
+### Network Namespaces <a name="network-namespaces"></a>
+Network namespaces implemented in the kernel provide network isolation used by docker etc... to
+separate and contain an app's networking separate from the host yet bridgable if desired.
+
+### Network Proxy <a name="network-proxy"></a>
+The Net module provides simple access to the system proxy environment variables.
+
+```ruby
+Net.proxy.ftp
+Net.proxy.http
+Net.proxy.https
+Net.proxy.no
+Net.proxy.uri
+Net.proxy.port
+
+# Simple way to check if a proxy is set
+Net.proxy?
+
+# Bash compatible string to use to insert proxy into commands
+Net.proxy_export
 ```
 
 ## Ruby Gem Creation <a name="ruby-gem-creation"></a>
