@@ -119,12 +119,15 @@ module Net
   # @param guest_veth [Veth] describes the veth to create for the guest side
   # @param network [Network] describes the network to share
   def create_namespace(namespace, host_veth, guest_veth, network)
+    namespace_conf = File.join("/etc/netns", namespace)
 
-    # Create new network namespace and start included loopback device
+    # Ensure namespace i.e. /var/run/netns/<namespace> exists
     if !File.exists?(File.join("/var/run/netns", namespace))
       Log.info("Creating VPN Namespace #{namespace.colorize(:cyan)}", newline:false)
       Sys.exec_status("ip netns add #{namespace}")
     end
+
+    # Ensure loopback device is running inside the pnamespace
     if `ip netns exec #{namespace} ip a`.include?("state DOWN")
       Log.info("Start loopback interface in namespace", newline:false)
       Sys.exec_status("ip netns exec #{namespace} ip link set lo up")
@@ -132,6 +135,7 @@ module Net
 
     # Create a virtual ethernet pair to communicate across namespaces
     # by default they will both be in the root namespace until one is assigned to another
+    # e.g. host:192.168.100.1 and guest:192.168.100.2 communicating in network:192.168.100.0
     if !`ip a`.include?(host_veth.name)
       Log.info("Create vpn veths #{host_veth.name.colorize(:cyan)} for #{'root'.colorize(:cyan)}
        and #{guest_veth.name.colorize(:cyan)} for #{namespace.colorize(:cyan)}", newline:false)
@@ -141,7 +145,7 @@ module Net
     end
 
     # Assign IPv4 addresses and start up the new veth interfaces
-    # sudo ping <vpn1_ip> and sudo netns exec <namespace> ping <vpn0_ip> should work now
+    # sudo ping #{host_veth.ip} and sudo netns exec #{namespace} ping #{guest_veth.ip} should work now
     if !`ip a`.include?(host_veth.ip)
       Log.info("Assign ip #{host_veth.ip.colorize(:cyan)} and start #{host_veth.ip.colorize(:cyan)}", newline:false)
       Sys.exec_status("ifconfig #{host_veth.name} #{File.join(host_veth.ip, nework.cidr)} up")

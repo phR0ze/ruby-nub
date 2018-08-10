@@ -27,6 +27,8 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 * [Config](#config)
 * [Net Module](#net-module)
   * [Network Namespaces](#network-namespaces)
+    * [Teamviewer Example](#teamviewer-example)
+    * [PIA VPN Example](#pia-vpn-example)
   * [Network Proxy](#network-proxy)
 * [Ruby Gem Creation](#ruby-gem-creation)
   * [Package Layout](#package-layout)
@@ -342,8 +344,95 @@ The network module is a collection of network related helpers and automation to 
 encapsulate functionality into reusable components.
 
 ### Network Namespaces <a name="network-namespaces"></a>
-Network namespaces implemented in the kernel provide network isolation used by docker etc... to
-separate and contain an app's networking separate from the host yet bridgable if desired.
+Linux by default shares a single set of network interfaces and routing table entries, such that an
+installed application can bind to all interfaces and has access to all other services currently
+running on the system. Network namespaces implemented in the kernel provide a way to isolate
+networks and services from each other. This is the technology that docker uses to isolate docker
+apps from the host and other docker apps.
+
+Network namespaces provide a way to have different separate virtual interfaces and routing tables
+that operate independent of each other. They can be easily manipulated via the ***ip netns*** command.
+
+```bash
+# Create a new network namespace
+# ip netns add <namespace>
+sudo ip netns add foo
+
+# List network namespaces
+ip netns list
+```
+
+Once a network namespace has been created you need to configure how it connected to the host. This
+can be done by creating a pair of virtual Ethernet ***veth*** interfaces and assigning them to the
+new network namespace as by default they will be assigned to the root namespace. The root namespace
+or global namespace is the default namespace used by the host for regular networking.
+
+```bash
+# Create veth pair veth1 and veth2
+sudo ip link add veth1 type veth peer name veth2
+
+# Verify veth pair creation and view their relationship
+# both are part of the root namespace by default
+ip a
+# veth1@veth2: <BROADCAST,MULTICAST,M-DOWN>
+# veth2@veth1: <BROADCAST,MULTICAST,M-DOWN>
+
+# Connect foo namespace to root namespace by assigning half the veth pair to the foo namespace
+sudo ip link set veth2 netns foo
+
+# Verify that the root namespace listing no longer shows veth2
+# notice also that the relationship of veth1 has changed
+ip a
+# veth1@if4: <BROADCAST,MULTICAST>
+
+# Verify that the foo namespace now owns veth2
+sudo ip netns exec foo ip a
+# lo: <LOOPBACK>
+# veth2@if5: <BROADCAST,MULTICAST>
+
+# Assign IPv4 address to the new veth pair
+sudo ifconfig veth1 192.168.100.1/24 up
+sudo ip netns exec foo ifconfig veth2 192.168.100.2/24 up
+
+# Verify that the assigned ips took
+ip a
+# inet 192.168.100.1/24 brd 192.168.100.255 scope global veth1
+sudo ip netns exec foo ip a
+# inet 192.168.100.2/24 brd 192.168.100.255 scope global veth2
+
+# Verify connectivity between veth pair
+sudo ping 192.168.100.2
+# 64 bytes from 192.168.100.2: icmp_seq=1 ttl=64 time=0.070 ms
+sudo ip netns exec foo ping 192.168.100.1
+# 64 bytes from 192.168.100.1: icmp_seq=1 ttl=64 time=0.080 ms
+```
+
+In the following sub sections I'll show you how to automated this compliated setup using the
+***Net*** ruby module.
+
+#### TeamViewer Example <a name="teamviewer-example"></a>
+In this example I'll be showing you how to isolate Teamviewer such that Teamviewer is only able to
+bind to the veth2 IPv4 address that we create for it rather than all network interfaces on the host.
+This will allow you to have Teamviewer running and accessible from your network facing IP but also
+to be able to SSH port forward other Teamviewer instances to your loopback interface or other veth
+addresses.
+
+```ruby
+WIP
+```
+
+#### PIA VPN Example <a name="pia-vpn-example"></a>
+```ruby
+WIP
+
+Example1: Network namespace with access only to the 192.168.100.0 network which only has the
+host address 192.168.100.1 available which only has access to the internet via the PIA VPN.
+
+namespace = 'pia'
+host_veth = Veth.new('veth1', '192.168.100.1')
+guest_veth = Veth.new('veth2', '192.168.100.2')
+network = Network.new('192.168.100.0', '24', ['209.222.18.222', '209.222.18.218'])
+```
 
 ### Network Proxy <a name="network-proxy"></a>
 The Net module provides simple access to the system proxy environment variables.
