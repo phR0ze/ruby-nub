@@ -397,14 +397,30 @@ sudo ip netns exec foo ifconfig veth2 192.168.100.2/24 up
 # Verify that the assigned ips took
 ip a
 # inet 192.168.100.1/24 brd 192.168.100.255 scope global veth1
+
 sudo ip netns exec foo ip a
 # inet 192.168.100.2/24 brd 192.168.100.255 scope global veth2
 
 # Verify connectivity between veth pair
 sudo ping 192.168.100.2
 # 64 bytes from 192.168.100.2: icmp_seq=1 ttl=64 time=0.070 ms
+
 sudo ip netns exec foo ping 192.168.100.1
 # 64 bytes from 192.168.100.1: icmp_seq=1 ttl=64 time=0.080 ms
+```
+
+Now we have connectivity between our veth pair across network namespaces. Because
+***192.168.100.0/24*** network, that we configured the veth pair on, is a separate network from the
+host any applications running within the new network namespace will not have connectivity to
+anything else on your host or networks currently including external access to the internet.
+
+```bash
+# Prove out isolation
+sudo ping www.google.com
+# 64 bytes from -----.1e100.net (172.217.1.196): icmp_seq=1 ttl=56 time=13.3 ms
+
+sudo ip netns exec foo ping www.google.com
+# connect: Network is unreachable
 ```
 
 In the following sub sections I'll show you how to automated this compliated setup using the
