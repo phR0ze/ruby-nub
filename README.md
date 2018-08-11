@@ -8,7 +8,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 
 ### Table of Contents
 * [Deploy](#deploy)
-* [Commander](#commander)
+* [Commander Module](#commander-module)
   * [Commands](#commands)
     * [Command Parameters ](#command-paramaters)
     * [Chained Commands](#chained-commands)
@@ -24,12 +24,22 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
   * [Help](#help)
     * [Examples](#examples)
     * [Indicators](#indicators)
-* [Config](#config)
+* [Config Module](#config-module)
+* [Core Module](#core-module)
+* [FileUtils Extensions](#fileutils-extensions)
+* [Hash Module](#hash-module)
+* [Log Module](#Log-module)
+* [Module Extensions](#module-extensions)
 * [Net Module](#net-module)
   * [Network Namespaces](#network-namespaces)
     * [Teamviewer Example](#teamviewer-example)
     * [PIA VPN Example](#pia-vpn-example)
   * [Network Proxy](#network-proxy)
+* [Pacman Module](#pacman-module)
+* [Process Module](#process-module)
+* [Sys Module](#sys-module)
+* [ThreadComm Module](#thread-comm-module)
+* [User Module](#user-module)
 * [Ruby Gem Creation](#ruby-gem-creation)
   * [Package Layout](#package-layout)
   * [Build Gem](#build-gem)
@@ -42,7 +52,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 ## Deploy <a name="deploy"></a>
 Run: `bundle install --system`
 
-## Commander <a name="commander"></a>
+## Commander Module <a name="commander-module"></a>
 Commander was created mainly because all available options parsers seemed overly complicated and
 overweight and partly because I enjoyed understanding every bit going into it. Commander offers
 ***git*** or ***kubectl*** like command syntax.
@@ -328,7 +338,7 @@ Usage: ./builder build [options]
     -h|--help                           Print command/options help
 ```
 
-## Config <a name="config"></a>
+## Config Module <a name="config-module"></a>
 Config is a simple YAML wrapper with some extra features. Since it implements the ***Singleton***
 pattern you can easily use it through out your app without carrying around instances everywhere.
 It creates config files in memory and saves them to the config ***~/.config*** directory when saved
@@ -338,6 +348,16 @@ Initialize once on entry of your app and leverage throughout:
 ```ruby
 Config.init("openvpn.yml")
 ```
+
+## Core Module <a name="core-module"></a>
+
+## FileUtils Extensions <a name="fileutils-module"></a>
+
+## Hash Module <a name="hash-module"></a>
+
+## Log Module <a name="log-module"></a>
+
+## Module Extensions <a name="module-extensions"></a>
 
 ## Net Module <a name="net-module"></a>
 The network module is a collection of network related helpers and automation to simplify tasks and
@@ -467,6 +487,16 @@ Net.proxy?
 # Bash compatible string to use to insert proxy into commands
 Net.proxy_export
 ```
+
+## Pacman Module <a name="pacman-module"></a>
+
+## Process Module <a name="process-module"></a>
+
+## Sys Module <a name="sys-module"></a>
+
+## ThreadComm Module <a name="threadcomm-module"></a>
+
+## User Module <a name="user-module"></a>
 
 ## Ruby Gem Creation <a name="ruby-gem-creation"></a>
 http://guides.rubygems.org/make-your-own-gem/
