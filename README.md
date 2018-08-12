@@ -25,6 +25,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
     * [Examples](#examples)
     * [Indicators](#indicators)
 * [Config Module](#config-module)
+  * [ERB Resolution](#erb-resolution)
 * [Core Module](#core-module)
 * [FileUtils Extensions](#fileutils-extensions)
 * [Hash Module](#hash-module)
@@ -350,6 +351,18 @@ Config.init("openvpn.yml")
 ```
 
 ## Core Module <a name="core-module"></a>
+The core module provides a few extensions to common ruby types.
+
+### ERB Resolution <a name="erb-resolution"></a>
+The ***String*** class has been extended to include ***.erb*** and ***.erb!*** to easily resolve
+template variables. Additionally the ***Array*** and ***Hash*** classes have been extended to
+recursively resolve template variables with ***.erb*** and ***.erb!*** functions.
+
+Examples:
+```ruby
+puts("This is a template example <%=foo%>.".erb({'foo': 'foobar'}))
+# outputs: This is a template example foobar.
+```
 
 ## FileUtils Extensions <a name="fileutils-module"></a>
 
