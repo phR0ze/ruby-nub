@@ -26,16 +26,12 @@ require_relative '../lib/nub/user'
 
 if ARGV.size > 0
   cmd = ARGV[0]
-  namespace = "foo"
-  host_veth = Net::Veth.new("veth1", "192.168.100.1")
-  guest_veth = Net::Veth.new("veth2", "192.168.100.2")
-  network = Net::Network.new("192.168.100.0", "24", "enp+")
   if cmd == "isolate"
-    Net.create_namespace(namespace, host_veth, guest_veth, network)
-    Net.namespace_connectivity?(namespace, "google.com")
-    Net.namespace_exec(namespace, "lxterminal")
+    Net.create_namespace("foo")
+    #Net.namespace_connectivity?(namespace, "google.com")
+    #Net.namespace_exec(namespace, "lxterminal")
   elsif cmd == "destroy"
-    Net.delete_namespace(namespace)
+    Net.delete_namespace("foo")
   end
 else
   puts("Isolate: #{$0} isolate")

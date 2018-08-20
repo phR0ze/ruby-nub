@@ -30,6 +30,10 @@ require_relative 'module'
 module Net
   extend self
   mattr_accessor(:agents)
+  mattr_accessor(:namespace_network)
+
+  @@namespace_cidr = "24"
+  @@namespace_subnet  = "192.168.100.0"
 
   @@agents = OpenStruct.new({
     windows_ie_6: 'Windows IE 6',
@@ -82,6 +86,14 @@ module Net
     return File.read('/proc/sys/net/ipv4/ip_forward').include?('1')
   end
 
+  # Determine the primary nic on the machine
+  # based off default routing to google.com
+  # @returns [String] nic identified as primary
+  def primary_nic
+    out = `ip route`
+    return out[/default via.*dev (.*) proto/, 1]
+  end
+
   # ----------------------------------------------------------------------------
   # Namespace related helpers
   # ----------------------------------------------------------------------------
@@ -108,7 +120,7 @@ module Net
     proxy = args.any? ? args.first.to_s : nil
     Log.info("Checking namespace #{namespace.colorize(:cyan)} for connectivity to #{target}", newline:false)
 
-    if File.exists?(File.join("/var/run/netns", namespace))
+    if self.namespaces.include?(namespace)
       ping = "curl -m 3 -sL -w \"%{http_code}\" #{target} -o /dev/null"
       return Sys.exec_status("ip netns exec #{namespace} bash -c '#{self.proxy_export(proxy)}#{ping}'", die:false, check:"200")
     else
@@ -119,6 +131,7 @@ module Net
 
   # Get the current nameservers in use
   # @param filename [String] to use instead of /etc/resolv.conf
+  # @returns [Array] of name server ips
   def nameservers(*args)
     filename = args.any? ? args.first.to_s : '/etc/resolv.conf'
 
@@ -133,12 +146,18 @@ module Net
     return result
   end
 
+  # Get all namespaces
+  # @returns [Array] of namespace names
+  def namespaces
+    return Dir[File.join("/var/run/netns", "*")].map{|x| File.basename(x)}
+  end
+
   # Get the veths associated with the given namespace
   # @param namespace [String] name to use when creating it
   # @returns [host_veth, guest_veth, network]
   def namespace_details(namespace)
     host, guest = Veth.new, Veth.new
-    if File.exists?(File.join("/var/run/netns", namespace))
+    if self.namespaces.include?(namespace)
 
       # Rebuild guest veth object
       out = `ip netns exec #{namespace} ip a show type veth`
@@ -170,16 +189,43 @@ module Net
   end
 
   # Create a network namespace with the given name
+  # Params can be given as ordered positional args or named args
+  #
   # @param namespace [String] name to use when creating it
   # @param host_veth [Veth] describes the veth to create for the host side
   # @param guest_veth [Veth] describes the veth to create for the guest side
-  # @param network [Network] describes the network to share
-  def create_namespace(namespace, host_veth, guest_veth, network)
-    namespace_conf = File.join("/etc/netns", namespace)
+  # @param network [Network] describes the network to share. 
+  #   If the nic param is nil NAT is not enabled. If nic is true then the primary nic is dynamically
+  #   looked up else use user given If nameservers are not given the host nameservers will be used
+  #def create_namespace(namespace, host_veth, guest_veth, network)
+  def create_namespace(namespace, *args)
+    network = Network.new(@@namespace_subnet, @@namespace_cidr, true)
+    host_veth, guest_veth = Veth.new, Veth.new
+    if args.size == 1 && args.first.is_a?(Hash)
+      network = args.first[:network]
+      host_veth = args.first[:host_veth]
+      guest_veth = args.first[:guest_veth]
+    elsif args.size > 1
+      host_veth, guest_veth, network = args
+    end
+
+    # Determine host and guest veth params
+    if !host_veth.name
+      i = self.namespaces.size + 1
+      host_veth.name = "veth#{i}"
+      ip_i = IPAddr.new(@@namespace_subnet).to_i + i
+      host_veth.ip = [24, 16, 8, 0].collect{|x| (ip_i >> x) & 255}.join('.')
+      i += 1
+      guest_veth.name = "veth#{i}"
+      guest_veth.ip = "#{IPAddr.new(host_veth.ip).succ}"
+    end
+
+    # Determine network nic and nameservers
+    network.nic = self.primary_nic if network.nic == true
     network.nameservers = self.nameservers if not network.nameservers
 
     # Ensure namespace i.e. /var/run/netns/<namespace> exists
-    if !File.exists?(File.join("/var/run/netns", namespace))
+    if self.namespaces.include?(namespace)
       Log.info("Creating Network Namespace #{namespace.colorize(:cyan)}", newline:false)
       Sys.exec_status("ip netns add #{namespace}")
     end
@@ -283,7 +329,7 @@ module Net
     end
 
     # Remove namespace
-    if File.exists?(File.join("/var/run/netns", namespace))
+    if self.namespaces.include?(namespace)
       Log.info("Removing namespace #{namespace.colorize(:cyan)}", newline:false)
       Sys.exec_status("ip netns delete #{namespace}")
     end

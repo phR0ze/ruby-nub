@@ -40,26 +40,20 @@ cmdr.add('create', 'Create namespace', nodes:[
 ], examples: "Create Namespace: sudo ./#{app} create ts enp+\n".colorize(:green))
 cmdr.add('destroy', 'Destroy namespace', nodes:[
   Option.new(nil, "Namespace name to destroy", required:true),
-  Option.new(nil, "NIC being used for NAT", required:true),
-], examples: "Destroy Namespace: sudo ./#{app} destroy ts enp+\n".colorize(:green))
+], examples: "Destroy Namespace: sudo ./#{app} destroy ts\n".colorize(:green))
 cmdr.parse!
 
 if cmdr[:create]
-  namespace = cmdr[:create][:create0]
-  nat_nic = cmdr[:create][:create1]
-
-  host_veth = Net::Veth.new("veth1", "192.168.100.1")
+  ns = cmdr[:create][:create0]
+  nic = cmdr[:create][:create1]
+  host_veth = Net::Veth.new("#{ns}_veth1", "192.168.100.1")
   guest_veth = Net::Veth.new("veth2", "192.168.100.2")
-  network = Net::Network.new("192.168.100.0", "24")
+  network = Net::Network.new("192.168.100.0", "24", nic)
   if cmd == "isolate"
-    Net.create_namespace(namespace, host_veth, guest_veth, network, "enp+")
-    Net.namespace_connectivity?(namespace, "google.com")
-    Net.namespace_exec(namespace, "lxterminal")
-  elsif cmd == "destroy"
+    Net.create_namespace(ns, host_veth, guest_veth, network)
+    Net.namespace_connectivity?(ns, "google.com")
 elsif cmdr[:destroy]
-  namespace = cmdr[:destroy][:destroy0]
-  nat_nic = cmdr[:destroy][:destroy1]
-  #Net.delete_namespace(namespace, host_veth, network, "enp+")
+  Net.delete_namespace(cmdr[:destroy][:destroy0])
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2
