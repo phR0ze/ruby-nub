@@ -21,6 +21,7 @@
 #SOFTWARE.
 
 require 'ostruct'
+require 'ipaddr'
 require_relative 'log'
 require_relative 'sys'
 require_relative 'module'
@@ -93,8 +94,9 @@ module Net
   # Network object
   # @param subnet [String] of the network e.g. 192.168.100.0
   # @param cidr [String] of the network
+  # @param nic [String] to use for NAT etc...
   # @param nameservers [Array[String]] to optionally use for new network else uses hosts
-  Network = Struct.new(:subnet, :cidr, :nameservers)
+  Network = Struct.new(:subnet, :cidr, :nic, :nameservers)
 
   # Check that the namespace has connectivity to the outside world
   # using a simple curl on google
@@ -154,7 +156,11 @@ module Net
       namespace_conf = File.join("/etc/netns", namespace, "resolv.conf")
       network.nameservers = self.nameservers(namespace_conf) if File.exists?(namespace_conf)
       network.cidr = host.ip[/\/([\d]+)/, 1]
-      network.subnet = host.ip[/\/([\d]+)/, 1]
+      network.subnet = IPAddr.new(host.ip).mask(network.cidr).to_s
+      out = `iptables -S`
+      if out.include?(host.name)
+        network.nic = out[/-A FORWARD -i #{host.name} -o (.*) -j ACCEPT/, 1]
+      end
     else
       Sys.exec_status(":", die:false, check:"200")
       Log.warn("Namespace #{namespace} doesn't exist!")
@@ -168,9 +174,7 @@ module Net
   # @param host_veth [Veth] describes the veth to create for the host side
   # @param guest_veth [Veth] describes the veth to create for the guest side
   # @param network [Network] describes the network to share
-  # @param nat [String] pattern matching nic to nat against e.g. en+
-  def create_namespace(namespace, host_veth, guest_veth, network, *args)
-    nat = args.any? ? args.first.to_s : nil
+  def create_namespace(namespace, host_veth, guest_veth, network)
     namespace_conf = File.join("/etc/netns", namespace)
     network.nameservers = self.nameservers if not network.nameservers
 
@@ -217,18 +221,18 @@ module Net
 
     # NAT guest veth behind host veth to share internet access on host with guest
     # Note: to see current forward rules use: sudo iptables -S
-    if nat
+    if network.nic
       if !`iptables -t nat -S`.include?(File.join(network.subnet, network.cidr))
         Log.info("Enable NAT on host for namespace #{File.join(network.subnet, network.cidr).colorize(:cyan)}", newline:false)
-        Sys.exec_status("iptables -t nat -A POSTROUTING -s #{File.join(network.subnet, network.cidr)} -o #{nat} -j MASQUERADE")
+        Sys.exec_status("iptables -t nat -A POSTROUTING -s #{File.join(network.subnet, network.cidr)} -o #{network.nic} -j MASQUERADE")
       end
-      if !`iptables -S`.include?("-A FORWARD -i #{nat}")
-        Log.info("Allow forwarding to #{namespace.colorize(:cyan)} from #{nat.colorize(:cyan)}", newline:false)
-        Sys.exec_status("iptables -A FORWARD -i #{nat} -o #{host_veth.name} -j ACCEPT")
+      if !`iptables -S`.include?("-A FORWARD -i #{network.nic}")
+        Log.info("Allow forwarding to #{namespace.colorize(:cyan)} from #{network.nic.colorize(:cyan)}", newline:false)
+        Sys.exec_status("iptables -A FORWARD -i #{network.nic} -o #{host_veth.name} -j ACCEPT")
       end
       if !`iptables -S`.include?("-A FORWARD -i #{host_veth.name}")
-        Log.info("Allow forwarding from #{namespace.colorize(:cyan)} to #{nat.colorize(:cyan)}", newline:false)
-        Sys.exec_status("iptables -A FORWARD -i #{host_veth.name} -o #{nat} -j ACCEPT")
+        Log.info("Allow forwarding from #{namespace.colorize(:cyan)} to #{network.nic.colorize(:cyan)}", newline:false)
+        Sys.exec_status("iptables -A FORWARD -i #{host_veth.name} -o #{network.nic} -j ACCEPT")
       end
     end
 
@@ -246,15 +250,8 @@ module Net
 
   # Delete the given network namespace
   # @param namespace [String] name to use when creating it
-  # @param nat [String] pattern matching nic to nat against e.g. en+
-  def delete_namespace(namespace, *args)
-    nat = args.any? ? args.first.to_s : nil
-
-    # Rebuild veths and network objects from disk
+  def delete_namespace(namespace)
     host_veth, guest_veth, network = self.namespace_details(namespace)
-    puts(host_veth)
-    puts(network)
-    exit
 
     # Remove nameserver config for network namespace
     namespace_conf = File.join("/etc/netns", namespace)
@@ -264,18 +261,18 @@ module Net
     end
 
     # Remove NAT and iptables forwarding allowances
-    if nat
+    if network.nic
       if `iptables -t nat -S`.include?(File.join(network.subnet, network.cidr))
         Log.info("Removing NAT on host for namespace #{File.join(network.subnet, network.cidr).colorize(:cyan)}", newline:false)
-        Sys.exec_status("iptables -t nat -D POSTROUTING -s #{File.join(network.subnet, network.cidr)} -o #{nat} -j MASQUERADE")
+        Sys.exec_status("iptables -t nat -D POSTROUTING -s #{File.join(network.subnet, network.cidr)} -o #{network.nic} -j MASQUERADE")
       end
-      if `iptables -S`.include?("-A FORWARD -i #{nat}")
+      if `iptables -S`.include?("-A FORWARD -i #{network.nic}")
         Log.info("Remove forwarding to #{namespace.colorize(:cyan)} from #{host_veth.ip.colorize(:cyan)}", newline:false)
-        Sys.exec_status("iptables -D FORWARD -i #{nat} -o #{host_veth.name} -j ACCEPT")
+        Sys.exec_status("iptables -D FORWARD -i #{network.nic} -o #{host_veth.name} -j ACCEPT")
       end
       if `iptables -S`.include?("-A FORWARD -i #{host_veth.name}")
         Log.info("Remove forwarding from #{namespace.colorize(:cyan)} to #{host_veth.ip.colorize(:cyan)}", newline:false)
-        Sys.exec_status("iptables -D FORWARD -i #{host_veth.name} -o #{nat} -j ACCEPT")
+        Sys.exec_status("iptables -D FORWARD -i #{host_veth.name} -o #{network.nic} -j ACCEPT")
       end
     end
 
