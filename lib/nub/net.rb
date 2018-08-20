@@ -65,7 +65,6 @@ module Net
   def proxy_export(*args)
     proxy = args.any? ? args.first.to_s : nil
     if proxy
-      puts("here")
       ({'ftp_proxy' => proxy,
        'http_proxy' => proxy,
        'https_proxy' => proxy

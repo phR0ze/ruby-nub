@@ -73,7 +73,7 @@ class TestProxy < Minitest::Test
   def test_proxy_export_set
     proxy = "http://proxy.com:8080"
     export = "export ftp_proxy=#{proxy};export http_proxy=#{proxy};export https_proxy=#{proxy};"
-    assert_equal(export, Net.proxy_export(proxy:'http://proxy.com:8080'))
+    assert_equal(export, Net.proxy_export('http://proxy.com:8080'))
   end
 
   def test_ip_forward_true
@@ -89,7 +89,7 @@ class TestProxy < Minitest::Test
 
   def test_namespace_connectivity_false
     File.stub(:exists?, false){
-      capture = Sys.capture{Net.namespace_connectivity?('bob')}
+      capture = Sys.capture{Net.namespace_connectivity?('bob', 'google.com')}
       assert(capture.stdout.include?("Namespace bob doesn't exist"))
     }
   end
