@@ -20,13 +20,34 @@
 #OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 #SOFTWARE.
 
-require_relative '../lib/nub/net'
-require_relative '../lib/nub/user'
-!puts("Must be root to execute") and exit if not User.root?
+begin
+  require 'nub'
+rescue Exception => e
+  puts("Error: missing package '#{e.message.split(' ').last.sub('/', '-')}'")
+  !puts("Error: install missing packages with 'bundle install --system") and exit
+end
+Log.die("Must be root to execute") if not User.root?
 
-if ARGV.size > 0
-  cmd = ARGV[0]
-  namespace = "foo"
+app = 'nsctl'
+version = '0.0.1'
+examples = "Create Namespace: sudo ./#{app} create ts enp+\n".colorize(:green)
+examples += "Destroy Namespace: sudo ./#{app} destroy ts enp+\n".colorize(:green)
+
+cmdr = Commander.new(app:app, version:version, examples:examples)
+cmdr.add('create', 'Create namespace', nodes:[
+  Option.new(nil, "Namespace name to create", required:true),
+  Option.new(nil, "NIC to NAT the new namespace to", required:true),
+], examples: "Create Namespace: sudo ./#{app} create ts enp+\n".colorize(:green))
+cmdr.add('destroy', 'Destroy namespace', nodes:[
+  Option.new(nil, "Namespace name to destroy", required:true),
+  Option.new(nil, "NIC being used for NAT", required:true),
+], examples: "Destroy Namespace: sudo ./#{app} destroy ts enp+\n".colorize(:green))
+cmdr.parse!
+
+if cmdr[:create]
+  namespace = cmdr[:create][:create0]
+  nat_nic = cmdr[:create][:create1]
+
   host_veth = Net::Veth.new("veth1", "192.168.100.1")
   guest_veth = Net::Veth.new("veth2", "192.168.100.2")
   network = Net::Network.new("192.168.100.0", "24")
@@ -35,11 +56,10 @@ if ARGV.size > 0
     Net.namespace_connectivity?(namespace, "google.com")
     Net.namespace_exec(namespace, "lxterminal")
   elsif cmd == "destroy"
-    Net.delete_namespace(namespace, host_veth, network, "enp+")
-  end
-else
-  puts("Isolate: #{$0} isolate")
-  puts("Destroy: #{$0} destroy")
+elsif cmdr[:destroy]
+  namespace = cmdr[:destroy][:destroy0]
+  nat_nic = cmdr[:destroy][:destroy1]
+  #Net.delete_namespace(namespace, host_veth, network, "enp+")
 end
 
 # vim: ft=ruby:ts=2:sw=2:sts=2

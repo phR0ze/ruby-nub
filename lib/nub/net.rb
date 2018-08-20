@@ -116,18 +116,51 @@ module Net
   end
 
   # Get the current nameservers in use
-  # parses /etc/resolv.conf
-  def nameservers
+  # @param filename [String] to use instead of /etc/resolv.conf
+  def nameservers(*args)
+    filename = args.any? ? args.first.to_s : '/etc/resolv.conf'
+
     result = []
-    resolv = "/etc/resolv.conf"
-    if File.file?(resolv)
-      File.readlines(resolv).each{|line|
+    if File.file?(filename)
+      File.readlines(filename).each{|line|
         if line[/nameserver/]
           result << line[/nameserver\s+(.*)/, 1]
         end
       }
     end
     return result
+  end
+
+  # Get the veths associated with the given namespace
+  # @param namespace [String] name to use when creating it
+  # @returns [host_veth, guest_veth, network]
+  def namespace_details(namespace)
+    host, guest = Veth.new, Veth.new
+    if File.exists?(File.join("/var/run/netns", namespace))
+
+      # Rebuild guest veth object
+      out = `ip netns exec #{namespace} ip a show type veth`
+      hostif = "if" + out[/([\d]+):\s+.*@if[\d]+/, 1]
+      guest.name = out[/ (.*)@if[\d]+/, 1]
+      guest.ip = out[/inet\s+([\d]+\.[\d]+\.[\d]+\.[\d]+\/[\d]+)/, 1]
+
+      # Rebuild host veth object
+      out = `ip a show type veth`
+      host.name = out[/ (.*)@#{hostif}/, 1]
+      host.ip = out[/inet(.*)#{host.name}/, 1][/\s*([\d]+\.[\d]+\.[\d]+\.[\d]+\/[\d]+).*/, 1]
+
+      # Rebuild network object
+      network = Network.new
+      namespace_conf = File.join("/etc/netns", namespace, "resolv.conf")
+      network.nameservers = self.nameservers(namespace_conf) if File.exists?(namespace_conf)
+      network.cidr = host.ip[/\/([\d]+)/, 1]
+      network.subnet = host.ip[/\/([\d]+)/, 1]
+    else
+      Sys.exec_status(":", die:false, check:"200")
+      Log.warn("Namespace #{namespace} doesn't exist!")
+    end
+
+    return host, guest, network
   end
 
   # Create a network namespace with the given name
@@ -213,11 +246,15 @@ module Net
 
   # Delete the given network namespace
   # @param namespace [String] name to use when creating it
-  # @param host_veth [Veth] describes the veth to create for the host side
-  # @param network [Network] describes the network to share
   # @param nat [String] pattern matching nic to nat against e.g. en+
-  def delete_namespace(namespace, host_veth, network, *args)
+  def delete_namespace(namespace, *args)
     nat = args.any? ? args.first.to_s : nil
+
+    # Rebuild veths and network objects from disk
+    host_veth, guest_veth, network = self.namespace_details(namespace)
+    puts(host_veth)
+    puts(network)
+    exit
 
     # Remove nameserver config for network namespace
     namespace_conf = File.join("/etc/netns", namespace)
