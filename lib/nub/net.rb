@@ -65,6 +65,7 @@ module Net
   def proxy_export(*args)
     proxy = args.any? ? args.first.to_s : nil
     if proxy
+      puts("here")
       ({'ftp_proxy' => proxy,
        'http_proxy' => proxy,
        'https_proxy' => proxy
@@ -259,7 +260,8 @@ module Net
   # @param namespace [String] to execut within
   # @param cmd [String] command to execute
   # @param proxy [String] to use rather than default
-  def namespace_exec(namespace, cmd, proxy:nil)
+  def namespace_exec(namespace, cmd, *args)
+    proxy = args.any? ? args.first.to_s : nil
     return `ip netns exec #{namespace} bash -c '#{self.proxy_export(proxy)}#{cmd}'`
   end
 end

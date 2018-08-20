@@ -500,6 +500,11 @@ Net.proxy?
 Net.proxy_export
 ```
 
+```bash
+# Ping type equivalent that works behind a proxy
+curl -m 3 -sL -w "%{http_code}" google.com -o /dev/null
+```
+
 ## Pacman Module <a name="pacman-module"></a>
 
 ## Process Module <a name="process-module"></a>

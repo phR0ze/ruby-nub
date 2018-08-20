@@ -34,9 +34,9 @@ if ARGV.size > 0
   if cmd == "isolate"
     Net.create_namespace(namespace, host_veth, guest_veth, network, "enp+")
     Net.namespace_connectivity?(namespace, "google.com")
+    Net.namespace_exec(namespace, "lxterminal")
   elsif cmd == "destroy"
     Net.delete_namespace(namespace, host_veth, network, "enp+")
-    Net.namespace_connectivity?(namespace, "google.com")
   end
 else
   puts("Isolate: #{$0} isolate <app>")
