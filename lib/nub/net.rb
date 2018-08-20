@@ -62,7 +62,8 @@ module Net
 
   # Get a shell export string for proxies
   # @param proxy [String] to use rather than default
-  def proxy_export(proxy:nil)
+  def proxy_export(*args)
+    proxy = args.any? ? args.first.to_s : nil
     if proxy
       ({'ftp_proxy' => proxy,
        'http_proxy' => proxy,
@@ -98,13 +99,15 @@ module Net
   # Check that the namespace has connectivity to the outside world
   # using a simple curl on google
   # @param namespace [String] name to use when creating it
+  # @param target [String] ip or dns name to use for check
   # @param proxy [String] to use rather than default
-  def namespace_connectivity?(namespace, proxy:nil)
+  def namespace_connectivity?(namespace, target, *args)
     success = false
-    Log.info("Checking namespace #{namespace.colorize(:cyan)} for connectivity to google.com", newline:false)
+    proxy = args.any? ? args.first.to_s : nil
+    Log.info("Checking namespace #{namespace.colorize(:cyan)} for connectivity to #{target}", newline:false)
 
     if File.exists?(File.join("/var/run/netns", namespace))
-      ping = 'curl -sL -w "%{http_code}" http://www.google.com -o /dev/null'
+      ping = "curl -m 3 -sL -w \"%{http_code}\" #{target} -o /dev/null"
       return Sys.exec_status("ip netns exec #{namespace} bash -c '#{self.proxy_export(proxy)}#{ping}'", die:false, check:"200")
     else
       Sys.exec_status(":", die:false, check:"200")
@@ -133,14 +136,14 @@ module Net
   # @param guest_veth [Veth] describes the veth to create for the guest side
   # @param network [Network] describes the network to share
   # @param nat [String] pattern matching nic to nat against e.g. en+
-  def create_namespace(namespace, host_veth, guest_veth, network, nat:nil)
+  def create_namespace(namespace, host_veth, guest_veth, network, *args)
+    nat = args.any? ? args.first.to_s : nil
     namespace_conf = File.join("/etc/netns", namespace)
     network.nameservers = self.nameservers if not network.nameservers
-    puts(network.nameservers)
 
     # Ensure namespace i.e. /var/run/netns/<namespace> exists
     if !File.exists?(File.join("/var/run/netns", namespace))
-      Log.info("Creating VPN Namespace #{namespace.colorize(:cyan)}", newline:false)
+      Log.info("Creating Network Namespace #{namespace.colorize(:cyan)}", newline:false)
       Sys.exec_status("ip netns add #{namespace}")
     end
 
@@ -154,7 +157,7 @@ module Net
     # by default they will both be in the root namespace until one is assigned to another
     # e.g. host:192.168.100.1 and guest:192.168.100.2 communicating in network:192.168.100.0
     if !`ip a`.include?(host_veth.name)
-      msg = "Create vpn veths #{host_veth.name.colorize(:cyan)} for #{'root'.colorize(:cyan)} "
+      msg = "Create namespace veths #{host_veth.name.colorize(:cyan)} for #{'root'.colorize(:cyan)} "
       msg += "and #{guest_veth.name.colorize(:cyan)} for #{namespace.colorize(:cyan)}"
       Log.info(msg, newline:false)
       Sys.exec_status("ip link add #{host_veth.name} type veth peer name #{guest_veth.name}")
@@ -180,23 +183,23 @@ module Net
     end
 
     # NAT guest veth behind host veth to share internet access on host with guest
-    # Note: to see current forward rules use: iptables -S
+    # Note: to see current forward rules use: sudo iptables -S
     if nat
       if !`iptables -t nat -S`.include?(File.join(network.subnet, network.cidr))
-        Log.info("Enable NAT on host for vpn net #{File.join(network.subnet, network.cidr).colorize(:cyan)}", newline:false)
+        Log.info("Enable NAT on host for namespace #{File.join(network.subnet, network.cidr).colorize(:cyan)}", newline:false)
         Sys.exec_status("iptables -t nat -A POSTROUTING -s #{File.join(network.subnet, network.cidr)} -o #{nat} -j MASQUERADE")
       end
       if !`iptables -S`.include?("-A FORWARD -i #{nat}")
-        Log.info("Allow forwarding to #{namespace.colorize(:cyan)}", newline:false)
+        Log.info("Allow forwarding to #{namespace.colorize(:cyan)} from #{nat.colorize(:cyan)}", newline:false)
         Sys.exec_status("iptables -A FORWARD -i #{nat} -o #{host_veth.name} -j ACCEPT")
       end
       if !`iptables -S`.include?("-A FORWARD -i #{host_veth.name}")
-        Log.info("Allow forwarding from #{namespace.colorize(:cyan)}", newline:false)
+        Log.info("Allow forwarding from #{namespace.colorize(:cyan)} to #{nat.colorize(:cyan)}", newline:false)
         Sys.exec_status("iptables -A FORWARD -i #{host_veth.name} -o #{nat} -j ACCEPT")
       end
     end
 
-    # Configure nameserver to use in VPN namespace
+    # Configure nameserver to use in Network namespace
     namespace_conf = File.join("/etc/netns", namespace)
     if !File.exists?(namespace_conf) && network.nameservers
       Log.info("Creating nameserver config #{namespace_conf}", newline:false)
@@ -213,9 +216,10 @@ module Net
   # @param host_veth [Veth] describes the veth to create for the host side
   # @param network [Network] describes the network to share
   # @param nat [String] pattern matching nic to nat against e.g. en+
-  def delete_namespace(namespace, host_veth, network, nat:nil)
+  def delete_namespace(namespace, host_veth, network, *args)
+    nat = args.any? ? args.first.to_s : nil
 
-    # Remove nameserver config for vpn
+    # Remove nameserver config for network namespace
     namespace_conf = File.join("/etc/netns", namespace)
     if File.exists?(namespace_conf)
       Log.info("Removing nameserver config #{namespace_conf.colorize(:cyan)}", newline:false)
@@ -225,7 +229,7 @@ module Net
     # Remove NAT and iptables forwarding allowances
     if nat
       if `iptables -t nat -S`.include?(File.join(network.subnet, network.cidr))
-        Log.info("Removing NAT on host for vpn net #{File.join(network.subnet, network.cidr).colorize(:cyan)}", newline:false)
+        Log.info("Removing NAT on host for namespace #{File.join(network.subnet, network.cidr).colorize(:cyan)}", newline:false)
         Sys.exec_status("iptables -t nat -D POSTROUTING -s #{File.join(network.subnet, network.cidr)} -o #{nat} -j MASQUERADE")
       end
       if `iptables -S`.include?("-A FORWARD -i #{nat}")
@@ -240,11 +244,11 @@ module Net
 
     # Remove veths (virtual ethernet interfaces)
     if `ip a`.include?(host_veth.name)
-      Log.info("Removing veth interface #{host_veth.name.colorize(:cyan)} for vpn", newline:false)
+      Log.info("Removing veth interface #{host_veth.name.colorize(:cyan)} for namespace", newline:false)
       Sys.exec_status("ip link delete #{host_veth.name}")
     end
 
-    # Remove namespace for vpn
+    # Remove namespace
     if File.exists?(File.join("/var/run/netns", namespace))
       Log.info("Removing namespace #{namespace.colorize(:cyan)}", newline:false)
       Sys.exec_status("ip netns delete #{namespace}")

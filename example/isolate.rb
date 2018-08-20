@@ -32,9 +32,11 @@ if ARGV.size > 0
   guest_veth = Net::Veth.new("veth2", "192.168.100.2")
   network = Net::Network.new("192.168.100.0", "24")
   if cmd == "isolate"
-    Net.create_namespace(namespace, host_veth, guest_veth, network, nat:"enp+")
+    Net.create_namespace(namespace, host_veth, guest_veth, network, "enp+")
+    Net.namespace_connectivity?(namespace, "google.com")
   elsif cmd == "destroy"
-    Net.delete_namespace(namespace, host_veth, network, nat:"enp+")
+    Net.delete_namespace(namespace, host_veth, network, "enp+")
+    Net.namespace_connectivity?(namespace, "google.com")
   end
 else
   puts("Isolate: #{$0} isolate <app>")
