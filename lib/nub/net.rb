@@ -85,16 +85,15 @@ module Net
   # ----------------------------------------------------------------------------
 
   # Virtual Ethernet NIC object
-  # @param name [String] of the veth
-  # @param ip [String] of the veth
-  # @param nic [String] pattern matching nic e.g. en+
-  Veth = Struct.new(:name, :ip, :nic)
+  # @param name [String] of the veth e.g. veth1
+  # @param ip [String] of the veth e.g. 192.168.100.1
+  Veth = Struct.new(:name, :ip)
 
   # Network object
-  # @param ip [String] of the network
+  # @param subnet [String] of the network e.g. 192.168.100.0
   # @param cidr [String] of the network
-  # @param nameservers [Array[String]] to use for new network
-  Network = Struct.new(:ip, :cidr, :nameservers)
+  # @param nameservers [Array[String]] to optionally use for new network else uses hosts
+  Network = Struct.new(:subnet, :cidr, :nameservers)
 
   # Check that the namespace has connectivity to the outside world
   # using a simple curl on google
@@ -113,13 +112,31 @@ module Net
     end
   end
 
+  # Get the current nameservers in use
+  # parses /etc/resolv.conf
+  def nameservers
+    result = []
+    resolv = "/etc/resolv.conf"
+    if File.file?(resolv)
+      File.readlines(resolv).each{|line|
+        if line[/nameserver/]
+          result << line[/nameserver\s+(.*)/, 1]
+        end
+      }
+    end
+    return result
+  end
+
   # Create a network namespace with the given name
   # @param namespace [String] name to use when creating it
   # @param host_veth [Veth] describes the veth to create for the host side
   # @param guest_veth [Veth] describes the veth to create for the guest side
   # @param network [Network] describes the network to share
-  def create_namespace(namespace, host_veth, guest_veth, network)
+  # @param nat [String] pattern matching nic to nat against e.g. en+
+  def create_namespace(namespace, host_veth, guest_veth, network, nat:nil)
     namespace_conf = File.join("/etc/netns", namespace)
+    network.nameservers = self.nameservers if not network.nameservers
+    puts(network.nameservers)
 
     # Ensure namespace i.e. /var/run/netns/<namespace> exists
     if !File.exists?(File.join("/var/run/netns", namespace))
@@ -137,8 +154,9 @@ module Net
     # by default they will both be in the root namespace until one is assigned to another
     # e.g. host:192.168.100.1 and guest:192.168.100.2 communicating in network:192.168.100.0
     if !`ip a`.include?(host_veth.name)
-      Log.info("Create vpn veths #{host_veth.name.colorize(:cyan)} for #{'root'.colorize(:cyan)}
-       and #{guest_veth.name.colorize(:cyan)} for #{namespace.colorize(:cyan)}", newline:false)
+      msg = "Create vpn veths #{host_veth.name.colorize(:cyan)} for #{'root'.colorize(:cyan)} "
+      msg += "and #{guest_veth.name.colorize(:cyan)} for #{namespace.colorize(:cyan)}"
+      Log.info(msg, newline:false)
       Sys.exec_status("ip link add #{host_veth.name} type veth peer name #{guest_veth.name}")
       Log.info("Assign veth #{guest_veth.name.colorize(:cyan)} to namespace #{namespace.colorize(:cyan)}", newline:false)
       Sys.exec_status("ip link set #{guest_veth.name} netns #{namespace}")
@@ -147,31 +165,35 @@ module Net
     # Assign IPv4 addresses and start up the new veth interfaces
     # sudo ping #{host_veth.ip} and sudo netns exec #{namespace} ping #{guest_veth.ip} should work now
     if !`ip a`.include?(host_veth.ip)
-      Log.info("Assign ip #{host_veth.ip.colorize(:cyan)} and start #{host_veth.ip.colorize(:cyan)}", newline:false)
-      Sys.exec_status("ifconfig #{host_veth.name} #{File.join(host_veth.ip, nework.cidr)} up")
+      Log.info("Assign ip #{host_veth.ip.colorize(:cyan)} and start #{host_veth.name.colorize(:cyan)}", newline:false)
+      Sys.exec_status("ifconfig #{host_veth.name} #{File.join(host_veth.ip, network.cidr)} up")
     end
     if !`ip netns exec #{namespace} ip a`.include?(guest_veth.ip)
-      Log.info("Assign ip #{guest_veth.ip.colorize(:cyan)} and start #{guest_veth.ip.colorize(:cyan)}", newline:false)
-      Sys.exec_status("ip netns exec #{namespace} ifconfig #{guest_veth.name} #{File.join(guest_veth.ip, nework.cidr)} up")
+      Log.info("Assign ip #{guest_veth.ip.colorize(:cyan)} and start #{guest_veth.name.colorize(:cyan)}", newline:false)
+      Sys.exec_status("ip netns exec #{namespace} ifconfig #{guest_veth.name} #{File.join(guest_veth.ip, network.cidr)} up")
     end
 
-    # Share internet access on host with namespace
-    # Note: to see current forward rules use: iptables -S
+    # Configure host veth as guest's default route leaving namespace
     if !`ip netns exec #{namespace} ip route`.include?('default')
-      Log.info("Set default route for traffic leaving namespace to #{host_veth.ip.colorize(:cyan)}", newline:false)
+      Log.info("Set default route for traffic leaving namespace #{namespace.colorize(:cyan)} to #{host_veth.ip.colorize(:cyan)}", newline:false)
       Sys.exec_status("ip netns exec #{namespace} ip route add default via #{host_veth.ip} dev #{guest_veth.name}")
     end
-    if !`iptables -t nat -S`.include?(File.join(nework.ip, nework.cidr))
-      Log.info("Enable NAT on host for vpn net #{File.join(nework.ip, nework.cidr).colorize(:cyan)}", newline:false)
-      Sys.exec_status("iptables -t nat -A POSTROUTING -s #{File.join(nework.ip, nework.cidr)} -o #{host_veth.nic} -j MASQUERADE")
-    end
-    if !`iptables -S`.include?("-A FORWARD -i #{host_veth.nic}")
-      Log.info("Allow forwarding to #{namespace.colorize(:cyan)}", newline:false)
-      Sys.exec_status("iptables -A FORWARD -i #{host_veth.nic} -o #{host_veth.name} -j ACCEPT")
-    end
-    if !`iptables -S`.include?("-A FORWARD -i #{host_veth.name}")
-      Log.info("Allow forwarding from #{namespace.colorize(:cyan)}", newline:false)
-      Sys.exec_status("iptables -A FORWARD -i #{host_veth.name} -o #{host_veth.nic} -j ACCEPT")
+
+    # NAT guest veth behind host veth to share internet access on host with guest
+    # Note: to see current forward rules use: iptables -S
+    if nat
+      if !`iptables -t nat -S`.include?(File.join(network.subnet, network.cidr))
+        Log.info("Enable NAT on host for vpn net #{File.join(network.subnet, network.cidr).colorize(:cyan)}", newline:false)
+        Sys.exec_status("iptables -t nat -A POSTROUTING -s #{File.join(network.subnet, network.cidr)} -o #{nat} -j MASQUERADE")
+      end
+      if !`iptables -S`.include?("-A FORWARD -i #{nat}")
+        Log.info("Allow forwarding to #{namespace.colorize(:cyan)}", newline:false)
+        Sys.exec_status("iptables -A FORWARD -i #{nat} -o #{host_veth.name} -j ACCEPT")
+      end
+      if !`iptables -S`.include?("-A FORWARD -i #{host_veth.name}")
+        Log.info("Allow forwarding from #{namespace.colorize(:cyan)}", newline:false)
+        Sys.exec_status("iptables -A FORWARD -i #{host_veth.name} -o #{nat} -j ACCEPT")
+      end
     end
 
     # Configure nameserver to use in VPN namespace
@@ -190,30 +212,33 @@ module Net
   # @param namespace [String] name to use when creating it
   # @param host_veth [Veth] describes the veth to create for the host side
   # @param network [Network] describes the network to share
-  def delete_namespace(namespace, host_veth, network)
+  # @param nat [String] pattern matching nic to nat against e.g. en+
+  def delete_namespace(namespace, host_veth, network, nat:nil)
 
     # Remove nameserver config for vpn
     namespace_conf = File.join("/etc/netns", namespace)
     if File.exists?(namespace_conf)
-      Log.info("Removing nameserver config #{namespace_conf}", newline:false)
+      Log.info("Removing nameserver config #{namespace_conf.colorize(:cyan)}", newline:false)
       Sys.exec_status("rm -rf #{namespace_conf}")
     end
 
     # Remove NAT and iptables forwarding allowances
-    if `iptables -t nat -S`.include?(File.join(network.ip, network.cidr))
-      Log.info("Removing NAT on host for vpn net #{File.join(network.ip, network.cidr).colorize(:cyan)}", newline:false)
-      Sys.exec_status("iptables -t nat -D POSTROUTING -s #{File.join(network.ip, network.cidr)} -o #{host_veth.nic} -j MASQUERADE")
-    end
-    if `iptables -S`.include?("-A FORWARD -i #{host_veth.nic}")
-      Log.info("Allow forwarding to #{namespace.colorize(:cyan)}", newline:false)
-      Sys.exec_status("iptables -D FORWARD -i #{host_veth.nic} -o #{host_veth.name} -j ACCEPT")
-    end
-    if `iptables -S`.include?("-A FORWARD -i #{host_veth.name}")
-      Log.info("Allow forwarding from #{namespace.colorize(:cyan)}", newline:false)
-      Sys.exec_status("iptables -D FORWARD -i #{host_veth.name} -o #{host_veth.nic} -j ACCEPT")
+    if nat
+      if `iptables -t nat -S`.include?(File.join(network.subnet, network.cidr))
+        Log.info("Removing NAT on host for vpn net #{File.join(network.subnet, network.cidr).colorize(:cyan)}", newline:false)
+        Sys.exec_status("iptables -t nat -D POSTROUTING -s #{File.join(network.subnet, network.cidr)} -o #{nat} -j MASQUERADE")
+      end
+      if `iptables -S`.include?("-A FORWARD -i #{nat}")
+        Log.info("Remove forwarding to #{namespace.colorize(:cyan)} from #{host_veth.ip.colorize(:cyan)}", newline:false)
+        Sys.exec_status("iptables -D FORWARD -i #{nat} -o #{host_veth.name} -j ACCEPT")
+      end
+      if `iptables -S`.include?("-A FORWARD -i #{host_veth.name}")
+        Log.info("Remove forwarding from #{namespace.colorize(:cyan)} to #{host_veth.ip.colorize(:cyan)}", newline:false)
+        Sys.exec_status("iptables -D FORWARD -i #{host_veth.name} -o #{nat} -j ACCEPT")
+      end
     end
 
-    # Remove virtual ethernet interfaces
+    # Remove veths (virtual ethernet interfaces)
     if `ip a`.include?(host_veth.name)
       Log.info("Removing veth interface #{host_veth.name.colorize(:cyan)} for vpn", newline:false)
       Sys.exec_status("ip link delete #{host_veth.name}")

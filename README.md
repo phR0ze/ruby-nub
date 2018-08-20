@@ -380,11 +380,11 @@ encapsulate functionality into reusable components.
 Linux by default shares a single set of network interfaces and routing table entries, such that an
 installed application can bind to all interfaces and has access to all other services currently
 running on the system. Network namespaces implemented in the kernel provide a way to isolate
-networks and services from each other. This is the technology that docker uses to isolate docker
-apps from the host and other docker apps.
+networks, interfaces and services from each other. This is the technology that docker uses to
+isolate networking in docker apps from the host and other docker apps.
 
-Network namespaces provide a way to have different separate virtual interfaces and routing tables
-that operate independent of each other. They can be easily manipulated via the ***ip netns*** command.
+Network namespaces provide a way to have separate virtual interfaces and routing tables that operate
+independent of each other. They can be manipulated via the `ip netns` command.
 
 ```bash
 # Create a new network namespace
@@ -395,8 +395,8 @@ sudo ip netns add foo
 ip netns list
 ```
 
-Once a network namespace has been created you need to configure how it connected to the host. This
-can be done by creating a pair of virtual Ethernet ***veth*** interfaces and assigning them to the
+Once a network namespace has been created you need to configure how/if it connects to the host. This
+can be done by creating a pair of virtual Ethernet (***veth***) interfaces and assigning them to the
 new network namespace as by default they will be assigned to the root namespace. The root namespace
 or global namespace is the default namespace used by the host for regular networking.
 
@@ -442,7 +442,7 @@ sudo ip netns exec foo ping 192.168.100.1
 # 64 bytes from 192.168.100.1: icmp_seq=1 ttl=64 time=0.080 ms
 ```
 
-Now we have connectivity between our veth pair across network namespaces. Because
+Now we have connectivity between our veth pair across network namespaces. Because the
 ***192.168.100.0/24*** network, that we configured the veth pair on, is a separate network from the
 host any applications running within the new network namespace will not have connectivity to
 anything else on your host or networks currently including external access to the internet.
@@ -456,15 +456,14 @@ sudo ip netns exec foo ping www.google.com
 # connect: Network is unreachable
 ```
 
-In the following sub sections I'll show you how to automated this compliated setup using the
+In the following sub sections I'll show you how to automated this complicated setup using the
 ***Net*** ruby module.
 
 #### TeamViewer Example <a name="teamviewer-example"></a>
 In this example I'll be showing you how to isolate Teamviewer such that Teamviewer is only able to
-bind to the veth2 IPv4 address that we create for it rather than all network interfaces on the host.
-This will allow you to have Teamviewer running and accessible from your network facing IP but also
-to be able to SSH port forward other Teamviewer instances to your loopback interface or other veth
-addresses.
+bind to the veth IPv4 address that we create for it rather than all network interfaces on the host.
+This will allow you to have a local Teamviewer instance running and accessible from your network
+facing IP but also to be able to SSH port forward other Teamviewer instances to your veth addresses.
 
 ```ruby
 WIP
@@ -510,6 +509,19 @@ Net.proxy_export
 ## ThreadComm Module <a name="threadcomm-module"></a>
 
 ## User Module <a name="user-module"></a>
+
+```ruby
+require 'nub'
+
+# Check if the user is root
+User.root?
+
+# Drop root privileges to regular user that invoked sudo
+User.drop_privileges
+
+# Raise privileges back to sudo user if previously dropped
+User.raise_privileges
+```
 
 ## Ruby Gem Creation <a name="ruby-gem-creation"></a>
 http://guides.rubygems.org/make-your-own-gem/
