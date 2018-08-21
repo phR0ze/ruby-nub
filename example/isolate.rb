@@ -28,8 +28,8 @@ if ARGV.size > 0
   cmd = ARGV[0]
   if cmd == "isolate"
     Net.create_namespace("foo")
-    #Net.namespace_connectivity?(namespace, "google.com")
-    #Net.namespace_exec(namespace, "lxterminal")
+    Net.namespace_connectivity?("foo", "google.com")
+    Net.namespace_exec("foo", "lxterminal")
   elsif cmd == "destroy"
     Net.delete_namespace("foo")
   end

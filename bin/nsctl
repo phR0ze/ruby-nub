@@ -21,7 +21,13 @@
 #SOFTWARE.
 
 begin
-  require 'nub'
+  if !File.expand_path(__FILE__).include?("ruby-nub/bin")
+    require 'nub'
+  else
+    require_relative '../lib/nub/net'
+    require_relative '../lib/nub/user'
+    require_relative '../lib/nub/commander'
+  end
 rescue Exception => e
   puts("Error: missing package '#{e.message.split(' ').last.sub('/', '-')}'")
   !puts("Error: install missing packages with 'bundle install --system") and exit
@@ -30,28 +36,26 @@ Log.die("Must be root to execute") if not User.root?
 
 app = 'nsctl'
 version = '0.0.1'
-examples = "Create Namespace: sudo ./#{app} create ts enp+\n".colorize(:green)
-examples += "Destroy Namespace: sudo ./#{app} destroy ts enp+\n".colorize(:green)
+examples = "List Namespaces: sudo ./#{app} list\n".colorize(:green)
+examples += "Create Namespace: sudo ./#{app} create tv\n".colorize(:green)
+examples += "Destroy Namespace: sudo ./#{app} destroy tv\n".colorize(:green)
 
 cmdr = Commander.new(app:app, version:version, examples:examples)
+cmdr.add('list', 'List namespaces')
 cmdr.add('create', 'Create namespace', nodes:[
   Option.new(nil, "Namespace name to create", required:true),
-  Option.new(nil, "NIC to NAT the new namespace to", required:true),
-], examples: "Create Namespace: sudo ./#{app} create ts enp+\n".colorize(:green))
+], examples: "Create Namespace: sudo ./#{app} create tv\n".colorize(:green))
 cmdr.add('destroy', 'Destroy namespace', nodes:[
   Option.new(nil, "Namespace name to destroy", required:true),
-], examples: "Destroy Namespace: sudo ./#{app} destroy ts\n".colorize(:green))
+], examples: "Destroy Namespace: sudo ./#{app} destroy tv\n".colorize(:green))
 cmdr.parse!
 
-if cmdr[:create]
+if cmdr[:list]
+  system("ip netns list")
+elsif cmdr[:create]
   ns = cmdr[:create][:create0]
-  nic = cmdr[:create][:create1]
-  host_veth = Net::Veth.new("#{ns}_veth1", "192.168.100.1")
-  guest_veth = Net::Veth.new("veth2", "192.168.100.2")
-  network = Net::Network.new("192.168.100.0", "24", nic)
-  if cmd == "isolate"
-    Net.create_namespace(ns, host_veth, guest_veth, network)
-    Net.namespace_connectivity?(ns, "google.com")
+  Net.create_namespace(ns)
+  Net.namespace_connectivity?(ns, "google.com")
 elsif cmdr[:destroy]
   Net.delete_namespace(cmdr[:destroy][:destroy0])
 end
