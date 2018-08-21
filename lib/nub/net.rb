@@ -22,6 +22,7 @@
 
 require 'ostruct'
 require 'ipaddr'
+require 'socket'
 require_relative 'log'
 require_relative 'sys'
 require_relative 'module'
@@ -112,6 +113,18 @@ module Net
     i = args.any? ? args.first.to_i : 1
     ip_i = IPAddr.new(ip).to_i - i
     return [24, 16, 8, 0].collect{|x| (ip_i >> x) & 255}.join('.')
+  end
+
+  # Check if the given ip:port is open
+  # @param ip [String] to check
+  # @param port [Int] to check
+  def port_open?(ip, port)
+    begin
+      TCPSocket.new(ip, port).close
+      true
+    rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
+      false
+    end
   end
 
   # ----------------------------------------------------------------------------
