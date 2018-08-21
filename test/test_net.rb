@@ -77,7 +77,7 @@ class TestProxy < Minitest::Test
   end
 end
 
-class TestIPForward < Minitest::Test
+class TestMisc < Minitest::Test
   def test_ip_forward_true
     File.stub(:read, '1'){
       assert(Net.ip_forward?)
@@ -87,6 +87,12 @@ class TestIPForward < Minitest::Test
   def test_ip_forward_false
     File.stub(:read, ''){assert(!Net.ip_forward?)}
     File.stub(:read, '0'){assert(!Net.ip_forward?)}
+  end
+
+  def test_primary_nic
+    Net.stub(:`, 'default via 1.1.1.1 dev fooeth proto') {
+      assert_equal('fooeth', Net.primary_nic)
+    }
   end
 end
 
@@ -183,7 +189,45 @@ class TestNamespaces < Minitest::Test
     }
   end
 
-  def test_namespace_defaults
+  def test_namespace_defaults_no_args
+    Net.stub(:namespaces, ['one', 'two', 'three']){
+      Net.stub(:primary_nic, 'foo1') {
+        Net.stub(:nameservers, ['1.1.1.1', '1.0.0.1']) {
+          host, guest, net = Net.namespace_defaults
+          assert_equal('veth7', host.name)
+          assert_equal('192.168.100.7', host.ip)
+          assert_equal('veth8', guest.name)
+          assert_equal('192.168.100.8', guest.ip)
+          assert_equal('192.168.100.0', net.subnet)
+          assert_equal('24', net.cidr)
+          assert_equal('foo1', net.nic)
+          assert_equal(['1.1.1.1', '1.0.0.1'], net.nameservers)
+        }
+      }
+    }
+  end
+
+  def test_namespace_defaults_custom
+    default_subnet = Net.namespace_subnet
+    Net.namespace_subnet = '192.168.10.0'
+
+    Net.stub(:namespaces, ['one', 'two', 'three']){
+      Net.stub(:primary_nic, 'foo1') {
+        Net.stub(:nameservers, ['1.1.1.1', '1.0.0.1']) {
+          host, guest, net = Net.namespace_defaults(host_veth: Net::Veth.new('foo1'), guest_veth: Net::Veth.new(nil, '19foo'))
+          assert_equal('foo1', host.name)
+          assert_equal('192.168.10.7', host.ip)
+          assert_equal('veth8', guest.name)
+          assert_equal('19foo', guest.ip)
+          assert_equal('192.168.10.0', net.subnet)
+          assert_equal('24', net.cidr)
+          assert_equal('foo1', net.nic)
+          assert_equal(['1.1.1.1', '1.0.0.1'], net.nameservers)
+        }
+      }
+    }
+
+    Net.namespace_subnet = default_subnet
   end
 end
 
