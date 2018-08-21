@@ -23,6 +23,7 @@
 require 'ostruct'
 require 'ipaddr'
 require 'socket'
+require 'timeout'
 require_relative 'log'
 require_relative 'sys'
 require_relative 'module'
@@ -118,13 +119,19 @@ module Net
   # Check if the given ip:port is open
   # @param ip [String] to check
   # @param port [Int] to check
-  def port_open?(ip, port)
-    begin
-      TCPSocket.new(ip, port).close
-      true
-    rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
-      false
-    end
+  # @param timeout [Int] to wait when dead
+  def port_open?(ip, port, *args)
+    sec = args.any? ? args.first.to_i : 0.1
+    Timeout::timeout(sec){
+      begin
+        TCPSocket.new(ip, port).close
+        true
+      rescue Errno::ECONNREFUSED, Errno::EHOSTUNREACH
+        false
+      end
+    }
+  rescue Timeout::Error
+    false
   end
 
   # ----------------------------------------------------------------------------
@@ -368,11 +375,11 @@ module Net
         Log.info("Removing NAT on host for namespace #{File.join(network.subnet, network.cidr).colorize(:cyan)}", newline:false)
         Sys.exec_status("iptables -t nat -D POSTROUTING -s #{File.join(network.subnet, network.cidr)} -o #{network.nic} -j MASQUERADE")
       end
-      if `iptables -S`.include?("-A FORWARD -i #{network.nic}")
+      if `iptables -S`.include?("-A FORWARD -i #{network.nic} -o #{host_veth.name}")
         Log.info("Remove forwarding to #{namespace.colorize(:cyan)} from #{host_veth.ip.colorize(:cyan)}", newline:false)
         Sys.exec_status("iptables -D FORWARD -i #{network.nic} -o #{host_veth.name} -j ACCEPT")
       end
-      if `iptables -S`.include?("-A FORWARD -i #{host_veth.name}")
+      if `iptables -S`.include?("-A FORWARD -i #{host_veth.name} -o #{network.nic}")
         Log.info("Remove forwarding from #{namespace.colorize(:cyan)} to #{host_veth.ip.colorize(:cyan)}", newline:false)
         Sys.exec_status("iptables -D FORWARD -i #{host_veth.name} -o #{network.nic} -j ACCEPT")
       end

@@ -468,6 +468,12 @@ facing IP but also to be able to SSH port forward other Teamviewer instances to 
 ```bash
 sudo cp ruby-nub/bin/nsctl /usr/bin
 sudo nsctl create tv1
+sudo nsctl list
+# nsctl_v0.0.1
+# --------------------------------------------------------------------------------
+# tv1: veths=[tv1_host:192.168.100.1, tv1_guest:192.168.100.2]
+
+ssh -L 192.168.100
 ssh 
 ```
 
