@@ -152,72 +152,65 @@ module Net
     end
   end
 
-  # Get namespaces defaults for missing arguments
+  # Get namespace details using defaults for missing arguments
   # veth names are generated incrementally using the 'vethN' naming pattern
   # veth ips are generated based off @@namespace_subnet/@@namespace_cidr incrementally
   # network subnet and cidr default and namespaces and nic are looked up
-  def namespace_defaults(*args)
-    network = Network.new(@@namespace_subnet, @@namespace_cidr, true)
-    host_veth, guest_veth = Veth.new, Veth.new
-
-    # Handle args as either as positional or named
-    if args.size == 1 && args.first.is_a?(Hash)
-      network = args.first[:network] if args.first.key?(:network)
-      host_veth = args.first[:host_veth] if args.first.key?(:host_veth)
-      guest_veth = args.first[:guest_veth] if args.first.key?(:guest_veth)
-    elsif args.size > 1
-      host_veth = args.shift
-      guest_veth = args.shift if args.any?
-      network = args.shift if args.any?
-    end
-
-    # Populate correct missing information
-    i = self.namespaces.size * 2 + 1
-    ip_i = IPAddr.new(@@namespace_subnet).to_i + i
-    host_veth.name = "veth#{i}" if !host_veth.name
-    host_veth.ip = [24, 16, 8, 0].collect{|x| (ip_i >> x) & 255}.join('.') if !host_veth.ip
-    guest_veth.name = "veth#{i + 1}" if !guest_veth.name
-    guest_veth.ip = "#{IPAddr.new(host_veth.ip).succ}" if !guest_veth.ip
-    network.nic = self.primary_nic if network.nic == true
-    network.nameservers = self.nameservers if not network.nameservers
-
-    return host_veth, guest_veth, network
-  end
-
-  # Get the veths associated with the given namespace
   # @param namespace [String] name to use when creating it
   # @returns [host_veth, guest_veth, network]
-  def namespace_details(namespace)
-    host, guest = Veth.new, Veth.new
+  def namespace_details(namespace, *args)
+    host_veth, guest_veth = Veth.new, Veth.new
+    network = Network.new(@@namespace_subnet, @@namespace_cidr, true)
+
+    # Rebuild namespace objects from disk where possible
     if self.namespaces.include?(namespace)
 
       # Rebuild guest veth object
       out = `ip netns exec #{namespace} ip a show type veth`
       hostif = "if" + out[/([\d]+):\s+.*@if[\d]+/, 1]
-      guest.name = out[/ (.*)@if[\d]+/, 1]
-      guest.ip = out[/inet\s+([\d]+\.[\d]+\.[\d]+\.[\d]+\/[\d]+)/, 1]
+      guest_veth.name = out[/ (.*)@if[\d]+/, 1]
+      guest_veth.ip = out[/inet\s+([\d]+\.[\d]+\.[\d]+\.[\d]+).*/, 1]
 
       # Rebuild host veth object
       out = `ip a show type veth`
-      host.name = out[/ (.*)@#{hostif}/, 1]
-      host.ip = out[/inet(.*)#{host.name}/, 1][/\s*([\d]+\.[\d]+\.[\d]+\.[\d]+\/[\d]+).*/, 1]
+      host_veth.name = out[/ (.*)@#{hostif}/, 1]
+      host_ip = out[/inet(.*)#{host_veth.name}/, 1][/\s*([\d]+\.[\d]+\.[\d]+\.[\d]+\/[\d]+).*/, 1]
+      host_veth.ip = host_ip[/(.*)\/[\d]+/, 1]
 
       # Rebuild network object
-      network = Network.new
       namespace_conf = File.join("/etc/netns", namespace, "resolv.conf")
       network.nameservers = self.nameservers(namespace_conf) if File.exists?(namespace_conf)
-      network.cidr = host.ip[/\/([\d]+)/, 1]
-      network.subnet = IPAddr.new(host.ip).mask(network.cidr).to_s
+      network.cidr = host_ip[/\/([\d]+)/, 1]
+      network.subnet = IPAddr.new(host_veth.ip).mask(network.cidr).to_s
       out = `iptables -S`
-      if out.include?(host.name)
-        network.nic = out[/-A FORWARD -i #{host.name} -o (.*) -j ACCEPT/, 1]
+      if out.include?(host_veth.name)
+        network.nic = out[/-A FORWARD -i #{host_veth.name} -o (.*) -j ACCEPT/, 1]
       end
+
+    # Handle args as either as positional or named
     else
-      Sys.exec_status(":", die:false, check:"200")
-      Log.warn("Namespace #{namespace} doesn't exist!")
+      if args.size == 1 && args.first.is_a?(Hash)
+        network = args.first[:network] if args.first.key?(:network)
+        host_veth = args.first[:host_veth] if args.first.key?(:host_veth)
+        guest_veth = args.first[:guest_veth] if args.first.key?(:guest_veth)
+      elsif args.size > 1
+        host_veth = args.shift
+        guest_veth = args.shift if args.any?
+        network = args.shift if args.any?
+      end
     end
 
-    return host, guest, network
+#    # Populate correct missing information
+#    i = self.namespaces.size * 2 + 1
+#    ip_i = IPAddr.new(@@namespace_subnet).to_i + i
+#    host_veth.name = "veth#{i}" if !host_veth.name
+#    host_veth.ip = [24, 16, 8, 0].collect{|x| (ip_i >> x) & 255}.join('.') if !host_veth.ip
+#    guest_veth.name = "veth#{i + 1}" if !guest_veth.name
+#    guest_veth.ip = "#{IPAddr.new(host_veth.ip).succ}" if !guest_veth.ip
+#    network.nic = self.primary_nic if network.nic == true
+#    network.nameservers = self.nameservers if not network.nameservers
+
+    return host_veth, guest_veth, network
   end
 
   # Create a network namespace with the given name
@@ -231,12 +224,10 @@ module Net
   #   looked up else use user given If nameservers are not given the host nameservers will be used
   #def create_namespace(namespace, host_veth, guest_veth, network)
   def create_namespace(namespace, *args)
-    host_veth, guest_veth, network = self.namespace_defaults(args)
-    puts(host_veth, guest_veth, network)
-    exit
+    host_veth, guest_veth, network = self.namespace_details(namespace, args)
 
     # Ensure namespace i.e. /var/run/netns/<namespace> exists
-    if self.namespaces.include?(namespace)
+    if !self.namespaces.include?(namespace)
       Log.info("Creating Network Namespace #{namespace.colorize(:cyan)}", newline:false)
       Sys.exec_status("ip netns add #{namespace}")
     end

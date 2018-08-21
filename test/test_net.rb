@@ -189,11 +189,11 @@ class TestNamespaces < Minitest::Test
     }
   end
 
-  def test_namespace_defaults_no_args
+  def test_namespace_details_defaults
     Net.stub(:namespaces, ['one', 'two', 'three']){
       Net.stub(:primary_nic, 'foo1') {
         Net.stub(:nameservers, ['1.1.1.1', '1.0.0.1']) {
-          host, guest, net = Net.namespace_defaults
+          host, guest, net = Net.namespace_details('ns1')
           assert_equal('veth7', host.name)
           assert_equal('192.168.100.7', host.ip)
           assert_equal('veth8', guest.name)
@@ -207,14 +207,14 @@ class TestNamespaces < Minitest::Test
     }
   end
 
-  def test_namespace_defaults_custom
+  def test_namespace_details_custom
     default_subnet = Net.namespace_subnet
     Net.namespace_subnet = '192.168.10.0'
 
     Net.stub(:namespaces, ['one', 'two', 'three']){
       Net.stub(:primary_nic, 'foo1') {
         Net.stub(:nameservers, ['1.1.1.1', '1.0.0.1']) {
-          host, guest, net = Net.namespace_defaults(host_veth: Net::Veth.new('foo1'), guest_veth: Net::Veth.new(nil, '19foo'))
+          host, guest, net = Net.namespace_details('ns1', host_veth: Net::Veth.new('foo1'), guest_veth: Net::Veth.new(nil, '19foo'))
           assert_equal('foo1', host.name)
           assert_equal('192.168.10.7', host.ip)
           assert_equal('veth8', guest.name)
@@ -228,6 +228,53 @@ class TestNamespaces < Minitest::Test
     }
 
     Net.namespace_subnet = default_subnet
+  end
+
+  def test_namespace_details_override
+    host_veth = Net::Veth.new('veth3', '192.168.100.1')
+    guest_veth = Net::Veth.new('veth4', '192.168.100.2')
+    network = Net::Network.new('192.168.100.0', '24', 'nic1', ['1.1.1.1', '1.0.0.1'])
+    host, guest, net = Net.namespace_details('ns1', host_veth: host_veth, guest_veth: guest_veth, network: network)
+    assert_equal(host_veth.name, host.name)
+    assert_equal(host_veth.ip, host.ip)
+    assert_equal(guest_veth.name, guest.name)
+    assert_equal(guest_veth.ip, guest.ip)
+    assert_equal(network.subnet, net.subnet)
+    assert_equal(network.cidr, net.cidr)
+    assert_equal(network.nic, net.nic)
+    assert_equal(network.nameservers, net.nameservers)
+  end
+
+  def test_namespace_details_existing_good
+    ns = 'foo'
+    check_params = ->(x){
+      if x.include?("#{ns} ip a show type veth")
+        "34: veth2@if35: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 7e:cb:fb:61:86:ca brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.100.2/24 brd 192.168.100.255 scope global veth2
+       valid_lft forever preferred_lft forever"
+      elsif x == "ip a show type veth"
+        "35: veth1@if34: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UP group default qlen 1000
+    link/ether 7e:cb:fb:61:86:ca brd ff:ff:ff:ff:ff:ff link-netnsid 0
+    inet 192.168.100.1/24 brd 192.168.100.255 scope global veth1
+       valid_lft forever preferred_lft forever"
+      elsif x == "iptables -S"
+        "-A FORWARD -i veth1 -o nic1 -j ACCEPT"
+      end
+    }
+
+    Net.stub(:namespaces, [ns]) {
+      Net.stub(:`, check_params) {
+        File.stub(:exists?, true) {
+          Net.stub(:nameservers, ['1.2.3.4']) {
+            host, guest, net = Net.namespace_details(ns)
+            assert_equal(Net::Veth.new('veth1', '192.168.100.1'), host)
+            assert_equal(Net::Veth.new('veth2', '192.168.100.2'), guest)
+            assert_equal(Net::Network.new('192.168.100.0', '24', 'nic1', ['1.2.3.4']), net)
+          }
+        }
+      }
+    }
   end
 end
 
