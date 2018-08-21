@@ -55,7 +55,6 @@ if cmdr[:list]
 elsif cmdr[:create]
   ns = cmdr[:create][:create0]
   Net.create_namespace(ns)
-  Net.namespace_connectivity?(ns, "google.com")
 elsif cmdr[:destroy]
   Net.delete_namespace(cmdr[:destroy][:destroy0])
 end
