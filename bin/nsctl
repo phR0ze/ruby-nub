@@ -40,6 +40,8 @@ class NSCtl
     `ip netns list`.split("\n").sort.each{|x|
       ns = x[/(.*?) /, 1]
       host, guest, _ = Net.namespace_details(ns)
+      puts(Net.port_open?(host.ip, 5938))
+      puts(Net.port_open?(guest.ip, 5938))
       puts("#{ns.colorize(:cyan)}: veths=[#{host.name}:#{host.ip}, #{guest.name}:#{guest.ip}]")
     }
   end
@@ -48,17 +50,21 @@ end
 app = 'nsctl'
 version = '0.0.1'
 examples = "List Namespaces: sudo ./#{app} list\n".colorize(:green)
-examples += "Create Namespace: sudo ./#{app} create tv\n".colorize(:green)
-examples += "Destroy Namespace: sudo ./#{app} destroy tv\n".colorize(:green)
+examples += "Create Namespace: sudo ./#{app} create tv1\n".colorize(:green)
+examples += "Destroy Namespace: sudo ./#{app} destroy tv1\n".colorize(:green)
 
 cmdr = Commander.new(app:app, version:version, examples:examples)
 cmdr.add('list', 'List namespaces')
 cmdr.add('create', 'Create namespace', nodes:[
   Option.new(nil, "Namespace name to create", required:true),
-], examples: "Create Namespace: sudo ./#{app} create tv\n".colorize(:green))
+], examples: "Create Namespace: sudo ./#{app} create tv1\n".colorize(:green))
+cmdr.add('exec', 'Execute in namespace', nodes:[
+  Option.new(nil, "Namespace name to use", required:true),
+  Option.new(nil, "Command to execute", required:true)
+], examples: "Execute: sudo ./#{app} exec tv1 'ping -c 1 192.168.100.1'\n".colorize(:green))
 cmdr.add('destroy', 'Destroy namespace', nodes:[
   Option.new(nil, "Namespace name to destroy", required:true),
-], examples: "Destroy Namespace: sudo ./#{app} destroy tv\n".colorize(:green))
+], examples: "Destroy Namespace: sudo ./#{app} destroy tv1\n".colorize(:green))
 cmdr.parse!
 
 nsctl = NSCtl.new
@@ -68,6 +74,10 @@ elsif cmdr[:create]
   ns = cmdr[:create][:create0]
   Net.create_namespace(ns)
   nsctl.list
+elsif cmdr[:exec]
+  ns = cmdr[:exec][:exec0]
+  cmd = cmdr[:exec][:exec1]
+  puts(Net.namespace_exec(ns, cmd))
 elsif cmdr[:destroy]
   Net.delete_namespace(cmdr[:destroy][:destroy0])
 end
