@@ -110,23 +110,10 @@ module Net
   # @param nameservers [Array[String]] to optionally use for new network else uses hosts
   Network = Struct.new(:subnet, :cidr, :nic, :nameservers)
 
-  # Check that the namespace has connectivity to the outside world
-  # using a simple curl on google
-  # @param namespace [String] name to use when creating it
-  # @param target [String] ip or dns name to use for check
-  # @param proxy [String] to use rather than default
-  def namespace_connectivity?(namespace, target, *args)
-    success = false
-    proxy = args.any? ? args.first.to_s : nil
-    Log.info("Checking namespace #{namespace.colorize(:cyan)} for connectivity to #{target}", newline:false)
-
-    if self.namespaces.include?(namespace)
-      ping = "curl -m 3 -sL -w \"%{http_code}\" #{target} -o /dev/null"
-      return Sys.exec_status("ip netns exec #{namespace} bash -c '#{self.proxy_export(proxy)}#{ping}'", die:false, check:"200")
-    else
-      Sys.exec_status(":", die:false, check:"200")
-      Log.warn("Namespace #{namespace} doesn't exist!")
-    end
+  # Get all namespaces
+  # @returns [Array] of namespace names
+  def namespaces
+    return Dir[File.join("/var/run/netns", "*")].map{|x| File.basename(x)}
   end
 
   # Get the current nameservers in use
@@ -146,10 +133,56 @@ module Net
     return result
   end
 
-  # Get all namespaces
-  # @returns [Array] of namespace names
-  def namespaces
-    return Dir[File.join("/var/run/netns", "*")].map{|x| File.basename(x)}
+  # Check that the namespace has connectivity to the outside world
+  # using a simple curl on google
+  # @param namespace [String] name to use when creating it
+  # @param target [String] ip or dns name to use for check
+  # @param proxy [String] to use rather than default
+  def namespace_connectivity?(namespace, target, *args)
+    success = false
+    proxy = args.any? ? args.first.to_s : nil
+    Log.info("Checking namespace #{namespace.colorize(:cyan)} for connectivity to #{target}", newline:false)
+
+    if self.namespaces.include?(namespace)
+      ping = "curl -m 3 -sL -w \"%{http_code}\" #{target} -o /dev/null"
+      return Sys.exec_status("ip netns exec #{namespace} bash -c '#{self.proxy_export(proxy)}#{ping}'", die:false, check:"200")
+    else
+      Sys.exec_status(":", die:false, check:"200")
+      Log.warn("Namespace #{namespace} doesn't exist!")
+    end
+  end
+
+  # Get namespaces defaults for missing arguments
+  # veth names are generated incrementally using the 'vethN' naming pattern
+  # veth ips are generated based off @@namespace_subnet/@@namespace_cidr incrementally
+  # network subnet and cidr default and namespaces and nic are looked up
+  def namespace_defaults(*args)
+    network = Network.new(@@namespace_subnet, @@namespace_cidr, true)
+    host_veth, guest_veth = Veth.new, Veth.new
+
+    # Handle args as either as positional or named
+    if args.size == 1 && args.first.is_a?(Hash)
+      network = args.first[:network]
+      host_veth = args.first[:host_veth]
+      guest_veth = args.first[:guest_veth]
+    elsif args.size > 1
+      host_veth, guest_veth, network = args
+    end
+
+    # Dynamically determine correct missing params
+    if !host_veth.name
+      i = self.namespaces.size * 2 + 1
+      host_veth.name = "veth#{i}"
+      ip_i = IPAddr.new(@@namespace_subnet).to_i + i
+      host_veth.ip = [24, 16, 8, 0].collect{|x| (ip_i >> x) & 255}.join('.')
+      i += 1
+      guest_veth.name = "veth#{i}"
+      guest_veth.ip = "#{IPAddr.new(host_veth.ip).succ}"
+    end
+    network.nic = self.primary_nic if network.nic == true
+    network.nameservers = self.nameservers if not network.nameservers
+
+    return host_veth, guest_veth, network
   end
 
   # Get the veths associated with the given namespace
@@ -199,30 +232,9 @@ module Net
   #   looked up else use user given If nameservers are not given the host nameservers will be used
   #def create_namespace(namespace, host_veth, guest_veth, network)
   def create_namespace(namespace, *args)
-    network = Network.new(@@namespace_subnet, @@namespace_cidr, true)
-    host_veth, guest_veth = Veth.new, Veth.new
-    if args.size == 1 && args.first.is_a?(Hash)
-      network = args.first[:network]
-      host_veth = args.first[:host_veth]
-      guest_veth = args.first[:guest_veth]
-    elsif args.size > 1
-      host_veth, guest_veth, network = args
-    end
-
-    # Determine host and guest veth params
-    if !host_veth.name
-      i = self.namespaces.size + 1
-      host_veth.name = "veth#{i}"
-      ip_i = IPAddr.new(@@namespace_subnet).to_i + i
-      host_veth.ip = [24, 16, 8, 0].collect{|x| (ip_i >> x) & 255}.join('.')
-      i += 1
-      guest_veth.name = "veth#{i}"
-      guest_veth.ip = "#{IPAddr.new(host_veth.ip).succ}"
-    end
-
-    # Determine network nic and nameservers
-    network.nic = self.primary_nic if network.nic == true
-    network.nameservers = self.nameservers if not network.nameservers
+    host_veth, guest_veth, network = self.namespace_defaults(args)
+    puts(host_veth, guest_veth, network)
+    exit
 
     # Ensure namespace i.e. /var/run/netns/<namespace> exists
     if self.namespaces.include?(namespace)

@@ -75,7 +75,9 @@ class TestProxy < Minitest::Test
     export = "export ftp_proxy=#{proxy};export http_proxy=#{proxy};export https_proxy=#{proxy};"
     assert_equal(export, Net.proxy_export('http://proxy.com:8080'))
   end
+end
 
+class TestIPForward < Minitest::Test
   def test_ip_forward_true
     File.stub(:read, '1'){
       assert(Net.ip_forward?)
@@ -86,12 +88,102 @@ class TestProxy < Minitest::Test
     File.stub(:read, ''){assert(!Net.ip_forward?)}
     File.stub(:read, '0'){assert(!Net.ip_forward?)}
   end
+end
 
-  def test_namespace_connectivity_false
-    File.stub(:exists?, false){
-      capture = Sys.capture{Net.namespace_connectivity?('bob', 'google.com')}
-      assert(capture.stdout.include?("Namespace bob doesn't exist"))
+class TestNamespaces < Minitest::Test
+  def setup
+    ENV['ftp_proxy'] = nil
+    ENV['http_proxy'] = nil
+    ENV['https_proxy'] = nil
+    ENV['no_proxy'] = nil
+  end
+
+  def test_namespaces
+    Dir.stub(:[], ['/foo/bar1', '/foo/bar2']){
+      assert_equal(['bar1', 'bar2'], Net.namespaces)
     }
+  end
+
+  def test_nameservers_no_file
+    File.stub(:file?, false) {
+      assert_equal([], Net.nameservers)
+    }
+  end
+
+  def test_nameservers_no_args
+    File.stub(:file?, true) {
+      File.stub(:readlines, ['nameserver 1.1.1.1', 'nameserver 1.0.0.1']) {
+        assert_equal(['1.1.1.1', '1.0.0.1'], Net.nameservers)
+      }
+    }
+  end
+
+  def test_nameservers_no_servers
+    File.stub(:file?, true) {
+      File.stub(:readlines, []) {
+        assert_equal([], Net.nameservers)
+      }
+    }
+  end
+
+  def test_nameservers_no_servers_bad_text
+    File.stub(:file?, true) {
+      File.stub(:readlines, ['foo bar 100', 'fe fi fo']) {
+        assert_equal([], Net.nameservers)
+      }
+    }
+  end
+
+  def test_nameservers_target_arg
+    filename = 'foobar'
+    File.stub(:file?, ->(x){assert_equal(filename, x)}) {
+      File.stub(:readlines, []) {
+        assert_equal([], Net.nameservers(filename))
+      }
+    }
+  end
+
+  def test_namespace_connectivity_no_ns
+    ns = "bob"
+    Net.stub(:namespaces, []){
+      capture = Sys.capture{Net.namespace_connectivity?(ns, 'google.com')}
+      assert(capture.stdout.include?("Namespace #{ns} doesn't exist"))
+    }
+  end
+
+  def test_namespace_connectivity_ns_exists
+    param_check = ->(x, y) {
+      assert(x.include?("bash -c 'curl -m"))
+      assert(y[:die] == false)
+      assert(y[:check] == "200")
+    }
+
+    ns = "bob"
+    Net.stub(:namespaces, [ns]){
+      Sys.stub(:exec_status, param_check) {
+        out = Sys.capture{Net.namespace_connectivity?(ns, 'google.com')}.stdout
+        assert(out.strip_color.include?("Checking namespace #{ns} for connectivity"))
+      }
+    }
+  end
+
+  def test_namespace_connectivity_proxy
+    param_check = ->(x, y) {
+      assert(x.include?("http://foobar;curl -m"))
+      assert(y[:die] == false)
+      assert(y[:check] == "200")
+    }
+
+    ns = "bob"
+    Net.stub(:namespaces, [ns]){
+      Sys.stub(:exec_status, param_check) {
+        out = Sys.capture{Net.namespace_connectivity?(ns, 'google.com', 'http://foobar')}.stdout
+        assert(out.strip_color.include?("Checking namespace #{ns} for connectivity"))
+      }
+    }
+  end
+
+  def test_namespace_defaults
   end
 end
 
