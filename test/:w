@@ -261,10 +261,10 @@ class TestNamespaces < Minitest::Test
     Net.stub(:namespaces, ['one', 'two', 'three']){
       Net.stub(:primary_nic, 'foo1') {
         Net.stub(:nameservers, ['1.1.1.1', '1.0.0.1']) {
-          Net.stub(:namespace_next_veth_ips, ['192.168.10.11', '192.168.10.12']) {
+          Net.stub(:namespace_next_veth_ips, ['192.168.100.7', '192.168.100.8']) {
             host, guest, net = Net.namespace_details('ns1', host_veth: Net::Veth.new('foo1'), guest_veth: Net::Veth.new(nil, '19foo'))
             assert_equal('foo1', host.name)
-            assert_equal('192.168.10.11', host.ip)
+            assert_equal('192.168.10.7', host.ip)
             assert_equal('ns1_guest', guest.name)
             assert_equal('19foo', guest.ip)
             assert_equal('192.168.10.0', net.subnet)
@@ -283,43 +283,20 @@ class TestNamespaces < Minitest::Test
     host_veth = Net::Veth.new('veth3', '192.168.100.1')
     guest_veth = Net::Veth.new('veth4', '192.168.100.2')
     network = Net::Network.new('192.168.100.0', '24', 'nic1', ['1.1.1.1', '1.0.0.1'])
-    Net.stub(:namespace_next_veth_ips, ['192.168.100.1', '192.168.100.2']) {
-      host, guest, net = Net.namespace_details('ns1', host_veth, guest_veth, network)
-      assert_equal(host_veth, host)
-      assert_equal(guest_veth, guest)
-      assert_equal(network, net)
-    }
+    host, guest, net = Net.namespace_details('ns1', host_veth, guest_veth, network)
+    assert_equal(host_veth, host)
+    assert_equal(guest_veth, guest)
+    assert_equal(network, net)
   end
 
   def test_namespace_details_override_hash
     host_veth = Net::Veth.new('veth3', '192.168.100.1')
     guest_veth = Net::Veth.new('veth4', '192.168.100.2')
     network = Net::Network.new('192.168.100.0', '24', 'nic1', ['1.1.1.1', '1.0.0.1'])
-    Net.stub(:namespace_next_veth_ips, ['192.168.100.1', '192.168.100.2']) {
-      host, guest, net = Net.namespace_details('ns1', guest_veth: guest_veth, network: network, host_veth: host_veth)
-      assert_equal(host_veth, host)
-      assert_equal(guest_veth, guest)
-      assert_equal(network, net)
-    }
-  end
-
-  def test_namespace_details_exists
-    host_veth = Net::Veth.new('one_host', '192.168.100.7')
-    guest_veth = Net::Veth.new('one_guest', '192.168.100.8')
-    Net.stub(:namespace_veths, [host_veth, guest_veth]){
-      Net.stub(:namespaces, ['one', 'two', 'three']){
-        Net.stub(:primary_nic, 'foo1') {
-          Net.stub(:nameservers, ['1.1.1.1', '1.0.0.1']) {
-            Net.stub(:namespace_next_veth_ips, ['192.168.100.1', '192.168.100.2']) {
-              host, guest, net = Net.namespace_details('one')
-              assert_equal(host_veth, host)
-              assert_equal(guest_veth, guest)
-              assert_equal(Net::Network.new('192.168.100.0', '24', 'foo1', ['1.1.1.1', '1.0.0.1']), net)
-            }
-          }
-        }
-      }
-    }
+    host, guest, net = Net.namespace_details('ns1', guest_veth: guest_veth, network: network, host_veth: host_veth)
+    assert_equal(host_veth, host)
+    assert_equal(guest_veth, guest)
+    assert_equal(network, net)
   end
 end
 

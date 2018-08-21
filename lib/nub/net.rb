@@ -172,36 +172,78 @@ module Net
     end
   end
 
+  # Get veths for namespace
+  # @param namespace [String] name to use for lookup
+  # @returns [host_veth, guest_veth]
+  def namespace_veths(namespace)
+    host, guest = Veth.new, Veth.new
+    if self.namespaces.include?(namespace)
+
+      # Lookup guest side
+      out = `ip netns exec #{namespace} ip a show type veth`
+      host_i = out[/([\d]+):\s+.*@if[\d]+/, 1]
+      if host_i
+        guest.name = out[/ (.*)@if[\d]+/, 1]
+        guest.ip = out[/inet\s+([\d]+\.[\d]+\.[\d]+\.[\d]+).*/, 1]
+
+        # Lookup host side
+        out = `ip a show type veth`
+        host.name = out[/ (.*)@if#{host_i}/, 1]
+        host_ip = out[/inet(.*)#{host.name}/, 1][/\s*([\d]+\.[\d]+\.[\d]+\.[\d]+\/[\d]+).*/, 1]
+        host.ip = host_ip[/(.*)\/[\d]+/, 1]
+      end
+    end
+
+    return host, guest
+  end
+
+  # Get next available pair of veth ips
+  # @returns ips [Array] of next available ips
+  def namespace_next_veth_ips
+    used = []
+    self.namespaces.each{|ns|
+      used += self.namespace_veths(ns).select{|x| x.ip}.map{|x| x.ip.split('.').last.to_i}
+    }
+    return ((1..255).to_a - used)[0..1].map{|x| self.ipinc(@@namespace_subnet, x)}
+  end
+
   # Get namespace details using defaults for missing arguments
   # veth names are generated using the '<ns>_<type>' naming pattern
   # veth ips are generated based off @@namespace_subnet/@@namespace_cidr incrementally
   # network subnet and cidr default and namespaces and nic are looked up
-  # @param namespace [String] name to use when creating it
+  # @param namespace [String] name to use for details
   # @returns [host_veth, guest_veth, network]
   def namespace_details(namespace, *args)
     host_veth, guest_veth = Veth.new, Veth.new
     network = Network.new(@@namespace_subnet, @@namespace_cidr, true)
 
+    # Pull from existing namespace first
+    if self.namespaces.include?(namespace)
+      host_veth, guest_veth = self.namespace_veths(namespace)
+
     # Handle args as either as positional or named
-    if args.size == 1 && args.first.is_a?(Hash)
-      network = args.first[:network] if args.first.key?(:network)
-      host_veth = args.first[:host_veth] if args.first.key?(:host_veth)
-      guest_veth = args.first[:guest_veth] if args.first.key?(:guest_veth)
-    elsif args.size > 1
-      host_veth = args.shift
-      guest_veth = args.shift if args.any?
-      network = args.shift if args.any?
+    else
+      if args.size == 1 && args.first.is_a?(Hash)
+        network = args.first[:network] if args.first.key?(:network)
+        host_veth = args.first[:host_veth] if args.first.key?(:host_veth)
+        guest_veth = args.first[:guest_veth] if args.first.key?(:guest_veth)
+      elsif args.size > 1
+        host_veth = args.shift
+        guest_veth = args.shift if args.any?
+        network = args.shift if args.any?
+      end
     end
 
     # Populate missing information
-    nss = self.namespaces
-    i = (nss.include?(namespace) ? nss.size - 1 : nss.size) * 2 + 1
     host_veth.name = "#{namespace}_host" if !host_veth.name
-    host_veth.ip = self.ipinc(@@namespace_subnet, i) if !host_veth.ip
     guest_veth.name = "#{namespace}_guest" if !guest_veth.name
-    guest_veth.ip = "#{self.ipinc(host_veth.ip)}" if !guest_veth.ip
     network.nic = self.primary_nic if network.nic == true
-    network.nameservers = self.nameservers if not network.nameservers
+    network.nameservers = self.nameservers if !network.nameservers
+    if !host_veth.ip or !guest_veth.ip
+      host_ip, guest_ip = self.namespace_next_veth_ips
+      host_veth.ip = host_ip if !host_veth.ip
+      guest_veth.ip = guest_ip if !guest_veth.ip
+    end
 
     return host_veth, guest_veth, network
   end

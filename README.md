@@ -466,28 +466,9 @@ This will allow you to have a local Teamviewer instance running and accessible f
 facing IP but also to be able to SSH port forward other Teamviewer instances to your veth addresses.
 
 ```bash
-require_relative '../lib/nub/net'
-require_relative '../lib/nub/user'
-!puts("Must be root to execute") and exit if not User.root?
-
-if ARGV.size > 0
-  cmd = ARGV[0]
-  app = ARGV[1]
-  namespace = "foo"
-  host_veth = Net::Veth.new("veth1", "192.168.100.1")
-  guest_veth = Net::Veth.new("veth2", "192.168.100.2")
-  network = Net::Network.new("192.168.100.0", "24")
-  if cmd == "isolate"
-    Net.create_namespace(namespace, host_veth, guest_veth, network, "enp+")
-    Net.namespace_connectivity?(namespace, "google.com")
-    Net.namespace_exec(namespace, "lxterminal")
-  elsif cmd == "destroy"
-    Net.delete_namespace(namespace, host_veth, network, "enp+")
-  end
-else
-  puts("Isolate: #{$0} isolate <app>")
-  puts("Destroy: #{$0} destroy")
-end
+sudo cp ruby-nub/bin/nsctl /usr/bin
+sudo nsctl create tv1
+ssh 
 ```
 
 #### PIA VPN Example <a name="pia-vpn-example"></a>
