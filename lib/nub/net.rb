@@ -200,15 +200,15 @@ module Net
       end
     end
 
-#    # Populate correct missing information
-#    i = self.namespaces.size * 2 + 1
-#    ip_i = IPAddr.new(@@namespace_subnet).to_i + i
-#    host_veth.name = "veth#{i}" if !host_veth.name
-#    host_veth.ip = [24, 16, 8, 0].collect{|x| (ip_i >> x) & 255}.join('.') if !host_veth.ip
-#    guest_veth.name = "veth#{i + 1}" if !guest_veth.name
-#    guest_veth.ip = "#{IPAddr.new(host_veth.ip).succ}" if !guest_veth.ip
-#    network.nic = self.primary_nic if network.nic == true
-#    network.nameservers = self.nameservers if not network.nameservers
+    # Populate correct missing information
+    i = self.namespaces.size * 2 + 1
+    ip_i = IPAddr.new(@@namespace_subnet).to_i + i
+    host_veth.name = "veth#{i}" if !host_veth.name
+    host_veth.ip = [24, 16, 8, 0].collect{|x| (ip_i >> x) & 255}.join('.') if !host_veth.ip
+    guest_veth.name = "veth#{i + 1}" if !guest_veth.name
+    guest_veth.ip = "#{IPAddr.new(host_veth.ip).succ}" if !guest_veth.ip
+    network.nic = self.primary_nic if network.nic == true
+    network.nameservers = self.nameservers if not network.nameservers
 
     return host_veth, guest_veth, network
   end
