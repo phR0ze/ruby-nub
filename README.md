@@ -33,7 +33,6 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 * [Module Extensions](#module-extensions)
 * [Net Module](#net-module)
   * [Network Namespaces](#network-namespaces)
-    * [Teamviewer Example](#teamviewer-example)
     * [PIA VPN Example](#pia-vpn-example)
   * [Network Proxy](#network-proxy)
 * [Pacman Module](#pacman-module)
@@ -458,24 +457,6 @@ sudo ip netns exec foo ping www.google.com
 
 In the following sub sections I'll show you how to automated this complicated setup using the
 ***Net*** ruby module.
-
-#### TeamViewer Example <a name="teamviewer-example"></a>
-In this example I'll be showing you how to isolate Teamviewer such that Teamviewer is only able to
-bind to the veth IPv4 address that we create for it rather than all network interfaces on the host.
-This will allow you to have a local Teamviewer instance running and accessible from your network
-facing IP but also to be able to SSH port forward other Teamviewer instances to your veth addresses.
-
-```bash
-sudo cp ruby-nub/bin/nsctl /usr/bin
-sudo nsctl create tv1
-sudo nsctl list
-# nsctl_v0.0.1
-# --------------------------------------------------------------------------------
-# tv1: veths=[tv1_host:192.168.100.1, tv1_guest:192.168.100.2]
-
-ssh -L 192.168.100
-ssh 
-```
 
 #### PIA VPN Example <a name="pia-vpn-example"></a>
 ```ruby
