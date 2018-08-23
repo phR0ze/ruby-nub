@@ -5,3 +5,6 @@ Gemfile.lock
 coverage
 test/.pacman
 test/.sysroot
+aur/pkg
+aur/src
+aur/*.pkg.tar.xz
