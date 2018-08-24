@@ -29,7 +29,7 @@ require_relative 'log'
 # Uses singleton pattern for single source of truth
 module Config
   extend self
-  @@_yml = nil
+  @@_yml = {}
 
   # Public properties
   class << self
