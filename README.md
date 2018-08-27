@@ -3,7 +3,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 
 [![Build Status](https://travis-ci.org/phR0ze/ruby-nub.svg)](https://travis-ci.org/phR0ze/ruby-nub?branch=master)
 [![Gem Version](https://badge.fury.io/rb/nub.svg)](https://badge.fury.io/rb/nub)
-[![Coverage Status](https://coveralls.io/repos/github/phR0ze/ruby-nub/badge.svg?branch=master)](https://coveralls.io/github/phR0ze/ruby-nub?branch=master)
+[![Coverage Status](https://coveralls.io/repos/github/phR0ze/ruby-nub/badge.svg?branch=master&service=github)](https://coveralls.io/github/phR0ze/ruby-nub?branch=master&service=github)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 ### Table of Contents
