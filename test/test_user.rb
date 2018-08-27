@@ -29,6 +29,32 @@ class TestUser < Minitest::Test
     Log.init(path:nil, queue: false, stdout: true)
   end
 
+  def test_drop_privileges
+    ENV['SUDO_UID'] = "888"
+    ENV['SUDO_GID'] = "999"
+
+    validate_seteuid_params = ->(x) { assert_equal(888, x)}
+    validate_setegid_params = ->(x) { assert_equal(999, x)}
+
+    Process.stub(:uid, 0) {
+      Process.stub(:gid, 0) {
+        Process::Sys.stub(:seteuid, validate_seteuid_params) {
+          Process::Sys.stub(:setegid, validate_setegid_params) {
+            assert_equal([0, 0], User.drop_privileges)
+          }
+        }
+      }
+    }
+  end
+
+  def test_raise_privileges
+    Process::Sys.stub(:seteuid, ->(x){assert_equal(888, x)}) {
+      Process::Sys.stub(:setegid, ->(x){assert_equal(999, x)}) {
+        User.raise_privileges(888, 999)
+      }
+    }
+  end
+
   def test_root?
     assert(!User.root?)
   end

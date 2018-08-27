@@ -28,16 +28,15 @@ module User
 
   # Drop root privileges to original user
   # Only affects ruby commands not system commands
-  # Params:
-  # +returns+:: uid, gid of prior user
+  # @returns [uid, gid] of root user
   def drop_privileges()
     uid = gid = nil
 
     if Process.uid.zero?
       uid, gid = Process.uid, Process.gid
       sudo_uid, sudo_gid = ENV['SUDO_UID'].to_i, ENV['SUDO_GID'].to_i
-      Process::Sys.setegid(sudo_uid)
-      Process::Sys.seteuid(sudo_gid)
+      Process::Sys.seteuid(sudo_uid)
+      Process::Sys.setegid(sudo_gid)
     end
 
     return uid, gid
@@ -45,9 +44,8 @@ module User
 
   # Raise privileges if dropped earlier
   # Only affects ruby commands not system commands
-  # Params:
-  # +uid+:: uid of user to assume
-  # +gid+:: gid of user to assume
+  # @param uid [String] uid of user to assume
+  # @param gid [String] gid of user to assume
   def raise_privileges(uid, gid)
     if uid and gid
       Process::Sys.seteuid(uid)
