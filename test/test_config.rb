@@ -48,6 +48,22 @@ class TestConfig < Minitest::Test
     }
   end
 
+  def test_init_reload
+    Config.init('foo.yml')
+    Config['general'] = "bob"
+    assert_equal("bob", Config['general'])
+    Config.reset
+    refute_equal("bob", Config['general'])
+  end
+
+  def test_init_no_reload
+    Config.init('foo.yml')
+    Config['general'] = "bob"
+    assert_equal("bob", Config['general'])
+    Config.init('foo.yml')
+    assert_equal("bob", Config['general'])
+  end
+
   def test_exists?
     assert(!Config.exists?)
 

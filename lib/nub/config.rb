@@ -42,10 +42,14 @@ module Config
 
     # Determine caller's file path to look for sidecar config
     caller_path = caller_locations(1, 1).first.path
-    @@path = File.expand_path(File.join(File.dirname(caller_path), config))
-    if !File.exists?(@@path)
-      @@path = "/home/#{User.name}/.config/#{config.split('/').first}"
+    path = File.expand_path(File.join(File.dirname(caller_path), config))
+    if !File.exists?(path)
+      path = "/home/#{User.name}/.config/#{config.split('/').first}"
     end
+
+    # Don't reload if its already been done
+    return Config if @@path == path
+    @@path = path
 
     # Open the config file or create in memory yml
     begin
