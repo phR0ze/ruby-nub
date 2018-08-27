@@ -42,11 +42,11 @@ class TestConfig < Minitest::Test
   def test_config_sidecar_config
     path = File.expand_path(File.join(File.dirname(__FILE__), 'foobar.yml'))
     File.stub(:exists?, true) {
-      YAML.stub(:load_file, {}) {
+      Sys.capture{assert_raises(SystemExit){
         Config.init('foobar.yml')
         assert_equal(path, Config.path)
         assert_equal({}, Config.yml)
-      }
+      }}
     }
   end
 
