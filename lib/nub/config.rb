@@ -22,19 +22,19 @@
 require 'yaml'
 require 'colorize'
 
-require_relative 'user'
 require_relative 'log'
+require_relative 'user'
+require_relative 'module'
 
 # Simple YAML configuration for an application.
 # Uses singleton pattern for single source of truth
 module Config
   extend self
-  @@_yml = {}
+  mattr_accessor(:path, :yml)
 
-  # Public properties
-  class << self
-    attr_accessor :path
-  end
+  # Defaults
+  @@yml = {}
+  @@path = ""
 
   # Singleton new alternate
   # @param config [String] name or path of the config file
@@ -42,46 +42,52 @@ module Config
 
     # Determine caller's file path to look for sidecar config
     caller_path = caller_locations(1, 1).first.path
-    @path = File.expand_path(File.join(File.dirname(caller_path), config))
-    if !File.exists?(@path)
-      @path = "/home/#{User.name}/.config/#{config.split('/').first}"
+    @@path = File.expand_path(File.join(File.dirname(caller_path), config))
+    if !File.exists?(@@path)
+      @@path = "/home/#{User.name}/.config/#{config.split('/').first}"
     end
 
     # Open the config file or create in memory yml
     begin
-      @@_yml = File.exists?(@path) ? YAML.load_file(@path) : {}
+      @@yml = File.exists?(@@path) ? YAML.load_file(@@path) : {}
     rescue Exception => e
       Log.die(e)
     end
 
-    return nil
+    return Config
+  end
+
+  # Set back to defaults read for init again
+  def reset
+    self.yml = {}
+    self.path = ""
   end
 
   # Simple bool whether the config exists or not on disk
   def exists?
-      return File.exists?(@path)
+      return File.exists?(@@path)
   end
 
   # Hash like getter
   def [](key)
-    return @@_yml[key]
+    return @@yml[key]
   end
 
   # Hash like setter
   def []=(key, val)
-    return @@_yml[key] = val
+    return @@yml[key] = val
   end
 
   # Get the given key and raise an error if it doesn't exist
   def get!(key)
-    Log.die("couldn't find '#{key}' in config") if !@@_yml.key?(key)
-    return @@_yml[key]
+    Log.die("couldn't find '#{key}' in config") if !@@yml.key?(key)
+    return @@yml[key]
   end
 
   # Save the config file
   def save
-    return unless @@_yml
-    File.open(@path, 'w', 0600){|f| f.write(@@_yml.to_yaml)}
+    return unless @@yml
+    File.open(@@path, 'w', 0600){|f| f.write(@@yml.to_yaml)}
   end
 end
 

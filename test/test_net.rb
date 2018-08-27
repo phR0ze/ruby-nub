@@ -26,6 +26,7 @@ require_relative '../lib/nub/net'
 class TestProxy < Minitest::Test
 
   def setup
+    Log.init(path:nil, queue: false, stdout: true)
     ENV['ftp_proxy'] = nil
     ENV['http_proxy'] = nil
     ENV['https_proxy'] = nil

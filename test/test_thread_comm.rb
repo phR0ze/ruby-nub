@@ -26,6 +26,8 @@ require_relative '../lib/nub/thread_comm'
 class TestThreadComm < Minitest::Test
 
   def setup
+    Log.init(path:nil, queue: false, stdout: true)
+
     @t1 = ThreadComm.new{|comm_in, comm_out|
       while true do
         if !comm_in.empty?

@@ -27,6 +27,7 @@ require_relative '../lib/nub/core'
 class TestERBExtensions < Minitest::Test
 
   def setup
+    Log.init(path:nil, queue: false, stdout: true)
     @vars ||= {'arch' => 'x86_64','release' => '4.7.4-1', 'distro' => 'cyberlinux'}
   end
 

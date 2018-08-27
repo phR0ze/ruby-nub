@@ -47,6 +47,10 @@ end
 
 class TestModule < Minitest::Test
 
+  def setup
+    Log.init(path:nil, queue: false, stdout: true)
+  end
+
   def test_mattr_reader_writer
     # Validate default value
     assert_equal('foo1', Foo.foo1)

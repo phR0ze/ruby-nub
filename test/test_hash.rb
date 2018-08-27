@@ -26,6 +26,10 @@ require_relative '../lib/nub/hash'
 
 class TestString < Minitest::Test
 
+  def setup
+    Log.init(path:nil, queue: false, stdout: true)
+  end
+
   def test_hash_deep_merge
     a = {foo1: 1, foo2: {foo3: 3, foo4: 4}}
     b = {foo1: 1, foo2: {foo3: 5}}

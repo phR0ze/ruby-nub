@@ -31,6 +31,8 @@ require_relative '../lib/nub/pacman'
 class TestPacman < Minitest::Test
 
   def setup
+    Log.init(path:nil, queue: false, stdout: true)
+
     Log.die("have to be root to run this") unless User.root?
 
     @test_dir = File.dirname(File.expand_path(__FILE__))

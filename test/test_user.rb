@@ -24,6 +24,11 @@ require 'minitest/autorun'
 require_relative '../lib/nub/user'
 
 class TestUser < Minitest::Test
+
+  def setup
+    Log.init(path:nil, queue: false, stdout: true)
+  end
+
   def test_root?
     assert(!User.root?)
   end

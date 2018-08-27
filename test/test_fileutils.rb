@@ -25,6 +25,10 @@ require_relative '../lib/nub/fileutils'
 
 class TestFileUtils < Minitest::Test
 
+  def setup
+    Log.init(path:nil, queue: false, stdout: true)
+  end
+
   def test_exec_success
     mock = Minitest::Mock.new
     mock.expect(:file?, true)

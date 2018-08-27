@@ -26,6 +26,10 @@ require_relative '../lib/nub/core'
 
 class TestSys < Minitest::Test
 
+  def setup
+    Log.init(path:nil, queue: false, stdout: true)
+  end
+
   def test_rm_rf_with_tmp_file
     Sys.stub(:puts, nil){
       assert(Sys.exec("touch foobar"))
