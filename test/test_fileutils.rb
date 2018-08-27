@@ -215,6 +215,8 @@ end
 class TestReplace < Minitest::Test
 
   def setup
+    Log.init(path:nil, queue: false, stdout: true)
+
     @file = 'foo'
     @vars ||= {'arch' => 'x86_64','release' => '4.7.4-1', 'distro' => 'cyberlinux'}
     @mock = Minitest::Mock.new
@@ -324,6 +326,8 @@ end
 class TestResolve < Minitest::Test
 
   def setup
+    Log.init(path:nil, queue: false, stdout: true)
+
     @vars ||= {'arch' => 'x86_64','release' => '4.7.4-1', 'distro' => 'cyberlinux'}
     @mock = Minitest::Mock.new
     @mock.expect(:seek, nil, [0])
@@ -372,6 +376,8 @@ end
 class TestInsert < Minitest::Test
 
   def setup
+    Log.init(path:nil, queue: false, stdout: true)
+
     @file ||= 'foo'
     @mock = Minitest::Mock.new
     @mock.expect(:seek, nil, [0])

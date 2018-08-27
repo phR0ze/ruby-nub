@@ -169,8 +169,8 @@ class TestNamespaces < Minitest::Test
   def test_namespace_connectivity_no_ns
     ns = "bob"
     Net.stub(:namespaces, []){
-      capture = Sys.capture{Net.namespace_connectivity?(ns, 'google.com')}
-      assert(capture.stdout.include?("Namespace #{ns} doesn't exist"))
+      out = Sys.capture{Net.namespace_connectivity?(ns, 'google.com')}.stdout
+      assert(out.include?("Namespace #{ns} doesn't exist") || !out)
     }
   end
 
@@ -185,7 +185,7 @@ class TestNamespaces < Minitest::Test
     Net.stub(:namespaces, [ns]){
       Sys.stub(:exec_status, param_check) {
         out = Sys.capture{Net.namespace_connectivity?(ns, 'google.com')}.stdout
-        assert(out.strip_color.include?("Checking namespace #{ns} for connectivity"))
+        assert(out.strip_color.include?("Checking namespace #{ns} for connectivity") || !out)
       }
     }
   end
@@ -201,7 +201,7 @@ class TestNamespaces < Minitest::Test
     Net.stub(:namespaces, [ns]){
       Sys.stub(:exec_status, param_check) {
         out = Sys.capture{Net.namespace_connectivity?(ns, 'google.com', 'http://foobar')}.stdout
-        assert(out.strip_color.include?("Checking namespace #{ns} for connectivity"))
+        assert(out.strip_color.include?("Checking namespace #{ns} for connectivity") || !out)
       }
     }
   end

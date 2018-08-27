@@ -87,6 +87,10 @@ end
 
 class TestCore < Minitest::Test
 
+  def setup
+    Log.init(path:nil, queue: false, stdout: true)
+  end
+
   def test_strip_color
     color = "foo bar".colorize(:cyan)
     assert("foo bar" != color)
