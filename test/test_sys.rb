@@ -21,6 +21,7 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
+require_relative '../lib/nub/log'
 require_relative '../lib/nub/sys'
 require_relative '../lib/nub/core'
 

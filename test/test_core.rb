@@ -22,6 +22,7 @@
 
 require 'colorize'
 require 'minitest/autorun'
+require_relative '../lib/nub/log'
 require_relative '../lib/nub/core'
 
 class TestERBExtensions < Minitest::Test

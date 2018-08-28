@@ -22,6 +22,7 @@
 
 require 'colorize'
 require 'minitest/autorun'
+require_relative '../lib/nub/log'
 require_relative '../lib/nub/hash'
 
 class TestString < Minitest::Test

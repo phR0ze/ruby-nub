@@ -26,42 +26,65 @@ require 'etc'
 module User
   extend self
 
-  # Drop root privileges to original user
-  # Only affects ruby commands not system commands
-  # @returns [uid, gid] of root user
-  def drop_privileges()
-    uid = gid = nil
-
-    if Process.uid.zero?
-      uid, gid = Process.uid, Process.gid
-      sudo_uid, sudo_gid = ENV['SUDO_UID'].to_i, ENV['SUDO_GID'].to_i
-      Process::Sys.seteuid(sudo_uid)
-      Process::Sys.setegid(sudo_gid)
-    end
-
-    return uid, gid
-  end
-
-  # Raise privileges if dropped earlier
-  # Only affects ruby commands not system commands
-  # @param uid [String] uid of user to assume
-  # @param gid [String] gid of user to assume
-  def raise_privileges(uid, gid)
-    if uid and gid
-      Process::Sys.seteuid(uid)
-      Process::Sys.setegid(gid)
-    end
-  end
-
-
   # Check if the current user has root privileges
   def root?
     return Process.uid.zero?
   end
 
-  # Get the current user taking into account sudo priviledges
+  # Get the real user taking into account sudo priviledges
   def name
     return Process.uid.zero? ? Etc.getpwuid(ENV['SUDO_UID'].to_i).name : ENV['USER']
+  end
+
+  # Correctly and permanently drops privileges
+  # http://timetobleed.com/5-things-you-dont-know-about-user-ids-that-will-destroy-you/
+  # requires you drop the group before the user and use a safe solution
+  def drop_privileges!
+    if Process.uid.zero?
+      nobody = Etc.getpwnam('nobody')
+      Process::Sys.setresgid(nobody.gid, nobody.gid, nobody.gid)
+      Process::Sys.setresuid(nobody.uid, nobody.uid, nobody.uid)
+    end
+  end
+
+  # Drop root privileges to original user
+  # @param [Proc] optional block to execut in context of user
+  # @returns [uid, gid] or result
+  def drop_privileges
+    result = nil
+    uid = gid = nil
+
+    # Drop privileges
+    if Process.uid.zero?
+      uid, gid = Process.uid, Process.gid
+      user_uid = ENV['SUDO_UID'].to_i
+      user_gid = ENV['SUDO_GID'].to_i
+      Process::GID.grant_privilege(user_gid)
+      Process::UID.grant_privilege(user_uid)
+    end
+
+    # Execute block if given
+    begin
+      result = Proc.new.call
+      self.raise_privileges(uid, gid)
+    rescue ArgumentError
+      # No block given just return ids
+      result = [uid, gid]
+    rescue
+      self.raise_privileges(uid, gid)
+    end
+
+    return result
+  end
+
+  # Raise privileges if dropped earlier
+  # @param uid [String] uid of user to assume
+  # @param gid [String] gid of user to assume
+  def raise_privileges(uid, gid)
+    if uid and gid
+      Process::UID.grant_privilege(uid)
+      Process::GID.grant_privilege(gid)
+    end
   end
 end
 

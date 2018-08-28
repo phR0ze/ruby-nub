@@ -21,6 +21,7 @@
 #SOFTWARE.
 
 require 'minitest/autorun'
+require_relative '../lib/nub/log'
 require_relative '../lib/nub/net'
 
 class TestProxy < Minitest::Test
