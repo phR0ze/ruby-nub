@@ -24,17 +24,17 @@
 #-------------------------------------------------------------------------------
 gem=nub
 pkgname=ruby-$gem
-pkgver=0.0.125
+pkgver=0.0.136
 pkgrel=1
 pkgdesc='Collection of useful Ruby utils'
 arch=(any)
 url='https://github.com/phR0ze/ruby-nub'
 license=(MIT)
-depends=(ruby ruby-colorize ruby-bundler curl grep)
+depends=(ruby ruby-colorize ruby-bundler curl grep iproute2 net-tools)
 options=(!emptydirs)
 source=(https://rubygems.org/downloads/$gem-$pkgver.gem)
 noextract=($gem-$pkgver.gem)
-sha256sums=('bbf367c4f771aee156141f226e9e1a36f3a9a89e84a5771200ed7d7568d5d079')
+sha256sums=('4176f09e7addbe07a9717d7dff018ced1cb446a683c4072920a047f0585760b9')
 
 package()
 {
