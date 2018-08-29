@@ -146,7 +146,7 @@ module Net
   # Network object
   # @param subnet [String] of the network e.g. 192.168.100.0
   # @param cidr [String] of the network
-  # @param nic [String] to use for NAT etc...
+  # @param nic [String] to use for NAT, true pics primary
   # @param nameservers [Array[String]] to optionally use for new network else uses hosts
   Network = Struct.new(:subnet, :cidr, :nic, :nameservers)
 
@@ -161,6 +161,7 @@ module Net
   # @returns [Array] of name server ips
   def nameservers(*args)
     filename = args.any? ? args.first.to_s : '/etc/resolv.conf'
+    filename = '/etc/resolv.conf' if !File.file?(filename)
 
     result = []
     if File.file?(filename)
@@ -239,6 +240,7 @@ module Net
 
     # Pull from existing namespace first
     if self.namespaces.include?(namespace)
+      network.nameservers = self.nameservers("/etc/netns/#{namespace}/resolv.conf")
       host_veth, guest_veth = self.namespace_veths(namespace)
 
     # Handle args as either as positional or named
@@ -247,7 +249,7 @@ module Net
         network = args.first[:network] if args.first.key?(:network)
         host_veth = args.first[:host_veth] if args.first.key?(:host_veth)
         guest_veth = args.first[:guest_veth] if args.first.key?(:guest_veth)
-      elsif args.size > 1
+      else args.any?
         host_veth = args.shift
         guest_veth = args.shift if args.any?
         network = args.shift if args.any?
@@ -257,7 +259,9 @@ module Net
     # Populate missing information
     host_veth.name = "#{namespace}_host" if !host_veth.name
     guest_veth.name = "#{namespace}_guest" if !guest_veth.name
-    network.nic = self.primary_nic if network.nic == true
+    network.subnet = @@namespace_subnet if !network.subnet
+    network.cidr = @@namespace_cidr if !network.cidr
+    network.nic = self.primary_nic if network.nic.nil? || network.nic == true
     network.nameservers = self.nameservers if !network.nameservers
     if !host_veth.ip or !guest_veth.ip
       host_ip, guest_ip = self.namespace_next_veth_ips
@@ -278,7 +282,7 @@ module Net
   #   If the nic param is nil NAT is not enabled. If nic is true then the primary nic is dynamically
   #   looked up else use user given If nameservers are not given the host nameservers will be used
   def create_namespace(namespace, *args)
-    host_veth, guest_veth, network = self.namespace_details(namespace, args)
+    host_veth, guest_veth, network = self.namespace_details(namespace, *args)
 
     # Ensure namespace i.e. /var/run/netns/<namespace> exists
     if !self.namespaces.include?(namespace)
@@ -360,7 +364,7 @@ module Net
   #   If the nic param is nil NAT is not enabled. If nic is true then the primary nic is dynamically
   #   looked up else use user given If nameservers are not given the host nameservers will be used
   def delete_namespace(namespace, *args)
-    host_veth, guest_veth, network = self.namespace_details(namespace, args)
+    host_veth, guest_veth, network = self.namespace_details(namespace, *args)
 
     # Remove nameserver config for network namespace
     namespace_conf = File.join("/etc/netns", namespace)
