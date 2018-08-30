@@ -249,7 +249,7 @@ module Net
         network = args.first[:network] if args.first.key?(:network)
         host_veth = args.first[:host_veth] if args.first.key?(:host_veth)
         guest_veth = args.first[:guest_veth] if args.first.key?(:guest_veth)
-      else args.any?
+      elsif args.any?
         host_veth = args.shift
         guest_veth = args.shift if args.any?
         network = args.shift if args.any?
