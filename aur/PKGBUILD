@@ -24,7 +24,7 @@
 #-------------------------------------------------------------------------------
 gem=nub
 pkgname=ruby-$gem
-pkgver=0.0.136
+pkgver=0.0.138
 pkgrel=1
 pkgdesc='Collection of useful Ruby utils'
 arch=(any)
@@ -34,7 +34,7 @@ depends=(ruby ruby-colorize ruby-bundler curl grep iproute2 net-tools)
 options=(!emptydirs)
 source=(https://rubygems.org/downloads/$gem-$pkgver.gem)
 noextract=($gem-$pkgver.gem)
-sha256sums=('4176f09e7addbe07a9717d7dff018ced1cb446a683c4072920a047f0585760b9')
+sha256sums=('95be16029b2b38c9f70c11186ba07d2f82d407fa4849448972f67081af5cacf4')
 
 package()
 {
