@@ -6,7 +6,7 @@ Collection of ruby utils I've used in several of my projects and wanted re-usabl
 [![Coverage Status](https://coveralls.io/repos/github/phR0ze/ruby-nub/badge.svg?branch=master&service=github)](https://coveralls.io/github/phR0ze/ruby-nub?branch=master&service=github)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
-## Table of Contents
+### Table of Contents
 * [Deploy](#deploy)
 * [Commander Module](#commander-module)
   * [Commands](#commands)
