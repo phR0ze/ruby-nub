@@ -1,5 +1,5 @@
 #MIT License
-#Copyright (c) 2017-2018 phR0ze
+#Copyright (c) 2017-2019 phR0ze
 #
 #Permission is hereby granted, free of charge, to any person obtaining a copy
 #of this software and associated documentation files (the "Software"), to deal
@@ -24,7 +24,7 @@
 #-------------------------------------------------------------------------------
 gem=nub
 pkgname=ruby-$gem
-pkgver=0.0.138
+pkgver=0.1.2
 pkgrel=1
 pkgdesc='Collection of useful Ruby utils'
 arch=(any)
@@ -34,7 +34,7 @@ depends=(ruby ruby-colorize ruby-bundler curl grep iproute2 net-tools)
 options=(!emptydirs)
 source=(https://rubygems.org/downloads/$gem-$pkgver.gem)
 noextract=($gem-$pkgver.gem)
-sha256sums=('95be16029b2b38c9f70c11186ba07d2f82d407fa4849448972f67081af5cacf4')
+sha256sums=('9cc8077602fd9e0bf28dea34fc2fabfe1716b8505ea937b3c914d0f551ad6e63')
 
 package()
 {
