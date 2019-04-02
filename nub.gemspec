@@ -1,8 +1,8 @@
 Gem::Specification.new do |spec|
   spec.name        = 'nub'
-  spec.version     = '0.1.3'
+  spec.version     = '0.1.4'
   spec.summary     = "Collection of useful utilities"
-  spec.authors     = ["Patrick Crummett"]
+  spec.authors     = ["phR0ze"]
   spec.homepage    = 'https://github.com/phR0ze/ruby-nub'
   spec.license     = 'MIT'
   spec.files       = `git ls-files | grep lib`.split("\n") + ['LICENSE', 'README.md']
